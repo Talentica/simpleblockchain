@@ -1,0 +1,44 @@
+<mxfile host="www.draw.io" modified="2019-10-23T09:37:21.645Z" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:69.0) Gecko/20100101 Firefox/69.0" etag="B7c0MhzB27TrGEorokAA" version="12.1.3" type="github" pages="1">
+  <diagram id="zw2LZUOGEL8zCDdYVrt6" name="Page-1">
+    <mxGraphModel dx="854" dy="482" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="lbWoWXGeoQI4eQCuDGwD-1" value="" style="group" vertex="1" connectable="0" parent="1">
+          <mxGeometry x="161" width="270" height="370" as="geometry"/>
+        </mxCell>
+        <mxCell id="o5tn7YAs-QMqgKv2cBp4-1" value="&lt;font style=&quot;font-size: 24px&quot;&gt;Application Layer&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="lbWoWXGeoQI4eQCuDGwD-1" vertex="1">
+          <mxGeometry x="29" y="20" width="220" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="o5tn7YAs-QMqgKv2cBp4-2" value="&lt;font style=&quot;font-size: 24px&quot;&gt;Consensus Layer&lt;br&gt;&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="lbWoWXGeoQI4eQCuDGwD-1" vertex="1">
+          <mxGeometry x="29" y="110" width="220" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="o5tn7YAs-QMqgKv2cBp4-5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="lbWoWXGeoQI4eQCuDGwD-1" source="o5tn7YAs-QMqgKv2cBp4-1" target="o5tn7YAs-QMqgKv2cBp4-2" edge="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="o5tn7YAs-QMqgKv2cBp4-6" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="lbWoWXGeoQI4eQCuDGwD-1" target="o5tn7YAs-QMqgKv2cBp4-7" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="139" y="160" as="sourcePoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="o5tn7YAs-QMqgKv2cBp4-7" value="&lt;font style=&quot;font-size: 24px&quot;&gt;P2P Layer&lt;br&gt;&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="lbWoWXGeoQI4eQCuDGwD-1" vertex="1">
+          <mxGeometry x="29" y="200" width="220" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="o5tn7YAs-QMqgKv2cBp4-8" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="lbWoWXGeoQI4eQCuDGwD-1" target="o5tn7YAs-QMqgKv2cBp4-9" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="139" y="250" as="sourcePoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="o5tn7YAs-QMqgKv2cBp4-9" value="&lt;br&gt;&lt;font style=&quot;font-size: 24px&quot;&gt;Database Layer&lt;br&gt;&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="lbWoWXGeoQI4eQCuDGwD-1" vertex="1">
+          <mxGeometry x="29" y="290" width="220" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="o5tn7YAs-QMqgKv2cBp4-11" value="" style="rounded=1;whiteSpace=wrap;html=1;opacity=20;fillColor=#f0a30a;strokeColor=#BD7000;fontColor=#ffffff;" parent="lbWoWXGeoQI4eQCuDGwD-1" vertex="1">
+          <mxGeometry width="270" height="370" as="geometry"/>
+        </mxCell>
+        <mxCell id="lbWoWXGeoQI4eQCuDGwD-11" value="&lt;font style=&quot;font-size: 24px&quot;&gt;Node - Layered Architecture&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;opacity=20;" vertex="1" parent="1">
+          <mxGeometry x="134" y="389" width="320" height="20" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
