@@ -3,6 +3,7 @@ Simplified version of blockchain
 
 ## Basic Workflow
 
+### Submitting a transaction
 
               
               Client        Blockchain Node        Blockchain Peer Node
@@ -34,3 +35,5 @@ Simplified version of blockchain
                                 |                        |
                                 |                        |
                                 v                        v
+
+### Block creation - Consensus
