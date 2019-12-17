@@ -1,30 +1,10 @@
-use serde::{Deserialize, Serialize};
-use libp2p::multihash::{encode, Hash};
-
-// struct for unit testing
-#[derive(Debug, Serialize, Deserialize)]
-struct Friend {
-    name: String,
-    // other: Box<Friend>;
-
-}
-// struct for unit testing
-#[derive(Debug, Serialize, Deserialize)]
-struct Mascot {
-    name: String,
-    species: String,
-    year_of_birth: u32,
-    f: Friend,
-
-}
-
-
 
 
 // Module responsible for serializing and deserializing
 pub mod sbserde{
 
-    use super::*;
+    use serde::{Deserialize, Serialize};
+    use libp2p::multihash::{encode, Hash};
 
     // serialize a generic type T
     // Needs trait Serialize to be implemented
@@ -67,12 +47,28 @@ pub mod sbserde{
 mod tests_sbserde {
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
-
+    use serde::{Deserialize, Serialize};
 
 
     // fn to test serializer
     #[test]
     fn test_ser(){
+
+        // struct for unit testing
+        #[derive(Debug, Serialize, Deserialize)]
+        struct Friend {
+            name: String,
+
+        }
+        // struct for unit testing
+        #[derive(Debug, Serialize, Deserialize)]
+        struct Mascot {
+            name: String,
+            species: String,
+            year_of_birth: u32,
+            f: Friend,
+
+        }
         let ferris = Mascot {
             name: "Ferris".to_owned(),
             species: "crab".to_owned(),
@@ -91,6 +87,23 @@ mod tests_sbserde {
     // fn to test deserializer
     #[test]
     fn test_ser_deser(){
+
+        // struct for unit testing
+        #[derive(Debug, Serialize, Deserialize)]
+        struct Friend {
+            name: String,
+            // other: Box<Friend>;
+
+        }
+        // struct for unit testing
+        #[derive(Debug, Serialize, Deserialize)]
+        struct Mascot {
+            name: String,
+            species: String,
+            year_of_birth: u32,
+            f: Friend,
+
+        }
         let ferris = Mascot {
             name: "Ferris".to_owned(),
             species: "crab".to_owned(),
@@ -114,7 +127,8 @@ mod tests_sbserde {
 // module responsible for connecting to 
 // rocksdb
 pub mod rdb_connection {
-    use super::* ;
+    use super::sbserde ;
+    use serde::{Deserialize, Serialize};
 
     // enum with with Db or Nil object
     // TODO: see if this can be handled with
