@@ -46,7 +46,7 @@ pub mod sbserde{
 #[cfg(test)]
 mod tests_sbserde {
     // Note this useful idiom: importing names from outer (for mod tests) scope.
-    use super::*;
+    use super::sbserde;
     use serde::{Deserialize, Serialize};
 
 
