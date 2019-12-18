@@ -3,7 +3,9 @@ Simplified version of blockchain
 
 ## Basic Workflow
 
-### Submitting a transaction
+### Transaction Flow
+
+![Alt text](./docs/TransactionFlow.png?raw=true "Transaction Flow in a blockchain")
 
               
               Client        Blockchain Node        Blockchain Peer Node
