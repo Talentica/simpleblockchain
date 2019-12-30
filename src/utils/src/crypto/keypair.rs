@@ -28,31 +28,27 @@ pub struct PublicKey {}
 #[derive(Debug)]
 pub struct SecretKey {}
 
-impl CryptoKeypair<libp2p::identity::ed25519::Keypair, libp2p::identity::ed25519::PublicKey>
-    for Keypair
-{
-    fn generate() -> libp2p::identity::ed25519::Keypair {
-        libp2p::identity::ed25519::Keypair::generate()
+impl CryptoKeypair<KeypairType, PublicKeyType> for Keypair {
+    fn generate() -> KeypairType {
+        KeypairType::generate()
     }
-    fn generate_from(secret_bytes: &mut [u8]) -> libp2p::identity::ed25519::Keypair {
-        let secret_key = libp2p::identity::ed25519::SecretKey::from_bytes(secret_bytes);
-        libp2p::identity::ed25519::Keypair::from(secret_key.unwrap())
+    fn generate_from(secret_bytes: &mut [u8]) -> KeypairType {
+        let secret_key = SecretKeyType::from_bytes(secret_bytes);
+        KeypairType::from(secret_key.unwrap())
     }
-    fn public(
-        keypair: &libp2p::identity::ed25519::Keypair,
-    ) -> libp2p::identity::ed25519::PublicKey {
+    fn public(keypair: &KeypairType) -> PublicKeyType {
         keypair.public()
     }
-    fn secret(keypair: &libp2p::identity::ed25519::Keypair) -> Vec<u8> {
+    fn secret(keypair: &KeypairType) -> Vec<u8> {
         keypair.secret().as_ref().to_vec()
     }
-    fn sign(keypair: &libp2p::identity::ed25519::Keypair, msg: &[u8]) -> Vec<u8> {
+    fn sign(keypair: &KeypairType, msg: &[u8]) -> Vec<u8> {
         keypair.sign(msg)
     }
 }
 
-impl Verify<libp2p::identity::ed25519::PublicKey> for PublicKey {
-    fn verify(public: &libp2p::identity::ed25519::PublicKey, msg: &[u8], signature: &[u8]) -> bool {
+impl Verify<PublicKeyType> for PublicKey {
+    fn verify(public: &PublicKeyType, msg: &[u8], signature: &[u8]) -> bool {
         public.verify(msg, signature)
     }
 }
