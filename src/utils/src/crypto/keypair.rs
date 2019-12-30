@@ -7,6 +7,10 @@ pub trait CryptoKeypair<T, U> {
     fn sign(keypair: &T, msg: &[u8]) -> Vec<u8>;
 }
 
+pub type KeypairType = libp2p::identity::ed25519::Keypair;
+pub type PublicKeyType = libp2p::identity::ed25519::PublicKey;
+pub type SecretKeyType = libp2p::identity::ed25519::SecretKey;
+
 pub trait Sign<T> {
     fn sign(secret: &T, msg: &[u8]) -> Vec<u8>;
 }
