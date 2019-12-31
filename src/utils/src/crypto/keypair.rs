@@ -17,6 +17,7 @@ pub trait Sign<T> {
 
 pub trait Verify<T> {
     fn verify(public: &T, msg: &[u8], signature: &[u8]) -> bool;
+    fn verify_from_encoded_pk(public: &String, msg: &[u8], signature: &[u8]) -> bool;
 }
 
 #[derive(Debug)]
@@ -50,6 +51,21 @@ impl CryptoKeypair<KeypairType, PublicKeyType> for Keypair {
 impl Verify<PublicKeyType> for PublicKey {
     fn verify(public: &PublicKeyType, msg: &[u8], signature: &[u8]) -> bool {
         public.verify(msg, signature)
+    }
+
+    fn verify_from_encoded_pk(public: &String, msg: &[u8], signature: &[u8]) -> bool {
+        // println!("decoding");
+        let decode_public_key = match hex::decode(public) {
+            Ok(decode_public_key) => decode_public_key,
+            Err(_e) => return false,
+        };
+
+        let public_key = match PublicKeyType::decode(&decode_public_key) {
+            Ok(public_key) => public_key,
+            Err(_e) => return false,
+        };
+        // println!("decoded");
+        public_key.verify(msg, signature)
     }
 }
 
