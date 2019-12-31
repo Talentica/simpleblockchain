@@ -2,7 +2,7 @@
 // rocksdb
 pub mod rdb_connection {
     use serde::{Deserialize, Serialize};
-    use utils::serialzer;
+    use utils::serializer;
 
     // enum with with Db or Nil object
     // TODO: see if this can be handled with
@@ -45,8 +45,8 @@ pub mod rdb_connection {
         {
             match &self.con_obj {
                 DB::Db(some) => {
-                    let ser_obj = serialzer::serialize(&object);
-                    let hash_obj = serialzer::serialize_hash256(&object);
+                    let ser_obj = serializer::serialize(&object);
+                    let hash_obj = serializer::serialize_hash256(&object);
                     let _res = some.put(&hash_obj, ser_obj);
                     Some(hash_obj)
                 }

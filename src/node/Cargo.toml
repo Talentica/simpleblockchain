@@ -8,3 +8,6 @@ edition = "2018"
 
 [dependencies]
 utils = { path = "../utils" }
+hex = "^0.4"
+serde = { version = "1.0", features = ["derive"] }
+serde_cbor = "^0.10"
