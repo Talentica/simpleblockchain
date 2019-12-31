@@ -6,8 +6,7 @@ use std::time::Duration;
 use utils::keypair::{CryptoKeypair, Keypair, KeypairType, PublicKey, Verify};
 use utils::serializer::{serialize, serialize_hash256, Deserialize, Serialize};
 
-mod transaction;
-use transaction::{SignedTransaction, TransactionPool, Txn, TxnPool};
+use crate::transaction::{SignedTransaction, TransactionPool, Txn, TxnPool};
 
 const PEER_ID: &str = "static Id";
 
