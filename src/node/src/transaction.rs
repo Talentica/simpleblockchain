@@ -1,7 +1,7 @@
 extern crate utils;
 
 use utils::keypair::{CryptoKeypair, Keypair, KeypairType, PublicKey, Verify};
-use utils::serializer::{serialize, serialize_hash256, Deserialize, Serialize};
+use utils::serializer::{serialize, Deserialize, Serialize};
 
 pub trait Txn<T, U> {
     fn generate() -> T;
@@ -132,6 +132,7 @@ mod tests_transactions {
 
     #[test]
     pub fn main_transaction() {
+        use super::*;
         let mut transaction_pool = TransactionPool::new();
         transaction_pool.add(SignedTransaction::generate());
         transaction_pool.add(SignedTransaction::generate());

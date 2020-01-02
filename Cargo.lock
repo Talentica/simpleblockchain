@@ -1292,6 +1292,7 @@ dependencies = [
 name = "node"
 version = "0.1.0"
 dependencies = [
+ "db 0.1.0",
  "hex 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_cbor 0.10.2 (registry+https://github.com/rust-lang/crates.io-index)",

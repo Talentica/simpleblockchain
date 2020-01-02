@@ -12,7 +12,7 @@ const PEER_ID: &str = "static Id";
 
 pub trait BlockTraits<T> {
     fn validate(&self, publickey: &String, signature: &[u8]) -> bool;
-    fn sign(&self, keypair: &T) -> Vec<u8>;
+    fn sign(&self, kp: &T) -> Vec<u8>;
 }
 
 pub trait BlockchainTraits {
@@ -45,13 +45,13 @@ impl BlockTraits<KeypairType> for Block {
         // unimplemented!();
         let ser_block = serialize(&self);
         PublicKey::verify_from_encoded_pk(&publickey, &ser_block, &signature)
-        // keypair::PublicKey::verify_from_encoded_pk(&self.txn.party_a, signing_string.as_bytes(), &self.signature.as_ref())
+        // PublicKey::verify_from_encoded_pk(&self.txn.party_a, signing_string.as_bytes(), &self.signature.as_ref())
     }
 
-    fn sign(&self, keypair: &KeypairType) -> Vec<u8> {
+    fn sign(&self, kp: &KeypairType) -> Vec<u8> {
         // unimplemented!();
         let ser_block = serialize(&self);
-        let sign = Keypair::sign(&keypair, &ser_block);
+        let sign = Keypair::sign(&kp, &ser_block);
         sign
     }
 }
