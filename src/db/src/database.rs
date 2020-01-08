@@ -1,3 +1,4 @@
+extern crate utils;
 // module responsible for connecting to
 // rocksdb
 pub mod rdb_connection {

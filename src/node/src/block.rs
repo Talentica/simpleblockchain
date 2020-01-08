@@ -1,8 +1,8 @@
 extern crate utils;
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
-
 use utils::keypair::{CryptoKeypair, Keypair, KeypairType, PublicKey, Verify};
 use utils::serializer::{serialize, serialize_hash256, Deserialize, Serialize};
 
@@ -30,7 +30,7 @@ pub struct Block {
     id: u32,
     peer_id: String,
     prev_hash: String,
-    txn_pool: Vec<SignedTransaction>,
+    txn_pool: Vec<Vec<u8>>,
 }
 
 pub struct BlockChain {
@@ -123,24 +123,78 @@ impl BlockchainTraits for BlockChain {
     }
 }
 
-pub fn main_block() {
-    let mut block_chain = BlockChain::new();
-    let block: Block = block_chain.get_root_block();
-    let sign = block.sign(&block_chain.keypair);
-    let validate = block.validate(&hex::encode(block_chain.keypair.public().encode()), &sign);
+pub fn poa_with_sep_th() {
+    let block_chain_obj = BlockChain::new();
+    let block: Block = block_chain_obj.get_root_block();
+    let sign = block.sign(&block_chain_obj.keypair);
+    let validate = block.validate(&hex::encode(block_chain_obj.keypair.public().encode()), &sign);
     println!("{}", validate);
+    let object = Arc::new(Mutex::new(block_chain_obj));
 
-    // add txn into txnpool
-    for _i in 0..100 {
-        let signed_txn = SignedTransaction::generate();
-        block_chain.txn_pool.add(signed_txn);
+    let mut threads = Vec::new();
+    let clone1 = object.clone();
+    let handle = thread::spawn(move || {
+        
+        // while db_obj.txn_pool.length_op().1 > 0 {
+        loop{
+            thread::sleep(Duration::from_millis(1000));
+            let mut db_obj = clone1.lock().unwrap();
+            db_obj.generate_block();
+            println!("{:?}", db_obj.txn_pool.length_op());
+            println!("{}", db_obj.block_chain_length());
+        }
+        // println!("lenght {:?}", db_obj.txn_pool.length_op());
+    });
+    threads.push(handle);
+
+    loop {
+        thread::sleep(Duration::from_millis(100));
+        let clone = object.clone();
+        // thread for adding txn into txn_pool
+        thread::spawn(move || {
+            let mut db_obj = clone.lock().unwrap();
+            let kp = Keypair::generate();
+            let one = SignedTransaction::generate(&kp);
+            let txn_hash = serialize_hash256(&one);
+            let mut txn_hash_str = String::new();
+            txn_hash_str.push_str(&String::from_utf8_lossy(&txn_hash));
+            db_obj.txn_pool.insert_op(&serialize(&one));
+            println!("lenght {:?}", db_obj.txn_pool.length_op());
+        });
     }
-    while block_chain.txn_pool.length() > 0 {
-        thread::sleep(Duration::from_millis(1000));
-        block_chain.generate_block();
-        println!("{}", block_chain.txn_pool.length());
-        println!("{}", block_chain.block_chain_length());
+    
+    
+    // println!("Workers successfully started.");
+    // for handle in threads {
+    //     handle.join().unwrap();
+    // }
+    // println!("{:?}", object.lock().unwrap().get_root_hash());
+    // println!("{:?}", object.lock().unwrap().block_chain_length());
+}
+
+#[cfg(test)]
+mod tests_blocks {
+
+    #[test]
+    pub fn main_block() {
+        use super::*;
+        let mut block_chain = BlockChain::new();
+        let block: Block = block_chain.get_root_block();
+        let sign = block.sign(&block_chain.keypair);
+        let validate = block.validate(&hex::encode(block_chain.keypair.public().encode()), &sign);
+        println!("{}", validate);
+        // add txn into txnpool
+        for _i in 0..50 {
+            let signed_txn = SignedTransaction::generate(&block_chain.keypair);
+            block_chain.txn_pool.insert_op(&serialize(&signed_txn));
+        }
+        while block_chain.txn_pool.length_op().1 > 0 {
+            thread::sleep(Duration::from_millis(100));
+            block_chain.generate_block();
+            println!("{:?}", block_chain.txn_pool.length_op());
+            println!("{}", block_chain.block_chain_length());
+        }
+        println!("--{}--", block_chain.get_root_hash());
+        // println!("{:?}", block_chain.get_root_block());
     }
-    println!("{}", block_chain.get_root_hash());
-    println!("{:?}", block_chain.get_root_block());
 }
