@@ -17,6 +17,9 @@ use utils::configreader::Configuration;
 
 use utils::crypto::keypair;
 
+//TODO remove this later
+use libc;
+
 pub enum MessageTypes {
     TransactionCreate,
     BlockCreate,
@@ -37,8 +40,9 @@ impl<TSubstream: AsyncRead + AsyncWrite> NetworkBehaviourEventProcess<MdnsEvent>
     fn inject_event(&mut self, mdns_event: MdnsEvent) {
         match mdns_event {
             MdnsEvent::Discovered(discovered_nodes) => {
-                println!("Discovered address {:?}", discovered_nodes);
+                // println!("Discovered address {:?}", discovered_nodes);
                 for (peer_id, _) in discovered_nodes {
+                    println!("peer discovered {}", peer_id);
                     self.floodsub.add_node_to_partial_view(peer_id);
                 }
             }
@@ -103,6 +107,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     )
     .unwrap();
 
+    unsafe {
+        println!("before char read");
+        libc::getchar();
+        println!("after char read");
+    }
     //connect to all peers
     let mut peers_list: Vec<String> = Vec::new(); //config.node.peers;
     peers_list.push(String::from(format!("{}{}", "/ip4/0.0.0.0/tcp/", port1)));
