@@ -2,11 +2,11 @@ extern crate utils;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use utils::keypair::{CryptoKeypair, Keypair, KeypairType, PublicKey, Verify};
 use utils::serializer::{serialize, serialize_hash256, Deserialize, Serialize};
 
-use crate::transaction::{SignedTransaction, TransactionPool, Txn, TxnPool};
+use crate::transaction::{SignedTransaction, TransactionPool, Txn, TxnPool, TxnPoolValueType};
 
 const PEER_ID: &str = "static Id";
 
@@ -23,6 +23,8 @@ pub trait BlockchainTraits {
     fn get_block(&self, block_hash: String) -> Block;
     fn add_block(&mut self, block: Block);
     fn generate_block(&mut self);
+    // print_acc_bals is just for testing purpose..
+    fn print_acc_bals(&self);
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -30,7 +32,7 @@ pub struct Block {
     id: u32,
     peer_id: String,
     prev_hash: String,
-    txn_pool: Vec<Vec<u8>>,
+    txn_pool: Vec<TxnPoolValueType>,
 }
 
 pub struct BlockChain {
@@ -38,6 +40,7 @@ pub struct BlockChain {
     blocks: HashMap<String, Block>,
     root_hash: String,
     txn_pool: TransactionPool,
+    accounts_bal: HashMap<String, u32>,
 }
 
 impl BlockTraits<KeypairType> for Block {
@@ -71,11 +74,15 @@ impl BlockchainTraits for BlockChain {
         let mut blocks = HashMap::new();
         blocks.insert(genesis_block_hash_to_str.clone(), genesis_block);
         let keypair = Keypair::generate();
+        let mut accounts_bal: HashMap<String, u32> = HashMap::new();
+        let peer_pk = hex::encode(Keypair::public(&keypair).encode());
+        accounts_bal.insert(peer_pk, 1_00_000);
         Self {
             keypair,
             blocks,
             root_hash: genesis_block_hash_to_str,
             txn_pool: TransactionPool::new(),
+            accounts_bal,
         }
     }
 
@@ -111,8 +118,7 @@ impl BlockchainTraits for BlockChain {
         let prev_block = self.get_root_block();
         let id: u32 = prev_block.id + 1;
         let prev_hash = self.get_root_hash();
-        let executed_txns = self.txn_pool.execute();
-        // unimplemented!();
+        let executed_txns = self.txn_pool.execute(&mut self.accounts_bal);
         let new_block = Block {
             id,
             peer_id: PEER_ID.to_string(),
@@ -120,6 +126,11 @@ impl BlockchainTraits for BlockChain {
             txn_pool: executed_txns,
         };
         self.add_block(new_block);
+    }
+
+    fn print_acc_bals(&self){
+        println!("Accounts Current Balance ");
+        println!("{:?}", self.accounts_bal);
     }
 }
 
@@ -135,31 +146,29 @@ pub fn poa_with_sep_th() {
     let clone1 = object.clone();
     let handle = thread::spawn(move || {
         
-        // while db_obj.txn_pool.length_op().1 > 0 {
         loop{
             thread::sleep(Duration::from_millis(1000));
             let mut db_obj = clone1.lock().unwrap();
             db_obj.generate_block();
-            println!("{:?}", db_obj.txn_pool.length_op());
-            println!("{}", db_obj.block_chain_length());
+            println!("block proposed and committed");
+            println!("(txn_pool_len, blockchain_len) -> ({}, {})", db_obj.txn_pool.length_op(), db_obj.block_chain_length());
+            if db_obj.block_chain_length() % 10 == 0{
+                db_obj.print_acc_bals();
+            }
         }
-        // println!("lenght {:?}", db_obj.txn_pool.length_op());
     });
     threads.push(handle);
 
     loop {
-        thread::sleep(Duration::from_millis(100));
+        thread::sleep(Duration::from_millis(99));
         let clone = object.clone();
         // thread for adding txn into txn_pool
         thread::spawn(move || {
             let mut db_obj = clone.lock().unwrap();
-            let kp = Keypair::generate();
-            let one = SignedTransaction::generate(&kp);
-            let txn_hash = serialize_hash256(&one);
-            let mut txn_hash_str = String::new();
-            txn_hash_str.push_str(&String::from_utf8_lossy(&txn_hash));
-            db_obj.txn_pool.insert_op(&serialize(&one));
-            println!("lenght {:?}", db_obj.txn_pool.length_op());
+            let one = SignedTransaction::generate(&db_obj.keypair);
+            let time_instant = Instant::now();
+            db_obj.txn_pool.insert_op(&time_instant, &one);
+            // println!("lenght {:?}", db_obj.txn_pool.length_op());
         });
     }
     
@@ -186,9 +195,10 @@ mod tests_blocks {
         // add txn into txnpool
         for _i in 0..50 {
             let signed_txn = SignedTransaction::generate(&block_chain.keypair);
-            block_chain.txn_pool.insert_op(&serialize(&signed_txn));
+            let time_instant = Instant::now();
+            block_chain.txn_pool.insert_op(&time_instant, &signed_txn);
         }
-        while block_chain.txn_pool.length_op().1 > 0 {
+        while block_chain.txn_pool.length_op() > 0 {
             thread::sleep(Duration::from_millis(100));
             block_chain.generate_block();
             println!("{:?}", block_chain.txn_pool.length_op());

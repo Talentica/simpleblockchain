@@ -41,7 +41,7 @@ pub struct Configuration {
 }
 
 impl Configuration {
-    fn new() -> Self {
+    pub fn new() -> Self {
         let tomlreader: TomlReaderConfig = Configuration::init_config();
         let mut secret = hex::decode(tomlreader.secret).expect("invalid secret");
         let keypair = Keypair::generate_from(secret.as_mut_slice());
@@ -74,7 +74,7 @@ impl Configuration {
             ),
         };
         println!(">> Current Working Directory: {}", cwd);
-        let config_file_path: String = cwd + &String::from("\\config.toml");
+        let config_file_path: String = cwd + &String::from("/config.toml");
         println!("path = {}", config_file_path);
         let mut config_file = match File::open(config_file_path) {
             Ok(f) => f,

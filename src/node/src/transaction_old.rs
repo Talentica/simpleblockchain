@@ -1,9 +1,8 @@
 extern crate utils;
 use chrono::prelude::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{vec_deque::VecDeque, HashMap};
 use utils::keypair::{CryptoKeypair, Keypair, KeypairType, PublicKey, Verify};
-use utils::serializer::{serialize, Deserialize, Serialize};
-use std::time::Instant;
+use utils::serializer::{serialize, serialize_hash256, Deserialize, Serialize};
 
 pub trait Txn {
     type T;
@@ -111,78 +110,73 @@ impl Txn for SignedTransaction {
     }
 }
 
-pub type TxnPoolKeyType = Instant;
-pub type TxnPoolValueType = SignedTransaction;
-
 pub trait TxnPool {
     type T;
     type U;
     
-    fn new() -> Self;
-    fn delete_op(&mut self, key: &Self::T);
-    fn pop_front(&mut self) -> Self::U;
-    fn insert_op(&mut self, key: &Self::T, value: &Self::U);
-    fn length_op(&self) -> usize;
-    fn execute(&mut self, acc_data_base: &mut HashMap<String, u32>) -> Vec<Self::U>;
+    fn new() -> Self::T;
+    fn delete_op(&mut self, key: &String);
+    fn pop_front(&mut self) -> (String, Self::U);
+    fn insert_op(&mut self, value: &Self::U);
+    fn length_op(&self) -> (usize, usize);
+    fn execute(&mut self) -> Vec<Self::U>;
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TransactionPool {
-    pool: BTreeMap<TxnPoolKeyType, TxnPoolValueType>,
+    hashmap: HashMap<String, Vec<u8>>,
+    queue: VecDeque<String>,
 }
 
 impl TxnPool for TransactionPool {
-    type T = TxnPoolKeyType;
-    type U = TxnPoolValueType;
+    type T = TransactionPool;
+    type U = Vec<u8>;
 
     fn new() -> TransactionPool {
         TransactionPool {
-            pool: BTreeMap::new(),
+            hashmap: HashMap::new(),
+            queue: VecDeque::new(),
         }
     }
 
-    fn delete_op(&mut self, key: &Self::T) {
+    fn delete_op(&mut self, key: &String) {
         // let (key, value) = m.lock().unwrap().pop_first().unwrap(); // lock the mutex, remove a value, unlock
-        if self.pool.contains_key(key) {
-            self.pool.remove(key);
+        if self.hashmap.contains_key(key) {
+            self.hashmap.remove_entry(key);
         }
     }
 
-    fn pop_front(&mut self) -> Self::U{
-        let (first_key, first_value) = self.pool.iter().next().unwrap();
-        let value = first_value.clone();
-        let key = first_key.clone();
-        self.delete_op(&key);
-        value
-    }
-
-    fn insert_op(&mut self, key: &Self::T, value: &Self::U) {
-        self.pool.insert(key.clone(), value.clone());
-    }
-
-    fn length_op(&self) -> usize {
-        self.pool.len()
-    }
-
-    fn execute(&mut self, acc_data_base: &mut HashMap<String, u32>) -> Vec<Self::U> {
-        let mut temp_vec = Vec::<Self::U>::with_capacity(10);
-        while temp_vec.len() < 10 && self.length_op() > 0 {
-            let txn: TxnPoolValueType = self.pop_front();
-            if txn.validate(){
-                if acc_data_base.contains_key(&txn.txn.from){
-                    let from_bal = acc_data_base.get(&txn.txn.from).unwrap().clone();
-                    if from_bal > txn.txn.amount{                        
-                        if acc_data_base.contains_key(&txn.txn.to){
-                            let new_bal = txn.txn.amount + acc_data_base.get(&txn.txn.to).unwrap().clone();
-                            acc_data_base.insert(txn.txn.to.clone(), new_bal);
-                        }else{
-                            acc_data_base.insert(txn.txn.to.clone(), txn.txn.amount.clone());
-                        }
-                        acc_data_base.insert(txn.txn.from.clone(), from_bal - txn.txn.amount.clone());
-                        temp_vec.push(txn);
-                    }
-                }
+    fn pop_front(&mut self) -> (String, Self::U) {
+        while self.queue.len() > 0 {
+            let key = self.queue.pop_back().unwrap();
+            if self.hashmap.contains_key(&key) {
+                let value = self.hashmap.get(&key).unwrap().clone();
+                // self.hashmap.remove_entry(&key);
+                self.delete_op(&key);
+                return (key, value);
             }
+        }
+        panic!();
+    }
+
+    fn insert_op(&mut self, value: &Self::U) {
+        let txn_hash = serialize_hash256(value);
+        let mut hash_str = String::new();
+        hash_str.push_str(&String::from_utf8_lossy(&txn_hash));
+
+        self.hashmap.insert(hash_str.clone(), value.clone());
+        self.queue.push_front(hash_str);
+    }
+
+    fn length_op(&self) -> (usize, usize) {
+        (self.hashmap.len(), self.queue.len())
+    }
+
+    fn execute(&mut self) -> Vec<Self::U> {
+        let mut temp_vec = Vec::<Vec<u8>>::with_capacity(10);
+        while temp_vec.len() < 10 && self.length_op().1 > 0 {
+            let txn = self.pop_front().1;
+            temp_vec.push(txn);
         }
         temp_vec
     }
@@ -198,12 +192,16 @@ mod tests_transactions {
         let kp = Keypair::generate();
         let one = SignedTransaction::generate(&kp);
         let two = SignedTransaction::generate(&kp);
-        let time_instant = Instant::now();
-        transaction_pool.insert_op(&time_instant, &one);
-        let time_instant = Instant::now();
-        transaction_pool.insert_op(&time_instant, &two);
+        let txn_hash = serialize_hash256(&one);
+        let mut txn_hash_str = String::new();
+        txn_hash_str.push_str(&String::from_utf8_lossy(&txn_hash));
+        transaction_pool.insert_op(&serialize(&one));
+        let txn_hash = serialize_hash256(&one);
+        let mut txn_hash_str = String::new();
+        txn_hash_str.push_str(&String::from_utf8_lossy(&txn_hash));
+        transaction_pool.insert_op(&serialize(&two));
 
-        let exexuted_pool = transaction_pool.execute(&mut HashMap::<String,u32>::new());
+        let exexuted_pool = transaction_pool.execute();
         println!("{:?}", exexuted_pool);
     }
 }
