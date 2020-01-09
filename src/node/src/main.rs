@@ -17,9 +17,6 @@ use utils::configreader::Configuration;
 
 use utils::crypto::keypair;
 
-//TODO remove this later
-use libc;
-
 pub enum MessageTypes {
     TransactionCreate,
     BlockCreate,
@@ -95,35 +92,26 @@ fn main() -> Result<(), Box<dyn Error>> {
         Swarm::new(transport, behaviour, peer_id)
     };
 
-    let myport = std::env::args().nth(1).unwrap();
-    let port1 = std::env::args().nth(2).unwrap();
-    //let port2 = std::env::args().nth(3).unwrap();
-
     Swarm::listen_on(
         &mut swarm,
-        format!("{}{}", "/ip4/0.0.0.0/tcp/", myport)
+        format!("{}{}", "/ip4/0.0.0.0/tcp/", "4444")
             .parse()
             .unwrap(),
     )
     .unwrap();
 
-    unsafe {
-        println!("before char read");
-        libc::getchar();
-        println!("after char read");
-    }
     //connect to all peers
-    let mut peers_list: Vec<String> = Vec::new(); //config.node.peers;
-    peers_list.push(String::from(format!("{}{}", "/ip4/0.0.0.0/tcp/", port1)));
+    // let mut peers_list: Vec<String> = Vec::new(); //config.node.peers;
+    // peers_list.push(String::from(format!("{}{}", "/ip4/0.0.0.0/tcp/", port1)));
     //peers_list.push(String::from(format!("{}{}", "/ip4/0.0.0.0/tcp/", port2)));
     // peers_list.push(String::from("/ip4/0.0.0.0/tcp/4446"));
-    for peer in peers_list {
-        let multi_addr = peer.parse::<Multiaddr>().unwrap();
-        match libp2p::Swarm::dial_addr(&mut swarm, multi_addr.clone()) {
-            Ok(_) => println!("Dialed {:?}", peer),
-            Err(e) => println!("Dial {:?} failed: {:?}", multi_addr, e),
-        }
-    }
+    // for peer in peers_list {
+    //     let multi_addr = peer.parse::<Multiaddr>().unwrap();
+    //     match libp2p::Swarm::dial_addr(&mut swarm, multi_addr.clone()) {
+    //         Ok(_) => println!("Dialed {:?}", peer),
+    //         Err(e) => println!("Dial {:?} failed: {:?}", multi_addr, e),
+    //     }
+    // }
 
     // Read full lines from stdin
     let mut stdin = io::BufReader::new(io::stdin()).lines();

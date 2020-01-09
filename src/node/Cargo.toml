@@ -8,10 +8,8 @@ edition = "2018"
 
 [dependencies]
 utils = { path = "../utils" }
-lazy_static = "1.4.0"
-toml = "0.5.5"
 tokio = { version = "0.2.6", features = ["full"] }
 futures = "0.3.1"
 libp2p = "0.14.0-alpha.1"
 async-std = "1.4.0"
-libc = "0.2.66"
+env_logger = "0.7.1"
