@@ -39,7 +39,7 @@ impl<TSubstream: AsyncRead + AsyncWrite> NetworkBehaviourEventProcess<MdnsEvent>
             MdnsEvent::Discovered(discovered_nodes) => {
                 // println!("Discovered address {:?}", discovered_nodes);
                 for (peer_id, _) in discovered_nodes {
-                    println!("peer discovered {}", peer_id);
+                    //println!("peer discovered {}", peer_id);
                     self.floodsub.add_node_to_partial_view(peer_id);
                 }
             }
@@ -62,10 +62,10 @@ impl<TSubstream: AsyncRead + AsyncWrite> NetworkBehaviourEventProcess<FloodsubEv
                 println!("Message received {:?}", msg);
             }
             FloodsubEvent::Subscribed { peer_id, topic } => {
-                println!("subscribed by peer {:?} topic {:?}", peer_id, topic);
+                //println!("subscribed by peer {:?} topic {:?}", peer_id, topic);
             }
             FloodsubEvent::Unsubscribed { peer_id, topic } => {
-                println!("unsubscribed by peer {:?} topic {:?}", peer_id, topic);
+                //println!("unsubscribed by peer {:?} topic {:?}", peer_id, topic);
             }
         }
     }
@@ -85,10 +85,11 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let mut swarm = {
         let mdns = task::block_on(Mdns::new()).unwrap();
-        let behaviour = P2PBehaviour {
+        let mut behaviour = P2PBehaviour {
             floodsub: Floodsub::new(peer_id.clone()),
             mdns,
         };
+        behaviour.floodsub.subscribe(floodsub_topic.clone());
         Swarm::new(transport, behaviour, peer_id)
     };
 
