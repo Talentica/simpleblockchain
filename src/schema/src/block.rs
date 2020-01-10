@@ -1,12 +1,26 @@
 extern crate utils;
+use crate::transaction::{SignedTransaction, TransactionPool, Txn, TxnPool, TxnPoolValueType};
+use exonum_crypto::Hash;
+use exonum_merkledb::{
+    // access::{Access, RawAccessMut},
+    impl_object_hash_for_binary_value,
+    BinaryValue,
+    // Fork,
+    // IndexAccess,
+    // ListIndex,
+    // MapIndex,
+    ObjectHash,
+    // ProofListIndex,
+    // ProofMapIndex,
+};
+use failure::Error;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
+use std::{borrow::Cow, convert::AsRef};
 use utils::keypair::{CryptoKeypair, Keypair, KeypairType, PublicKey, Verify};
 use utils::serializer::{serialize, serialize_hash256, Deserialize, Serialize};
-
-use crate::transaction::{SignedTransaction, TransactionPool, Txn, TxnPool, TxnPoolValueType};
 
 const PEER_ID: &str = "static Id";
 
@@ -58,6 +72,18 @@ impl BlockTraits<KeypairType> for Block {
         sign
     }
 }
+
+impl BinaryValue for Block {
+    fn to_bytes(&self) -> Vec<u8> {
+        bincode::serialize(self).unwrap()
+    }
+
+    fn from_bytes(bytes: Cow<'_, [u8]>) -> Result<Self, Error> {
+        bincode::deserialize(bytes.as_ref()).map_err(From::from)
+    }
+}
+
+impl_object_hash_for_binary_value! { Block}
 
 impl BlockchainTraits for BlockChain {
     // create genesis block and set its hash as root_hash of blockchain
@@ -128,7 +154,7 @@ impl BlockchainTraits for BlockChain {
         self.add_block(new_block);
     }
 
-    fn print_acc_bals(&self){
+    fn print_acc_bals(&self) {
         println!("Accounts Current Balance ");
         println!("{:?}", self.accounts_bal);
     }
@@ -138,23 +164,30 @@ pub fn poa_with_sep_th() {
     let block_chain_obj = BlockChain::new();
     let block: Block = block_chain_obj.get_root_block();
     let sign = block.sign(&block_chain_obj.keypair);
-    let validate = block.validate(&hex::encode(block_chain_obj.keypair.public().encode()), &sign);
+    let validate = block.validate(
+        &hex::encode(block_chain_obj.keypair.public().encode()),
+        &sign,
+    );
     println!("{}", validate);
     let object = Arc::new(Mutex::new(block_chain_obj));
-
+    // {
+    //     let txn_trie: ProofMapIndex<_, Hash, Txn> = ProofMapIndex::new(name, &fork);
+    //     let blocks: ProofListIndex<_, Block> = ProofListIndex::new(name, &fork);
+    // }
     let mut threads = Vec::new();
     let clone1 = object.clone();
-    let handle = thread::spawn(move || {
-        
-        loop{
-            thread::sleep(Duration::from_millis(1000));
-            let mut db_obj = clone1.lock().unwrap();
-            db_obj.generate_block();
-            println!("block proposed and committed");
-            println!("(txn_pool_len, blockchain_len) -> ({}, {})", db_obj.txn_pool.length_op(), db_obj.block_chain_length());
-            if db_obj.block_chain_length() % 10 == 0{
-                db_obj.print_acc_bals();
-            }
+    let handle = thread::spawn(move || loop {
+        thread::sleep(Duration::from_millis(1000));
+        let mut db_obj = clone1.lock().unwrap();
+        db_obj.generate_block();
+        println!("block proposed and committed");
+        println!(
+            "(txn_pool_len, blockchain_len) -> ({}, {})",
+            db_obj.txn_pool.length_op(),
+            db_obj.block_chain_length()
+        );
+        if db_obj.block_chain_length() % 10 == 0 {
+            db_obj.print_acc_bals();
         }
     });
     threads.push(handle);
@@ -171,8 +204,6 @@ pub fn poa_with_sep_th() {
             // println!("lenght {:?}", db_obj.txn_pool.length_op());
         });
     }
-    
-    
     // println!("Workers successfully started.");
     // for handle in threads {
     //     handle.join().unwrap();

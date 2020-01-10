@@ -1,10 +1,24 @@
 extern crate utils;
 use chrono::prelude::*;
-use std::collections::{HashMap, BTreeMap};
+use exonum_crypto::Hash;
+use exonum_merkledb::{
+    impl_object_hash_for_binary_value,
+    BinaryValue,
+    // Fork,
+    // IndexAccess,
+    // ListIndex,
+    // MapIndex,
+    ObjectHash,
+    // ProofListIndex,
+    // ProofMapIndex,
+};
+use failure::Error;
+use std::{borrow::Cow, convert::AsRef};
+
+use std::collections::{BTreeMap, HashMap};
+use std::time::Instant;
 use utils::keypair::{CryptoKeypair, Keypair, KeypairType, PublicKey, Verify};
 use utils::serializer::{serialize, Deserialize, Serialize};
-use std::time::Instant;
-
 pub trait Txn {
     type T;
     type U;
@@ -111,13 +125,24 @@ impl Txn for SignedTransaction {
     }
 }
 
+impl BinaryValue for SignedTransaction {
+    fn to_bytes(&self) -> Vec<u8> {
+        bincode::serialize(self).unwrap()
+    }
+
+    fn from_bytes(bytes: Cow<'_, [u8]>) -> Result<Self, Error> {
+        bincode::deserialize(bytes.as_ref()).map_err(From::from)
+    }
+}
+
+impl_object_hash_for_binary_value! { SignedTransaction}
+
 pub type TxnPoolKeyType = Instant;
 pub type TxnPoolValueType = SignedTransaction;
 
 pub trait TxnPool {
     type T;
     type U;
-    
     fn new() -> Self;
     fn delete_op(&mut self, key: &Self::T);
     fn pop_front(&mut self) -> Self::U;
@@ -148,7 +173,7 @@ impl TxnPool for TransactionPool {
         }
     }
 
-    fn pop_front(&mut self) -> Self::U{
+    fn pop_front(&mut self) -> Self::U {
         let (first_key, first_value) = self.pool.iter().next().unwrap();
         let value = first_value.clone();
         let key = first_key.clone();
@@ -168,17 +193,19 @@ impl TxnPool for TransactionPool {
         let mut temp_vec = Vec::<Self::U>::with_capacity(10);
         while temp_vec.len() < 10 && self.length_op() > 0 {
             let txn: TxnPoolValueType = self.pop_front();
-            if txn.validate(){
-                if acc_data_base.contains_key(&txn.txn.from){
+            if txn.validate() {
+                if acc_data_base.contains_key(&txn.txn.from) {
                     let from_bal = acc_data_base.get(&txn.txn.from).unwrap().clone();
-                    if from_bal > txn.txn.amount{                        
-                        if acc_data_base.contains_key(&txn.txn.to){
-                            let new_bal = txn.txn.amount + acc_data_base.get(&txn.txn.to).unwrap().clone();
+                    if from_bal > txn.txn.amount {
+                        if acc_data_base.contains_key(&txn.txn.to) {
+                            let new_bal =
+                                txn.txn.amount + acc_data_base.get(&txn.txn.to).unwrap().clone();
                             acc_data_base.insert(txn.txn.to.clone(), new_bal);
-                        }else{
+                        } else {
                             acc_data_base.insert(txn.txn.to.clone(), txn.txn.amount.clone());
                         }
-                        acc_data_base.insert(txn.txn.from.clone(), from_bal - txn.txn.amount.clone());
+                        acc_data_base
+                            .insert(txn.txn.from.clone(), from_bal - txn.txn.amount.clone());
                         temp_vec.push(txn);
                     }
                 }
@@ -203,7 +230,7 @@ mod tests_transactions {
         let time_instant = Instant::now();
         transaction_pool.insert_op(&time_instant, &two);
 
-        let exexuted_pool = transaction_pool.execute(&mut HashMap::<String,u32>::new());
+        let exexuted_pool = transaction_pool.execute(&mut HashMap::<String, u32>::new());
         println!("{:?}", exexuted_pool);
     }
 }
