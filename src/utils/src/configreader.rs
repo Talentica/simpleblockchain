@@ -18,13 +18,14 @@ pub enum NODETYPE {
     FullNode,
     Validator,
 }
-
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TomlReaderConfig {
     pub public: String,
     pub secret: String,
     node_type: i32,
     genesis_block: bool,
+    //p2p
+    p2p_port: u16,
     //db config
     dbpath: String,
 }
@@ -33,7 +34,6 @@ pub struct TomlReaderConfig {
 pub struct Configuration {
     //Node
     pub node: Node,
-    //P2P config
     //peers list
 
     //Database config
@@ -54,6 +54,7 @@ impl Configuration {
             keypair: keypair,
             node_type: NODETYPE::FullNode,
             genesis_block: true,
+            p2p_port : 4444,
         };
         let db_path: Database = Database {
             dbpath: "utils/rocksdb".to_string(),
@@ -74,7 +75,7 @@ impl Configuration {
             ),
         };
         println!(">> Current Working Directory: {}", cwd);
-        let config_file_path: String = cwd + &String::from("\\config.toml");
+        let config_file_path: String = cwd + &String::from("/config.toml");
         println!("path = {}", config_file_path);
         let mut config_file = match File::open(config_file_path) {
             Ok(f) => f,
@@ -97,6 +98,7 @@ pub struct Node {
     pub keypair: crypto::keypair::KeypairType,
     pub node_type: NODETYPE,
     pub genesis_block: bool,
+    pub p2p_port: u16,
 }
 
 #[derive(Debug)]

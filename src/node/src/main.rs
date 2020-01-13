@@ -17,9 +17,26 @@ use utils::configreader::Configuration;
 
 use utils::crypto::keypair;
 
+pub trait Message {
+    const TOPIC: &'static str;
+    fn handler(&self);
+}
+
+pub struct TransactionCreate {}
+
+impl Message for TransactionCreate {
+    const TOPIC: &'static str = "txn-create";
+    fn handler(&self) {}
+}
+
+pub struct BlockCreate {}
+impl Message for BlockCreate {
+    const TOPIC: &'static str = "block-create";
+    fn handler(&self) {}
+}
 pub enum MessageTypes {
-    TransactionCreate,
-    BlockCreate,
+    TransactionCreate(TransactionCreate),
+    BlockCreate(BlockCreate),
     BlockFinalize,
     MsgTest,
 }
@@ -31,6 +48,22 @@ struct P2PBehaviour<TSubstream: AsyncRead + AsyncWrite> {
     floodsub: Floodsub<TSubstream>,
     mdns: Mdns<TSubstream>,
 }
+
+impl<TSubstream: AsyncRead + AsyncWrite> P2PBehaviour<TSubstream> {
+    pub fn new(peer_id: PeerId) -> Self {
+        let mdns = task::block_on(Mdns::new()).unwrap();
+        let mut behaviour = P2PBehaviour {
+            floodsub: Floodsub::new(peer_id.clone()),
+            mdns,
+        };
+        behaviour
+    }
+    pub fn subscribe(&mut self, topic_str: String) {
+        let floodsub_topic = floodsub::TopicBuilder::new(topic_str).build();
+        self.floodsub.subscribe(floodsub_topic);
+    }
+}
+
 impl<TSubstream: AsyncRead + AsyncWrite> NetworkBehaviourEventProcess<MdnsEvent>
     for P2PBehaviour<TSubstream>
 {
@@ -71,76 +104,67 @@ impl<TSubstream: AsyncRead + AsyncWrite> NetworkBehaviourEventProcess<FloodsubEv
     }
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
+pub struct SimpleSwarm;
+
+impl SimpleSwarm {
+    pub fn process(peer_id: PeerId, config: &Configuration) -> Result<(), Box<dyn Error>> {
+        let transport = libp2p::build_tcp_ws_secio_mplex_yamux(libp2p::identity::Keypair::Ed25519(
+            config.node.keypair.clone(),
+        ))
+        .unwrap();
+
+        let mut swarm = {
+            let mut behaviour = P2PBehaviour::new(peer_id.clone());
+            behaviour.subscribe(String::from(TransactionCreate::TOPIC));
+            Swarm::new(transport, behaviour, peer_id)
+        };
+
+        Swarm::listen_on(
+            &mut swarm,
+            format!("{}{}", "/ip4/0.0.0.0/tcp/", config.node.p2p_port)
+                .parse()
+                .unwrap(),
+        )
+        .unwrap();
+
+        let mut listening = false;
+        let mut stdin = io::BufReader::new(io::stdin()).lines();
+
+        task::block_on(future::poll_fn(move |cx: &mut Context| {
+            loop {
+                match stdin.try_poll_next_unpin(cx)? {
+                    Poll::Ready(Some(line)) => swarm.floodsub.publish(
+                        &floodsub::TopicBuilder::new(TransactionCreate::TOPIC).build(),
+                        line.as_bytes(),
+                    ),
+                    Poll::Ready(None) => panic!("Stdin closed"),
+                    Poll::Pending => break,
+                }
+            }
+            loop {
+                match swarm.poll_next_unpin(cx) {
+                    Poll::Ready(Some(event)) => println!("{:?}", event),
+                    Poll::Ready(None) => return Poll::Ready(Ok(())),
+                    Poll::Pending => {
+                        if !listening {
+                            if let Some(a) = Swarm::listeners(&swarm).next() {
+                                println!("Listening on {:?}", a);
+                                listening = true;
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+            Poll::Pending
+        }))
+    }
+}
+
+fn main() {
     let config: &Configuration = &configreader::GLOBAL_CONFIG;
     let peer_id = PeerId::from_public_key(config.node.public.clone());
     println!("peer id = {:?}", peer_id);
-    let transport = libp2p::build_development_transport(libp2p::identity::Keypair::Ed25519(
-        // let transport = libp2p::build_tcp_ws_secio_mplex_yamux(libp2p::identity::Keypair::Ed25519(
-        config.node.keypair.clone(),
-    ))
-    .unwrap();
-    // Create a Floodsub topic
-    let floodsub_topic = floodsub::TopicBuilder::new("txn-messages").build();
-
-    let mut swarm = {
-        let mdns = task::block_on(Mdns::new()).unwrap();
-        let mut behaviour = P2PBehaviour {
-            floodsub: Floodsub::new(peer_id.clone()),
-            mdns,
-        };
-        behaviour.floodsub.subscribe(floodsub_topic.clone());
-        Swarm::new(transport, behaviour, peer_id)
-    };
-
-    Swarm::listen_on(
-        &mut swarm,
-        format!("{}{}", "/ip4/0.0.0.0/tcp/", "4444")
-            .parse()
-            .unwrap(),
-    )
-    .unwrap();
-
-    //connect to all peers
-    // let mut peers_list: Vec<String> = Vec::new(); //config.node.peers;
-    // peers_list.push(String::from(format!("{}{}", "/ip4/0.0.0.0/tcp/", port1)));
-    //peers_list.push(String::from(format!("{}{}", "/ip4/0.0.0.0/tcp/", port2)));
-    // peers_list.push(String::from("/ip4/0.0.0.0/tcp/4446"));
-    // for peer in peers_list {
-    //     let multi_addr = peer.parse::<Multiaddr>().unwrap();
-    //     match libp2p::Swarm::dial_addr(&mut swarm, multi_addr.clone()) {
-    //         Ok(_) => println!("Dialed {:?}", peer),
-    //         Err(e) => println!("Dial {:?} failed: {:?}", multi_addr, e),
-    //     }
-    // }
-
-    // Read full lines from stdin
-    let mut stdin = io::BufReader::new(io::stdin()).lines();
-
-    let mut listening = false;
-    task::block_on(future::poll_fn(move |cx: &mut Context| {
-        loop {
-            match stdin.try_poll_next_unpin(cx)? {
-                Poll::Ready(Some(line)) => swarm.floodsub.publish(&floodsub_topic, line.as_bytes()),
-                Poll::Ready(None) => panic!("Stdin closed"),
-                Poll::Pending => break,
-            }
-        }
-        loop {
-            match swarm.poll_next_unpin(cx) {
-                Poll::Ready(Some(event)) => println!("{:?}", event),
-                Poll::Ready(None) => return Poll::Ready(Ok(())),
-                Poll::Pending => {
-                    if !listening {
-                        if let Some(a) = Swarm::listeners(&swarm).next() {
-                            println!("Listening on {:?}", a);
-                            listening = true;
-                        }
-                    }
-                    break;
-                }
-            }
-        }
-        Poll::Pending
-    }))
+    SimpleSwarm::process(peer_id, config);
+    // let transport = libp2p::build_development_transport(libp2p::identity::Keypair::Ed25519(
 }
