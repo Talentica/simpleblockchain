@@ -1,3 +1,7 @@
+pub mod messages;
+pub mod p2pbehaviour;
+pub mod simpleswarm;
+
 #[cfg(test)]
 mod tests {
     #[test]

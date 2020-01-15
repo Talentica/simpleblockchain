@@ -54,7 +54,7 @@ impl Configuration {
             keypair: keypair,
             node_type: NODETYPE::FullNode,
             genesis_block: true,
-            p2p_port : 4444,
+            p2p_port: 4444,
         };
         let db_path: Database = Database {
             dbpath: "utils/rocksdb".to_string(),
