@@ -1,60 +1,44 @@
 extern crate utils;
-use crate::transaction::{SignedTransaction, TransactionPool, Txn, TxnPool, TxnPoolValueType};
 use exonum_crypto::Hash;
-use exonum_merkledb::{
-    // access::{Access, RawAccessMut},
-    impl_object_hash_for_binary_value,
-    BinaryValue,
-    // Fork,
-    // IndexAccess,
-    // ListIndex,
-    // MapIndex,
-    ObjectHash,
-    // ProofListIndex,
-    // ProofMapIndex,
-};
+use exonum_merkledb::{impl_object_hash_for_binary_value, BinaryValue, ObjectHash};
 use failure::Error;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
-use std::thread;
-use std::time::{Duration, Instant};
 use std::{borrow::Cow, convert::AsRef};
 use utils::keypair::{CryptoKeypair, Keypair, KeypairType, PublicKey, Verify};
-use utils::serializer::{serialize, serialize_hash256, Deserialize, Serialize};
-
-const PEER_ID: &str = "static Id";
+use utils::serializer::{serialize, Deserialize, Serialize};
 
 pub trait BlockTraits<T> {
     fn validate(&self, publickey: &String, signature: &[u8]) -> bool;
     fn sign(&self, kp: &T) -> Vec<u8>;
+    fn genesis_block() -> Self;
+    fn new_block(
+        id: u64,
+        peer_id: String,
+        prev_hash: Hash,
+        txn_pool: Vec<Hash>,
+        header: HashMap<String, Hash>,
+    ) -> Self;
 }
 
-pub trait BlockchainTraits {
-    fn new() -> Self;
-    fn block_chain_length(&self) -> usize;
-    fn get_root_hash(&self) -> String;
-    fn get_root_block(&self) -> Block;
-    fn get_block(&self, block_hash: String) -> Block;
-    fn add_block(&mut self, block: Block);
-    fn generate_block(&mut self);
-    // print_acc_bals is just for testing purpose..
-    fn print_acc_bals(&self);
+pub trait SignedBlockTraits<T> {
+    fn validate(&self, publickey: &String) -> bool;
+    fn create_block(block: Block, sig: Vec<u8>) -> Self;
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
 pub struct Block {
-    id: u32,
-    peer_id: String,
-    prev_hash: String,
-    txn_pool: Vec<TxnPoolValueType>,
+    pub id: u64,
+    pub peer_id: String,
+    pub prev_hash: Hash,
+    pub txn_pool: Vec<Hash>,
+    // txn_trie, state_trie, storage_trie
+    pub header: HashMap<String, Hash>,
 }
 
-pub struct BlockChain {
-    keypair: KeypairType,
-    blocks: HashMap<String, Block>,
-    root_hash: String,
-    txn_pool: TransactionPool,
-    accounts_bal: HashMap<String, u32>,
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+pub struct SignedBlock {
+    pub block: Block,
+    pub signature: Vec<u8>,
 }
 
 impl BlockTraits<KeypairType> for Block {
@@ -71,9 +55,46 @@ impl BlockTraits<KeypairType> for Block {
         let sign = Keypair::sign(&kp, &ser_block);
         sign
     }
+
+    fn genesis_block() -> Block {
+        Block {
+            id: 0,
+            peer_id: String::from("to_be_decided"),
+            prev_hash: Hash::zero(),
+            txn_pool: vec![],
+            header: HashMap::new(),
+        }
+    }
+
+    fn new_block(
+        id: u64,
+        peer_id: String,
+        prev_hash: Hash,
+        txn_pool: Vec<Hash>,
+        header: HashMap<String, Hash>,
+    ) -> Block {
+        Block {
+            id,
+            peer_id,
+            prev_hash,
+            txn_pool,
+            header,
+        }
+    }
 }
 
-impl BinaryValue for Block {
+impl SignedBlockTraits<KeypairType> for SignedBlock {
+    fn validate(&self, publickey: &String) -> bool {
+        let ser_block = serialize(&self.block);
+        PublicKey::verify_from_encoded_pk(&publickey, &ser_block, &self.signature)
+    }
+
+    fn create_block(block: Block, signature: Vec<u8>) -> SignedBlock {
+        SignedBlock { block, signature }
+    }
+}
+
+impl BinaryValue for SignedBlock {
     fn to_bytes(&self) -> Vec<u8> {
         bincode::serialize(self).unwrap()
     }
@@ -83,159 +104,43 @@ impl BinaryValue for Block {
     }
 }
 
-impl_object_hash_for_binary_value! { Block}
-
-impl BlockchainTraits for BlockChain {
-    // create genesis block and set its hash as root_hash of blockchain
-    fn new() -> Self {
-        let genesis_block = Block {
-            id: 0,
-            peer_id: PEER_ID.to_string(),
-            prev_hash: String::from(""),
-            txn_pool: vec![],
-        };
-        let genesis_block_hash = serialize_hash256(&genesis_block);
-        let mut genesis_block_hash_to_str = String::new();
-        genesis_block_hash_to_str.push_str(&String::from_utf8_lossy(&genesis_block_hash));
-        let mut blocks = HashMap::new();
-        blocks.insert(genesis_block_hash_to_str.clone(), genesis_block);
-        let keypair = Keypair::generate();
-        let mut accounts_bal: HashMap<String, u32> = HashMap::new();
-        let peer_pk = hex::encode(Keypair::public(&keypair).encode());
-        accounts_bal.insert(peer_pk, 1_00_000);
-        Self {
-            keypair,
-            blocks,
-            root_hash: genesis_block_hash_to_str,
-            txn_pool: TransactionPool::new(),
-            accounts_bal,
-        }
-    }
-
-    fn block_chain_length(&self) -> usize {
-        self.blocks.len()
-    }
-
-    fn get_root_hash(&self) -> String {
-        // unimplemented!();
-        self.root_hash.clone()
-    }
-
-    fn get_root_block(&self) -> Block {
-        self.blocks.get(&self.root_hash).unwrap().clone()
-        // unimplemented!();
-    }
-
-    fn get_block(&self, _block_hash: String) -> Block {
-        self.blocks.get(&_block_hash).unwrap().clone()
-        // unimplemented!();
-    }
-
-    fn add_block(&mut self, block: Block) {
-        // unimplemented!();
-        let block_hash = serialize_hash256(&block);
-        let mut block_hash_to_str = String::new();
-        block_hash_to_str.push_str(&String::from_utf8_lossy(&block_hash));
-        self.blocks.insert(block_hash_to_str.clone(), block);
-        self.root_hash = block_hash_to_str;
-    }
-
-    fn generate_block(&mut self) {
-        let prev_block = self.get_root_block();
-        let id: u32 = prev_block.id + 1;
-        let prev_hash = self.get_root_hash();
-        let executed_txns = self.txn_pool.execute(&mut self.accounts_bal);
-        let new_block = Block {
-            id,
-            peer_id: PEER_ID.to_string(),
-            prev_hash,
-            txn_pool: executed_txns,
-        };
-        self.add_block(new_block);
-    }
-
-    fn print_acc_bals(&self) {
-        println!("Accounts Current Balance ");
-        println!("{:?}", self.accounts_bal);
-    }
-}
-
-pub fn poa_with_sep_th() {
-    let block_chain_obj = BlockChain::new();
-    let block: Block = block_chain_obj.get_root_block();
-    let sign = block.sign(&block_chain_obj.keypair);
-    let validate = block.validate(
-        &hex::encode(block_chain_obj.keypair.public().encode()),
-        &sign,
-    );
-    println!("{}", validate);
-    let object = Arc::new(Mutex::new(block_chain_obj));
-    // {
-    //     let txn_trie: ProofMapIndex<_, Hash, Txn> = ProofMapIndex::new(name, &fork);
-    //     let blocks: ProofListIndex<_, Block> = ProofListIndex::new(name, &fork);
-    // }
-    let mut threads = Vec::new();
-    let clone1 = object.clone();
-    let handle = thread::spawn(move || loop {
-        thread::sleep(Duration::from_millis(1000));
-        let mut db_obj = clone1.lock().unwrap();
-        db_obj.generate_block();
-        println!("block proposed and committed");
-        println!(
-            "(txn_pool_len, blockchain_len) -> ({}, {})",
-            db_obj.txn_pool.length_op(),
-            db_obj.block_chain_length()
-        );
-        if db_obj.block_chain_length() % 10 == 0 {
-            db_obj.print_acc_bals();
-        }
-    });
-    threads.push(handle);
-
-    loop {
-        thread::sleep(Duration::from_millis(99));
-        let clone = object.clone();
-        // thread for adding txn into txn_pool
-        thread::spawn(move || {
-            let mut db_obj = clone.lock().unwrap();
-            let one = SignedTransaction::generate(&db_obj.keypair);
-            let time_instant = Instant::now();
-            db_obj.txn_pool.insert_op(&time_instant, &one);
-            // println!("lenght {:?}", db_obj.txn_pool.length_op());
-        });
-    }
-    // println!("Workers successfully started.");
-    // for handle in threads {
-    //     handle.join().unwrap();
-    // }
-    // println!("{:?}", object.lock().unwrap().get_root_hash());
-    // println!("{:?}", object.lock().unwrap().block_chain_length());
-}
+impl_object_hash_for_binary_value! { SignedBlock}
 
 #[cfg(test)]
 mod tests_blocks {
 
     #[test]
-    pub fn main_block() {
+    pub fn test_block() {
         use super::*;
-        let mut block_chain = BlockChain::new();
-        let block: Block = block_chain.get_root_block();
-        let sign = block.sign(&block_chain.keypair);
-        let validate = block.validate(&hex::encode(block_chain.keypair.public().encode()), &sign);
+        use crate::transaction::{SignedTransaction, Txn};
+        let block: Block = Block {
+            id: 0,
+            peer_id: String::from("peer_id"),
+            prev_hash: Hash::zero(),
+            txn_pool: vec![],
+            header: HashMap::new(),
+        };
+        let kp = Keypair::generate();
+        let public_key = &hex::encode(kp.public().encode());
+        let sign = block.sign(&kp);
+        let signed_block: SignedBlock = SignedBlock::create_block(block, sign);
+        println!("{}", signed_block.validate(&public_key));
+        let mut txn_pool = vec![];
+        for _i in 0..5 {
+            let signed_txn = SignedTransaction::generate(&kp);
+            txn_pool.push(signed_txn);
+        }
+        let prev_hash = signed_block.object_hash();
+        let id = signed_block.block.id;
+        let block: Block = Block {
+            id: id + 1,
+            peer_id: String::from("peer_id"),
+            prev_hash,
+            txn_pool: vec![],
+            header: HashMap::new(),
+        };
+        let sign = block.sign(&kp);
+        let validate = block.validate(&hex::encode(kp.public().encode()), &sign);
         println!("{}", validate);
-        // add txn into txnpool
-        for _i in 0..50 {
-            let signed_txn = SignedTransaction::generate(&block_chain.keypair);
-            let time_instant = Instant::now();
-            block_chain.txn_pool.insert_op(&time_instant, &signed_txn);
-        }
-        while block_chain.txn_pool.length_op() > 0 {
-            thread::sleep(Duration::from_millis(100));
-            block_chain.generate_block();
-            println!("{:?}", block_chain.txn_pool.length_op());
-            println!("{}", block_chain.block_chain_length());
-        }
-        println!("--{}--", block_chain.get_root_hash());
-        // println!("{:?}", block_chain.get_root_block());
     }
 }

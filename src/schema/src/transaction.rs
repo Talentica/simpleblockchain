@@ -1,17 +1,7 @@
 extern crate utils;
 use chrono::prelude::*;
 use exonum_crypto::Hash;
-use exonum_merkledb::{
-    impl_object_hash_for_binary_value,
-    BinaryValue,
-    // Fork,
-    // IndexAccess,
-    // ListIndex,
-    // MapIndex,
-    ObjectHash,
-    // ProofListIndex,
-    // ProofMapIndex,
-};
+use exonum_merkledb::{impl_object_hash_for_binary_value, BinaryValue, ObjectHash};
 use failure::Error;
 use std::{borrow::Cow, convert::AsRef};
 
@@ -28,7 +18,7 @@ pub trait Txn {
     fn sign(&self, kp: &Self::U) -> Vec<u8>;
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Transaction {
     /* TODO:
     // Priority for a transaction. Additive. Higher is better.
@@ -39,17 +29,17 @@ pub struct Transaction {
     // Tag for a transaction. No two transactions with the same tag should be placed on-chain.
     pub type TransactionTag = Vec<u8>;
     */
-    nonce: u64,
-    from: String,
-    to: String,
-    fxn_call: String,
+    pub nonce: u64,
+    pub from: String,
+    pub to: String,
+    pub fxn_call: String,
     // TODO:: payload is for fxn_call variables
     // update payload type and add/remove in future as per requirement
-    payload: HashMap<String, String>,
-    amount: u32,
+    pub payload: HashMap<String, String>,
+    pub amount: u64,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct SignedTransaction {
     pub txn: Transaction,
     // TODO::
@@ -148,12 +138,13 @@ pub trait TxnPool {
     fn pop_front(&mut self) -> Self::U;
     fn insert_op(&mut self, key: &Self::T, value: &Self::U);
     fn length_op(&self) -> usize;
-    fn execute(&mut self, acc_data_base: &mut HashMap<String, u32>) -> Vec<Self::U>;
+    fn get(&self, key: &Self::T) -> Option<&Self::U>;
+    fn execute(&mut self, acc_data_base: &mut HashMap<String, u64>) -> Vec<Hash>;
 }
 
 #[derive(Debug, Clone)]
 pub struct TransactionPool {
-    pool: BTreeMap<TxnPoolKeyType, TxnPoolValueType>,
+    pub pool: BTreeMap<TxnPoolKeyType, TxnPoolValueType>,
 }
 
 impl TxnPool for TransactionPool {
@@ -189,8 +180,16 @@ impl TxnPool for TransactionPool {
         self.pool.len()
     }
 
-    fn execute(&mut self, acc_data_base: &mut HashMap<String, u32>) -> Vec<Self::U> {
-        let mut temp_vec = Vec::<Self::U>::with_capacity(10);
+    fn get(&self, key: &Self::T) -> Option<&Self::U> {
+        if self.pool.contains_key(key) {
+            return self.pool.get(&key);
+        } else {
+            return Option::None;
+        }
+    }
+
+    fn execute(&mut self, acc_data_base: &mut HashMap<String, u64>) -> Vec<Hash> {
+        let mut temp_vec = Vec::<Hash>::with_capacity(10);
         while temp_vec.len() < 10 && self.length_op() > 0 {
             let txn: TxnPoolValueType = self.pop_front();
             if txn.validate() {
@@ -206,7 +205,7 @@ impl TxnPool for TransactionPool {
                         }
                         acc_data_base
                             .insert(txn.txn.from.clone(), from_bal - txn.txn.amount.clone());
-                        temp_vec.push(txn);
+                        temp_vec.push(txn.object_hash());
                     }
                 }
             }
@@ -230,7 +229,7 @@ mod tests_transactions {
         let time_instant = Instant::now();
         transaction_pool.insert_op(&time_instant, &two);
 
-        let exexuted_pool = transaction_pool.execute(&mut HashMap::<String, u32>::new());
+        let exexuted_pool = transaction_pool.execute(&mut HashMap::<String, u64>::new());
         println!("{:?}", exexuted_pool);
     }
 }
