@@ -2,7 +2,6 @@ extern crate utils;
 use exonum_crypto::Hash;
 use exonum_merkledb::{impl_object_hash_for_binary_value, BinaryValue, ObjectHash};
 use failure::Error;
-use std::collections::HashMap;
 use std::{borrow::Cow, convert::AsRef};
 use utils::keypair::{CryptoKeypair, Keypair, KeypairType, PublicKey, Verify};
 use utils::serializer::{serialize, Deserialize, Serialize};
@@ -16,7 +15,7 @@ pub trait BlockTraits<T> {
         peer_id: String,
         prev_hash: Hash,
         txn_pool: Vec<Hash>,
-        header: HashMap<String, Hash>,
+        header: [Hash; 3],
     ) -> Self;
 }
 
@@ -32,7 +31,7 @@ pub struct Block {
     pub prev_hash: Hash,
     pub txn_pool: Vec<Hash>,
     // txn_trie, state_trie, storage_trie
-    pub header: HashMap<String, Hash>,
+    pub header: [Hash; 3],
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
@@ -62,7 +61,7 @@ impl BlockTraits<KeypairType> for Block {
             peer_id: String::from("to_be_decided"),
             prev_hash: Hash::zero(),
             txn_pool: vec![],
-            header: HashMap::new(),
+            header: [Hash::zero(), Hash::zero(), Hash::zero()],
         }
     }
 
@@ -71,7 +70,7 @@ impl BlockTraits<KeypairType> for Block {
         peer_id: String,
         prev_hash: Hash,
         txn_pool: Vec<Hash>,
-        header: HashMap<String, Hash>,
+        header: [Hash; 3],
     ) -> Block {
         Block {
             id,
@@ -113,13 +112,7 @@ mod tests_blocks {
     pub fn test_block() {
         use super::*;
         use crate::transaction::{SignedTransaction, Txn};
-        let block: Block = Block {
-            id: 0,
-            peer_id: String::from("peer_id"),
-            prev_hash: Hash::zero(),
-            txn_pool: vec![],
-            header: HashMap::new(),
-        };
+        let block: Block = Block::genesis_block();
         let kp = Keypair::generate();
         let public_key = &hex::encode(kp.public().encode());
         let sign = block.sign(&kp);
@@ -137,7 +130,7 @@ mod tests_blocks {
             peer_id: String::from("peer_id"),
             prev_hash,
             txn_pool: vec![],
-            header: HashMap::new(),
+            header: [Hash::zero(), Hash::zero(), Hash::zero()],
         };
         let sign = block.sign(&kp);
         let validate = block.validate(&hex::encode(kp.public().encode()), &sign);

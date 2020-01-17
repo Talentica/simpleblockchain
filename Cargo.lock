@@ -1480,6 +1480,7 @@ dependencies = [
 name = "node"
 version = "0.1.0"
 dependencies = [
+ "chrono 0.4.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "consensus 0.1.0",
  "hex 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",

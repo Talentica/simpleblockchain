@@ -5,8 +5,7 @@ use exonum_merkledb::{impl_object_hash_for_binary_value, BinaryValue, ObjectHash
 use failure::Error;
 use std::{borrow::Cow, convert::AsRef};
 
-use std::collections::{BTreeMap, HashMap};
-use std::time::Instant;
+use std::collections::HashMap;
 use utils::keypair::{CryptoKeypair, Keypair, KeypairType, PublicKey, Verify};
 use utils::serializer::{serialize, Deserialize, Serialize};
 pub trait Txn {
@@ -16,6 +15,13 @@ pub trait Txn {
     fn generate(kp: &Self::U) -> Self::T;
     fn validate(&self) -> bool;
     fn sign(&self, kp: &Self::U) -> Vec<u8>;
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub enum DataTypes {
+    String,
+    Vec(String),
+    Number(u64),
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -35,7 +41,7 @@ pub struct Transaction {
     pub fxn_call: String,
     // TODO:: payload is for fxn_call variables
     // update payload type and add/remove in future as per requirement
-    pub payload: HashMap<String, String>,
+    pub payload: Vec<DataTypes>,
     pub amount: u64,
 }
 
@@ -72,7 +78,7 @@ impl Txn for Transaction {
             to,
             amount: 32,
             fxn_call: String::from("transfer"),
-            payload: HashMap::default(),
+            payload: vec![],
         }
     }
 }
@@ -102,7 +108,7 @@ impl Txn for SignedTransaction {
             to,
             amount: 32,
             fxn_call: String::from("transfer"),
-            payload: HashMap::default(),
+            payload: vec![],
         };
         let txn_sign = txn.sign(&kp);
         let mut header = HashMap::default();
@@ -127,109 +133,15 @@ impl BinaryValue for SignedTransaction {
 
 impl_object_hash_for_binary_value! { SignedTransaction}
 
-pub type TxnPoolKeyType = Instant;
-pub type TxnPoolValueType = SignedTransaction;
-
-pub trait TxnPool {
-    type T;
-    type U;
-    fn new() -> Self;
-    fn delete_op(&mut self, key: &Self::T);
-    fn pop_front(&mut self) -> Self::U;
-    fn insert_op(&mut self, key: &Self::T, value: &Self::U);
-    fn length_op(&self) -> usize;
-    fn get(&self, key: &Self::T) -> Option<&Self::U>;
-    fn execute(&mut self, acc_data_base: &mut HashMap<String, u64>) -> Vec<Hash>;
-}
-
-#[derive(Debug, Clone)]
-pub struct TransactionPool {
-    pub pool: BTreeMap<TxnPoolKeyType, TxnPoolValueType>,
-}
-
-impl TxnPool for TransactionPool {
-    type T = TxnPoolKeyType;
-    type U = TxnPoolValueType;
-
-    fn new() -> TransactionPool {
-        TransactionPool {
-            pool: BTreeMap::new(),
-        }
-    }
-
-    fn delete_op(&mut self, key: &Self::T) {
-        // let (key, value) = m.lock().unwrap().pop_first().unwrap(); // lock the mutex, remove a value, unlock
-        if self.pool.contains_key(key) {
-            self.pool.remove(key);
-        }
-    }
-
-    fn pop_front(&mut self) -> Self::U {
-        let (first_key, first_value) = self.pool.iter().next().unwrap();
-        let value = first_value.clone();
-        let key = first_key.clone();
-        self.delete_op(&key);
-        value
-    }
-
-    fn insert_op(&mut self, key: &Self::T, value: &Self::U) {
-        self.pool.insert(key.clone(), value.clone());
-    }
-
-    fn length_op(&self) -> usize {
-        self.pool.len()
-    }
-
-    fn get(&self, key: &Self::T) -> Option<&Self::U> {
-        if self.pool.contains_key(key) {
-            return self.pool.get(&key);
-        } else {
-            return Option::None;
-        }
-    }
-
-    fn execute(&mut self, acc_data_base: &mut HashMap<String, u64>) -> Vec<Hash> {
-        let mut temp_vec = Vec::<Hash>::with_capacity(10);
-        while temp_vec.len() < 10 && self.length_op() > 0 {
-            let txn: TxnPoolValueType = self.pop_front();
-            if txn.validate() {
-                if acc_data_base.contains_key(&txn.txn.from) {
-                    let from_bal = acc_data_base.get(&txn.txn.from).unwrap().clone();
-                    if from_bal > txn.txn.amount {
-                        if acc_data_base.contains_key(&txn.txn.to) {
-                            let new_bal =
-                                txn.txn.amount + acc_data_base.get(&txn.txn.to).unwrap().clone();
-                            acc_data_base.insert(txn.txn.to.clone(), new_bal);
-                        } else {
-                            acc_data_base.insert(txn.txn.to.clone(), txn.txn.amount.clone());
-                        }
-                        acc_data_base
-                            .insert(txn.txn.from.clone(), from_bal - txn.txn.amount.clone());
-                        temp_vec.push(txn.object_hash());
-                    }
-                }
-            }
-        }
-        temp_vec
-    }
-}
-
 #[cfg(test)]
 mod tests_transactions {
 
     #[test]
     pub fn main_transaction() {
         use super::*;
-        let mut transaction_pool = TransactionPool::new();
         let kp = Keypair::generate();
-        let one = SignedTransaction::generate(&kp);
-        let two = SignedTransaction::generate(&kp);
-        let time_instant = Instant::now();
-        transaction_pool.insert_op(&time_instant, &one);
-        let time_instant = Instant::now();
-        transaction_pool.insert_op(&time_instant, &two);
-
-        let exexuted_pool = transaction_pool.execute(&mut HashMap::<String, u64>::new());
-        println!("{:?}", exexuted_pool);
+        let signed_txn = SignedTransaction::generate(&kp);
+        let validate_txn = signed_txn.validate();
+        println!("{:?}", validate_txn);
     }
 }

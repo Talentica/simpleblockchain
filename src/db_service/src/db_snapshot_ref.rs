@@ -4,7 +4,7 @@ extern crate utils;
 
 use exonum_crypto::Hash;
 use exonum_merkledb::{ListIndex, ObjectAccess, ObjectHash, ProofMapIndex};
-use schema::block::{SignedBlock, SignedBlockTraits};
+use schema::block::SignedBlock;
 use schema::transaction::SignedTransaction;
 use schema::wallet::Wallet;
 // use utils::keypair::{CryptoKeypair, Keypair, PublicKey, Verify};
