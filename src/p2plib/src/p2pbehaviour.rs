@@ -59,7 +59,7 @@ impl<TSubstream: AsyncRead + AsyncWrite> NetworkBehaviourEventProcess<FloodsubEv
     fn inject_event(&mut self, pubsub_event: FloodsubEvent) {
         match pubsub_event {
             FloodsubEvent::Message(msg) => {
-                println!("Message received {:?}", msg);
+                println!("Message received from {:?} \ndata = {:?}", msg.source, String::from_utf8(msg.data).unwrap());
             }
             FloodsubEvent::Subscribed { peer_id, topic } => {
                 //println!("subscribed by peer {:?} topic {:?}", peer_id, topic);

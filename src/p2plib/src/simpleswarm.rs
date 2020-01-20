@@ -50,19 +50,6 @@ impl SimpleSwarm {
 
         task::block_on(future::poll_fn(move |cx: &mut Context| {
             loop {
-                match stdin.try_poll_next_unpin(cx)? {
-                    Poll::Ready(Some(line)) => {
-                        swarm.floodsub.publish(
-                            &floodsub::TopicBuilder::new("test-msg").build(),
-                            line.as_bytes(),
-                        );
-                        println!("read data {:?}", line);
-                    }
-                    Poll::Ready(None) => panic!("Stdin closed"),
-                    Poll::Pending => break,
-                }
-            }
-            loop {
                 match swarm.poll_next_unpin(cx) {
                     Poll::Ready(Some(event)) => println!("{:?}", event),
                     Poll::Ready(None) => return Poll::Ready(Ok(())),
