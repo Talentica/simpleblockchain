@@ -44,8 +44,17 @@ impl Wallet {
         self.nonce = self.nonce + 1;
     }
 
-    pub fn set_balance(&mut self, new_bal: u64) {
-        self.balance = new_bal
+    pub fn deduct_balance(&mut self, amount: u64) {
+        self.balance = self.balance - amount;
+    }
+
+    pub fn add_balance(&mut self, amount: u64) {
+        if self.balance > self.balance + amount{
+            panic!("do balance check before fxn calling");
+        }
+        else{
+            self.balance = self.balance + amount;
+        }
     }
 
     pub fn set_storage_root(&mut self, new_storage_root: Hash) {

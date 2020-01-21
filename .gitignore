@@ -32,3 +32,6 @@
 
 #/target
 #**/*.rs.bk
+
+/dbtest
+/src/db_service/dbtest

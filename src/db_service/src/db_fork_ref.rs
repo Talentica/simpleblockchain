@@ -54,7 +54,7 @@ impl<T: ObjectAccess> SchemaFork<T> {
             blocks.push(genesis_block);
             let public_key = hex::encode(Keypair::public(&kp).encode());
             let mut alice_wallet: Wallet = Wallet::new();
-            alice_wallet.set_balance(100000000);
+            alice_wallet.add_balance(100000000);
             wallets.put(&public_key, alice_wallet.clone());
             let alice_wallet = wallets.get(&public_key).unwrap();
             println!("{:?}", alice_wallet);
@@ -68,23 +68,24 @@ impl<T: ObjectAccess> SchemaFork<T> {
         txn_pool: &mut TransactionPool,
         wallet: &mut RefMut<ProofMapIndex<T, String, Wallet>>,
     ) -> Vec<SignedTransaction> {
-        let mut temp_vec = Vec::<SignedTransaction>::with_capacity(10);
-        while temp_vec.len() < 10 && txn_pool.length_order_pool() > 0 {
+        let mut temp_vec = Vec::<SignedTransaction>::with_capacity(15);
+        while temp_vec.len() < 15 && txn_pool.length_order_pool() > 0 {
             let txn: SignedTransaction = txn_pool.pop_front();
             if txn.validate() {
                 if wallet.contains(&txn.txn.from) {
-                    let mut from_wallet = wallet.get(&txn.txn.from).unwrap();
+                    let mut from_wallet: Wallet = wallet.get(&txn.txn.from).unwrap();
                     if from_wallet.get_balance() > txn.txn.amount {
                         if wallet.contains(&txn.txn.to) {
-                            let mut to_wallet = wallet.get(&txn.txn.to).unwrap();
-                            to_wallet.set_balance(to_wallet.get_balance() + txn.txn.amount);
+                            let mut to_wallet: Wallet = wallet.get(&txn.txn.to).unwrap();
+                            to_wallet.add_balance(txn.txn.amount);
                             wallet.put(&txn.txn.to.clone(), to_wallet);
                         } else {
                             let mut to_wallet = Wallet::new();
-                            to_wallet.set_balance(txn.txn.amount);
+                            to_wallet.add_balance(txn.txn.amount);
                             wallet.put(&txn.txn.to.clone(), to_wallet);
                         }
-                        from_wallet.set_balance(from_wallet.get_balance() - txn.txn.amount);
+                        from_wallet.deduct_balance(txn.txn.amount);
+                        from_wallet.increase_nonce();
                         wallet.put(&txn.txn.from.clone(), from_wallet);
                         temp_vec.push(txn);
                     }
@@ -111,7 +112,6 @@ impl<T: ObjectAccess> SchemaFork<T> {
         let last_block: SignedBlock = blocks.get(length - 1).unwrap();
         // println!("{:?}", last_block);
         let prev_hash = last_block.object_hash();
-        println!("prev_hash {:?}", prev_hash);
         let header: [Hash; 3] = [
             wallets.object_hash(),
             storage_trie.object_hash(),
@@ -124,92 +124,6 @@ impl<T: ObjectAccess> SchemaFork<T> {
         let signed_block: SignedBlock = SignedBlock::create_block(block, signature);
         blocks.push(signed_block.clone());
         signed_block
-    }
-
-    pub fn validate_block(&self, block: &Block, txn_pool: &mut TransactionPool) -> bool {
-        let mut wallets = self.state();
-        let mut transaction_trie = self.transactions();
-        let storage_trie = self.storage();
-        // TODO: this logic should be modified after consesus integration
-        if self.validate_transactions(
-            &block.txn_pool,
-            &mut wallets,
-            &mut transaction_trie,
-            &txn_pool,
-        ) {
-            let blocks = self.blocks();
-            let length = blocks.len();
-            let last_block: SignedBlock = blocks.get(length - 1).unwrap();
-            // println!("{:?}", last_block);
-            let prev_hash = last_block.object_hash();
-            println!("{}, {} ", prev_hash, block.prev_hash);
-            println!("{}, {} ", length, block.id);
-            if prev_hash != block.prev_hash {
-                println!("check1");
-                return false;
-            }
-            if length != block.id {
-                println!("check2");
-                return false;
-            }
-            if wallets.object_hash() != block.header[0] {
-                println!("check3");
-                return false;
-            }
-            if storage_trie.object_hash() != block.header[1] {
-                println!("check5");
-                return false;
-            }
-            if transaction_trie.object_hash() != block.header[2] {
-                println!("check4");
-                return false;
-            }
-            return true;
-        } else {
-            println!("check0");
-            return false;
-        }
-    }
-
-    pub fn validate_transactions(
-        &self,
-        hash_vec: &Vec<Hash>,
-        wallet: &mut RefMut<ProofMapIndex<T, String, Wallet>>,
-        transaction_trie: &mut RefMut<ProofMapIndex<T, Hash, SignedTransaction>>,
-        txn_pool: &TransactionPool,
-    ) -> bool {
-        for txn_hash in hash_vec.into_iter() {
-            let txn: SignedTransaction = match txn_pool.get(txn_hash) {
-                None => return false,
-                Some(txn) => txn.clone(),
-            };
-            if txn.validate() {
-                if wallet.contains(&txn.txn.from) {
-                    let mut from_wallet = wallet.get(&txn.txn.from).unwrap();
-                    if from_wallet.get_balance() > txn.txn.amount {
-                        if wallet.contains(&txn.txn.to) {
-                            let mut to_wallet = wallet.get(&txn.txn.to).unwrap();
-                            to_wallet.set_balance(to_wallet.get_balance() + txn.txn.amount);
-                            wallet.put(&txn.txn.to.clone(), to_wallet);
-                        } else {
-                            let mut to_wallet = Wallet::new();
-                            to_wallet.set_balance(txn.txn.amount);
-                            wallet.put(&txn.txn.to.clone(), to_wallet);
-                        }
-                        from_wallet.set_balance(from_wallet.get_balance() - txn.txn.amount);
-                        wallet.put(&txn.txn.from.clone(), from_wallet);
-                        transaction_trie.put(&txn_hash, txn.clone());
-                    } else {
-                        return false;
-                    }
-                } else {
-                    return false;
-                }
-            } else {
-                return false;
-            }
-        }
-        return true;
     }
 }
 

@@ -1,7 +1,7 @@
 extern crate consensus;
-use consensus::blockchain::check_blockchain;
+use consensus::blockchain;
 
 fn main() {
     println!("Hello, world!");
-    check_blockchain();
+    blockchain::check_blockchain();
 }

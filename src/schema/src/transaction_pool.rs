@@ -1,10 +1,10 @@
 extern crate utils;
 
 use exonum_crypto::Hash;
-use exonum_merkledb::{  ObjectHash};
+use exonum_merkledb::ObjectHash;
 
-use std::collections::{BTreeMap, HashMap};
 use crate::transaction::{SignedTransaction, Txn};
+use std::collections::{BTreeMap, HashMap};
 
 pub type TxnPoolKeyType = i64;
 pub type TxnPoolValueType = SignedTransaction;
@@ -21,7 +21,9 @@ pub trait TxnPool {
     fn length_order_pool(&self) -> usize;
     fn length_hash_pool(&self) -> usize;
     fn get(&self, key: &Self::H) -> Option<&Self::U>;
-    fn execute(&mut self, acc_data_base: &mut HashMap<String, u64>) -> Vec<Hash>;
+    fn sync_pool(&mut self, txn_hash_vec: &Vec<Self::H>);
+    fn sync_order_pool(&mut self, txn_hash_vec: &Vec<Self::H>);
+    fn execute(&mut self, acc_data_base: &mut HashMap<String, u64>) -> Vec<Self::H>;
 }
 
 #[derive(Debug, Clone)]
@@ -76,11 +78,40 @@ impl TxnPool for TransactionPool {
     fn length_hash_pool(&self) -> usize {
         self.hash_pool.len()
     }
+
     fn get(&self, key: &Self::H) -> Option<&Self::U> {
         if self.hash_pool.contains_key(key) {
             return self.hash_pool.get(&key);
         } else {
             return Option::None;
+        }
+    }
+
+    fn sync_pool(&mut self, txn_hash_vec: &Vec<Hash>) {
+        for each_hash in txn_hash_vec.iter() {
+            let txn: &SignedTransaction = self.get(each_hash).unwrap();
+            let timestamp = txn
+                .header
+                .get(&String::from("timestamp"))
+                .unwrap()
+                .parse::<i64>()
+                .unwrap();
+            self.delete_txn_order(&timestamp);
+            self.delete_txn_hash(each_hash);
+        }
+    }
+
+    fn sync_order_pool(&mut self, txn_hash_vec: &Vec<Hash>) {
+        // TODO: readd all txns which are deleted at the time of block proposal
+        for each_hash in txn_hash_vec.iter() {
+            let txn: SignedTransaction = self.get(each_hash).unwrap().clone();
+            let timestamp = txn
+                .header
+                .get(&String::from("timestamp"))
+                .unwrap()
+                .parse::<i64>()
+                .unwrap();
+            self.order_pool.insert(timestamp, txn);
         }
     }
 
