@@ -1483,6 +1483,8 @@ dependencies = [
  "chrono 0.4.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "consensus 0.1.0",
  "hex 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "p2plib 0.1.0",
+ "schema 0.1.0",
  "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_cbor 0.10.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "utils 0.1.0",
@@ -1593,6 +1595,16 @@ dependencies = [
 name = "opaque-debug"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "p2plib"
+version = "0.1.0"
+dependencies = [
+ "chrono 0.4.10 (registry+https://github.com/rust-lang/crates.io-index)",
+ "consensus 0.1.0",
+ "schema 0.1.0",
+ "utils 0.1.0",
+]
 
 [[package]]
 name = "parity-multiaddr"
@@ -2058,6 +2070,7 @@ dependencies = [
  "exonum-merkledb 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_cbor 0.10.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "utils 0.1.0",

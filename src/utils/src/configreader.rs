@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 
 use toml::Value;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum NODETYPE {
     FullNode,
     Validator,
@@ -23,7 +23,7 @@ pub enum NODETYPE {
 pub struct TomlReaderConfig {
     pub public: String,
     pub secret: String,
-    node_type: i32,
+    node_type: String,
     genesis_block: bool,
     //db config
     dbpath: String,
@@ -48,15 +48,24 @@ impl Configuration {
         if hex::encode(keypair.public().encode()) != tomlreader.public {
             panic!("Secret and public key pair is invalid");
         }
+        let mut node_type: NODETYPE;
+        println!("{}", tomlreader.node_type.to_ascii_lowercase());
+        if tomlreader.node_type.to_ascii_lowercase() == "fullnode" {
+            node_type = NODETYPE::FullNode
+        } else if tomlreader.node_type.to_ascii_lowercase() == "validator" {
+            node_type = NODETYPE::Validator
+        } else {
+            panic!("node type not defined properly");
+        }
         let node_obj: Node = Node {
             public: Keypair::public(&keypair),
             hex_public: tomlreader.public,
             keypair: keypair,
-            node_type: NODETYPE::FullNode,
-            genesis_block: true,
+            node_type,
+            genesis_block: tomlreader.genesis_block,
         };
         let db_path: Database = Database {
-            dbpath: "utils/rocksdb".to_string(),
+            dbpath: tomlreader.dbpath,
         };
         let conf_obj = Configuration {
             node: node_obj,

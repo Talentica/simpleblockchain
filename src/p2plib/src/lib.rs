@@ -1,3 +1,5 @@
+pub mod txn_pool_p2p;
+
 #[cfg(test)]
 mod tests {
     #[test]

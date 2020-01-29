@@ -3,7 +3,7 @@ extern crate schema;
 extern crate utils;
 use db::db_layer::{fork_db, patch_db};
 use exonum_crypto::Hash;
-use exonum_merkledb::{Fork, ListIndex, ObjectAccess, ObjectHash, ProofMapIndex, RefMut};
+use exonum_merkledb::{ListIndex, ObjectAccess, ObjectHash, ProofMapIndex, RefMut};
 use schema::block::{Block, BlockTraits, SignedBlock, SignedBlockTraits};
 use schema::transaction::{SignedTransaction, Txn};
 use schema::transaction_pool::{TransactionPool, TxnPool};
@@ -48,11 +48,6 @@ impl<T: ObjectAccess> SchemaFork<T> {
     pub fn initialize_db(&self, kp: &KeypairType) -> Hash {
         let mut blocks = self.blocks();
         let mut wallets = self.state();
-        let mut transaction_trie = self.transactions();
-        let mut storage_trie = self.storage();
-        wallets.clear();
-        transaction_trie.clear();
-        storage_trie.clear();
         blocks.clear();
         let mut block = Block::genesis_block();
         let public_key = hex::encode(Keypair::public(&kp).encode());
@@ -131,18 +126,8 @@ impl<T: ObjectAccess> SchemaFork<T> {
         blocks.push(signed_block.clone());
         signed_block
     }
-    pub fn create_block_temp(
-        kp: &KeypairType,
-        txn_pool: &mut TransactionPool,
-    ) -> (Fork, SignedBlock) {
-        let fork = fork_db();
-        let mut signed_block: SignedBlock;
-        {
-            let schema = SchemaFork::new(&fork);
-            signed_block = schema.create_block(kp, txn_pool);
-        }
-        return (fork, signed_block);
-    }
+
+    
 }
 
 #[cfg(test)]

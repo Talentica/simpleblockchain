@@ -4,7 +4,9 @@ extern crate schema;
 extern crate utils;
 use chrono::prelude::Utc;
 use db::db_layer::{fork_db, patch_db, snapshot_db};
-use db_service::{db_fork_ref::SchemaFork, db_snapshot_ref::SchemaSnap, db_validation_ref::SchemaValidate};
+use db_service::{
+    db_fork_ref::SchemaFork, db_snapshot_ref::SchemaSnap, db_validation_ref::SchemaValidate,
+};
 use exonum_crypto::Hash;
 use exonum_merkledb::{Fork, ObjectHash};
 use schema::block::{SignedBlock, SignedBlockTraits};
@@ -93,8 +95,9 @@ impl BlockchainTraits for BlockChain {
         let own_block_acceptted = true;
         let block_proposed = true;
         // If your block is not acceptted then add all txn which popped in create block process
-        if ! own_block_acceptted && block_proposed{
-            self.txn_pool.sync_order_pool(&to_be_commit_block.block.txn_pool);
+        if !own_block_acceptted && block_proposed {
+            self.txn_pool
+                .sync_order_pool(&to_be_commit_block.block.txn_pool);
         }
         self.commit_block(fork, to_be_commit_block);
     }
@@ -111,7 +114,8 @@ pub fn poa_with_sep_th() {
         println!("\nblock generate callled");
         println!(
             "(txn_pool_lens) -> ( {}, {})",
-            db_obj.txn_pool.length_order_pool(), db_obj.txn_pool.length_hash_pool()
+            db_obj.txn_pool.length_order_pool(),
+            db_obj.txn_pool.length_hash_pool()
         );
         db_obj.generate_block();
         println!("block proposed and committed\n");
