@@ -19,16 +19,6 @@ use std::{thread, time};
 use async_std::io;
 // use async_std::io::stdin;
 
-fn main2() {
-    let msg1 = Some(MessageTypes::BlockCreate(BlockCreate {}));
-    // println!("data = {:?}", msg1.unwrap());
-    println!("t = {:?}", TransactionCreate {}.topic());
-    match msg1.unwrap() {
-        MessageTypes::BlockCreate(a) => println!("inner data = {:?}", a.topic()),
-        _ => println!("no"),
-    }
-}
-
 fn test_publish() {
     // let (mut tx, mut rx) = mpsc::channel::<Option<MessageTypes>>(4194304);
     // let (mut tx, mut rx) = mpsc::channel::<i32>(0);
@@ -46,8 +36,20 @@ fn test_publish() {
 
     thread::spawn(move || {
         loop {
-            let msg1 = Some(MessageTypes::BlockCreate(BlockCreate {}));
-            let msg2 = Some(MessageTypes::TransactionCreate(TransactionCreate {}));
+            let msg1 = Some(MessageTypes::NodeMsg(NodeMessageTypes::BlockCreate(
+                BlockCreate {
+                    height: 1,
+                    hash: String::from("test"),
+                },
+            )));
+            let msg2 = Some(MessageTypes::ConsensusMsg(
+                ConsensusMessageTypes::LeaderElect(TransactionCreate {
+                    nonce: 1,
+                    payload: String::from("payload"),
+                    signature: String::from("abcdefg"),
+                }),
+            ));
+
             thread::sleep(time::Duration::from_secs(2));
             tx.try_send(msg1);
             tx.try_send(msg2);

@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 /// Needs trait Serialize to be implemented
 /// can be done directly by using macro
 /// #[derive(Serialize)] defined in serde
-pub fn serialize<T>(to_ser: T) -> Vec<u8>
+pub fn serialize<T>(to_ser: &T) -> Vec<u8>
 where
     T: Serialize,
 {
@@ -16,7 +16,7 @@ where
 
 /// returns the SHA3_256 hash of cbor value for
 /// generic type T
-pub fn serialize_hash256<T>(to_ser: T) -> Vec<u8>
+pub fn serialize_hash256<T>(to_ser: &T) -> Vec<u8>
 where
     T: Serialize,
 {

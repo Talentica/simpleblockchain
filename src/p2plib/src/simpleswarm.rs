@@ -1,6 +1,6 @@
 use futures::{channel::mpsc::*, executor::*, future, prelude::*, task::*};
 use libp2p::{
-    floodsub::{self, Floodsub, FloodsubEvent},
+    floodsub::{self, Floodsub, FloodsubEvent, Topic},
     identity,
     mdns::{Mdns, MdnsEvent},
     swarm::NetworkBehaviourEventProcess,
@@ -13,6 +13,7 @@ use utils::configreader;
 use utils::configreader::Configuration;
 
 use utils::crypto::keypair;
+use utils::serialzer::*;
 
 use super::messages::*;
 use super::p2pbehaviour::P2PBehaviour;
@@ -62,8 +63,6 @@ impl SimpleSwarm {
         .unwrap();
 
         let mut listening = false;
-        // let mut stdin = io::BufReader::new(io::stdin()).lines();
-
         block_on(future::poll_fn(move |cx: &mut Context| {
             loop {
                 match self.rx.poll_next_unpin(cx) {
@@ -72,14 +71,18 @@ impl SimpleSwarm {
                         match msg {
                             None => println!("empty message !"),
                             Some(msgtype) => match msgtype {
-                                MessageTypes::TransactionCreate(data) => swarm.floodsub.publish(
-                                    &floodsub::TopicBuilder::new(data.topic()).build(),
-                                    "txn create test data",
-                                ),
-                                MessageTypes::BlockCreate(data) => swarm.floodsub.publish(
-                                    &floodsub::TopicBuilder::new(data.topic()).build(),
-                                    "block create test data",
-                                ),
+                                MessageTypes::NodeMsg(data) => {
+                                    let msgdata: Vec<u8> = serialize(&data);
+                                    let topics: Vec<Topic> =
+                                        Vec::<Topic>::from(MessageTypes::NodeMsg(data)); //TODO Find way to get rid of clone
+                                    swarm.floodsub.publish_many(topics, msgdata)
+                                }
+                                MessageTypes::ConsensusMsg(data) => {
+                                    let msgdata: Vec<u8> = serialize(&data);
+                                    let topics: Vec<Topic> =
+                                        Vec::<Topic>::from(MessageTypes::ConsensusMsg(data));
+                                    swarm.floodsub.publish_many(topics, msgdata)
+                                }
                                 _ => println!("unhandled msgs"),
                             },
                         }
@@ -92,19 +95,7 @@ impl SimpleSwarm {
                     Poll::Pending => break,
                 }
             }
-            // loop {
-            //     match stdin.try_poll_next_unpin(cx)? {
-            //         Poll::Ready(Some(line)) => {
-            //             swarm.floodsub.publish(
-            //                 &floodsub::TopicBuilder::new("test-msg").build(),
-            //                 line.as_bytes(),
-            //             );
-            //             println!("read data {:?}", line);
-            //         }
-            //         Poll::Ready(None) => panic!("Stdin closed"),
-            //         Poll::Pending => break,
-            //     }
-            // }
+
             loop {
                 match swarm.poll_next_unpin(cx) {
                     Poll::Ready(Some(event)) => println!("{:?}", event),
