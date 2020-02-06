@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 
 use toml::Value;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug)]
 pub enum NODETYPE {
     FullNode,
     Validator,
@@ -23,8 +23,10 @@ pub enum NODETYPE {
 pub struct TomlReaderConfig {
     pub public: String,
     pub secret: String,
-    node_type: String,
+    node_type: i32,
     genesis_block: bool,
+    //p2p
+    p2p_port: u16,
     //db config
     dbpath: String,
 }
@@ -33,7 +35,6 @@ pub struct TomlReaderConfig {
 pub struct Configuration {
     //Node
     pub node: Node,
-    //P2P config
     //peers list
 
     //Database config
@@ -41,31 +42,23 @@ pub struct Configuration {
 }
 
 impl Configuration {
-    pub fn new() -> Self {
+    fn new() -> Self {
         let tomlreader: TomlReaderConfig = Configuration::init_config();
         let mut secret = hex::decode(tomlreader.secret).expect("invalid secret");
         let keypair = Keypair::generate_from(secret.as_mut_slice());
         if hex::encode(keypair.public().encode()) != tomlreader.public {
             panic!("Secret and public key pair is invalid");
         }
-        let mut node_type: NODETYPE;
-        println!("{}", tomlreader.node_type.to_ascii_lowercase());
-        if tomlreader.node_type.to_ascii_lowercase() == "fullnode" {
-            node_type = NODETYPE::FullNode
-        } else if tomlreader.node_type.to_ascii_lowercase() == "validator" {
-            node_type = NODETYPE::Validator
-        } else {
-            panic!("node type not defined properly");
-        }
         let node_obj: Node = Node {
             public: Keypair::public(&keypair),
             hex_public: tomlreader.public,
             keypair: keypair,
-            node_type,
+            node_type: NODETYPE::FullNode,
             genesis_block: tomlreader.genesis_block,
+            p2p_port: tomlreader.p2p_port,
         };
         let db_path: Database = Database {
-            dbpath: tomlreader.dbpath,
+            dbpath: "utils/rocksdb".to_string(),
         };
         let conf_obj = Configuration {
             node: node_obj,
@@ -106,6 +99,7 @@ pub struct Node {
     pub keypair: crypto::keypair::KeypairType,
     pub node_type: NODETYPE,
     pub genesis_block: bool,
+    pub p2p_port: u16,
 }
 
 #[derive(Debug)]

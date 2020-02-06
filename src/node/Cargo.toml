@@ -15,5 +15,7 @@ hex = "^0.4"
 serde = { version = "1.0", features = ["derive"] }
 serde_cbor = "^0.10"
 chrono = { version = "0.4", features = ["serde"] }
+libp2p = "^0.15"
+
 [profile.release]
 panic = 'abort'

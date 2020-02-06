@@ -8,19 +8,28 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use utils::configreader;
 use utils::configreader::Configuration;
+use p2plib::messages::Message;
+use p2plib::messages::*;
+use p2plib::simpleswarm::SimpleSwarm;
+use libp2p::PeerId;
 
 fn main() {
     let config: &Configuration = &configreader::GLOBAL_CONFIG;
+    let peer_id = config.node.public.into_peer_id();
+    let peer_id = PeerId::from_public_key(config.node.public.clone());
+    println!("peer id = {:?}", peer_id);
+    let mut swarm = SimpleSwarm::new();
+    swarm.topic_list.push(String::from(BlockCreate::TOPIC));
+    swarm
+        .topic_list
+        .push(String::from(TransactionCreate::TOPIC));
+    swarm.process(peer_id, config);
+
     let transaction_pool: TransactionPool = TransactionPool::new();
     let object = Arc::new(Mutex::new(transaction_pool));
     let clone1 = object.clone();
     let clone2 = object.clone();
-    // println!("db path {:?}", config.db.dbpath);
-    // println!("public key {:?}", config.node.hex_public);
-    // println!(
-    //     "node type {:?},  genesis_block {}",
-    //     config.node.node_type, config.node.genesis_block
-    // );
+    
 
     // this thread will be responsible for adding txn in txn_pool
     let mut threads = Vec::new();
