@@ -2,6 +2,8 @@ extern crate db;
 extern crate db_service;
 extern crate schema;
 extern crate utils;
+extern crate p2plib;
+
 use chrono::prelude::Utc;
 use db::db_layer::{fork_db, patch_db, snapshot_db};
 use db_service::db_fork_ref::SchemaFork;
@@ -13,6 +15,8 @@ use std::thread;
 use std::time::Duration;
 use utils::configreader::{Configuration, NODETYPE};
 use utils::keypair::{CryptoKeypair, Keypair, KeypairType};
+use futures::{channel::mpsc::*, executor::*, future, prelude::*, task::*};
+use p2plib::messages::{MessageTypes, NodeMessageTypes, ConsensusMessageTypes};
 
 pub struct Consensus {
     keypair: KeypairType,
@@ -123,8 +127,11 @@ impl Consensus {
         &self,
         fork: Option<Fork>,
         signed_block: Option<&SignedBlock>,
+        sender: &mut Sender<Option<MessageTypes>>,
     ) {
         let fork_obj = self.consensus_achieved(fork, signed_block);
+        let data = Some(MessageTypes::NodeMsg(NodeMessageTypes::SignedBlockEnum(signed_block.unwrap().clone())));
+        sender.try_send(data);
         self.commit_block(fork_obj);
     }
 
@@ -136,6 +143,7 @@ impl Consensus {
     fn start_mining(
         &self,
         locked_txn_pool: Arc<std::sync::Mutex<schema::transaction_pool::TransactionPool>>,
+        sender: &mut Sender<Option<MessageTypes>>,
     ) {
         loop {
             thread::sleep(Duration::from_millis(5000));
@@ -153,9 +161,9 @@ impl Consensus {
                     println!("{:?}", signed_block);
                 }
                 if self.propose_block(&signed_block) {}
-                self.listening_to_p2_p_for_consensus(Some(fork), Some(&signed_block));
+                self.listening_to_p2_p_for_consensus(Some(fork), Some(&signed_block), sender);
             } else {
-                self.listening_to_p2_p_for_consensus(Option::None, Option::None);
+                self.listening_to_p2_p_for_consensus(Option::None, Option::None, sender);
             }
         }
     }
@@ -165,6 +173,7 @@ impl Consensus {
     pub fn init_consensus(
         config: &Configuration,
         txn_pool: Arc<std::sync::Mutex<schema::transaction_pool::TransactionPool>>,
+        sender: &mut Sender<Option<MessageTypes>>,
     ) {
         Consensus::init_required_connection_estd();
         let consensus_obj = Consensus {
@@ -173,7 +182,7 @@ impl Consensus {
         consensus_obj.init_state(config.node.genesis_block, &config.db.dbpath);
 
         match config.node.node_type {
-            NODETYPE::FullNode => consensus_obj.start_mining(txn_pool),
+            NODETYPE::FullNode => consensus_obj.start_mining(txn_pool, sender),
             NODETYPE::Validator => consensus_obj.auditor(),
         }
     }

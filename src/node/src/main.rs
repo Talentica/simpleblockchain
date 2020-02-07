@@ -27,7 +27,7 @@ fn main() {
     swarm
         .topic_list
         .push(String::from(SignedTransaction::TOPIC));
-    swarm.process(peer_id, config);
+    let mut sender = swarm.tx.clone();
 
     let transaction_pool: TransactionPool = TransactionPool::new();
     let object = Arc::new(Mutex::new(transaction_pool));
@@ -45,8 +45,10 @@ fn main() {
     // this thread will be responsible for whole consensus part.
     // in future this thread will spwan new child thread accrding to consensus requirement.
     let handle =
-        thread::spawn(move || consensus_interface::Consensus::init_consensus(config, clone1));
+        thread::spawn(move || consensus_interface::Consensus::init_consensus(config, clone1, &mut sender));
     threads.push(handle);
+    swarm.process(peer_id, config);
+    println!("hello ji");
     for each in threads {
         each.join().unwrap();
     }
