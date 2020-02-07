@@ -1,4 +1,8 @@
+#[macro_use]
+extern crate lazy_static;
+mod nodemsgprocessor;
 use libp2p::PeerId;
+use nodemsgprocessor::*;
 use p2plib::simpleswarm::SimpleSwarm;
 use utils::configreader;
 use utils::configreader::Configuration;
@@ -18,9 +22,11 @@ use std::{thread, time};
 
 use async_std::io;
 // use async_std::io::stdin;
+use std::sync::Arc;
+use std::sync::Mutex;
 
 fn test_publish() {
-    // let (mut tx, mut rx) = mpsc::channel::<Option<MessageTypes>>(4194304);
+    // let (mut tx, mut rx) = mpsc::channel::<Option<MessageTypes>>(4194304x);
     // let (mut tx, mut rx) = mpsc::channel::<i32>(0);
     // let mut stdin = io::BufReader::new(io::stdin());//.lines();
     let config: &Configuration = &configreader::GLOBAL_CONFIG;
@@ -31,8 +37,13 @@ fn test_publish() {
     swarm
         .topic_list
         .push(String::from(TransactionCreate::TOPIC));
-    swarm.process(peer_id, config);
     let mut tx = swarm.tx.clone();
+
+    {
+        thread::spawn(move || {
+            thread_safe_nodemsgprocessor.lock().unwrap().start();
+        });
+    }
 
     thread::spawn(move || {
         loop {
@@ -103,6 +114,7 @@ fn test_publish() {
     //         _ => println!("Error"),
     //     }
     // }));
+    swarm.process(peer_id, config);
 }
 
 fn main() {
