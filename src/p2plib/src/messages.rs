@@ -121,16 +121,24 @@ impl MsgProcess for protocol::FloodsubMessage {
     fn process(&self, topics: &Vec<TopicHash>, data: &Vec<u8>) {
         if topics[0] == TopicHash::from_raw(String::from(constants::NODE)) {
             println!("Node type msg");
-            if topics[1] == TopicHash::from_raw(String::from(BlockCreate::TOPIC)) {
+            if topics[1] == TopicBuilder::new(BlockCreate::TOPIC).build().hash().clone() {
                 let block_create_msg = deserialize::<BlockCreate>(data);
-                println!("block create msg received in process = {:?}", block_create_msg);
+                println!(
+                    "block create msg received in process = {:?}",
+                    block_create_msg
+                );
                 msg_dispatcher
                     .node_msg_dispatcher
                     .as_ref()
                     .unwrap()
                     .clone()
                     .try_send(NodeMessageTypes::BlockCreate(block_create_msg));
-            } else if topics[1] == TopicHash::from_raw(String::from(TransactionCreate::TOPIC)) {
+            } else if topics[1]
+                == TopicBuilder::new(TransactionCreate::TOPIC)
+                    .build()
+                    .hash()
+                    .clone()
+            {
                 let mut txn_create_msg = deserialize::<TransactionCreate>(data);
                 println!("txn create msg received in process = {:?}", txn_create_msg);
                 msg_dispatcher
