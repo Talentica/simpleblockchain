@@ -3,8 +3,8 @@ extern crate utils;
 use exonum_crypto::Hash;
 use exonum_merkledb::ObjectHash;
 
-use crate::transaction::{SignedTransaction, Txn};
-use std::collections::{BTreeMap, HashMap};
+use crate::transaction::{SignedTransaction};
+use std::collections::{BTreeMap};
 
 pub type TxnPoolKeyType = i64;
 pub type TxnPoolValueType = SignedTransaction;
@@ -23,13 +23,16 @@ pub trait TxnPool {
     fn get(&self, key: &Self::H) -> Option<&Self::U>;
     fn sync_pool(&mut self, txn_hash_vec: &Vec<Self::H>);
     fn sync_order_pool(&mut self, txn_hash_vec: &Vec<Self::H>);
-    fn execute(&mut self, acc_data_base: &mut HashMap<String, u64>) -> Vec<Self::H>;
 }
 
+/**
+ * BTreeMap is used here for in-order push-pop values and at the same time, search operation also supported.
+*/
+/// TransactionPool object to maintain in-coming txn and txn-order.
 #[derive(Debug, Clone)]
 pub struct TransactionPool {
     hash_pool: BTreeMap<Hash, TxnPoolValueType>,
-    order_pool: BTreeMap<TxnPoolKeyType, TxnPoolValueType>,
+    pub order_pool: BTreeMap<TxnPoolKeyType, TxnPoolValueType>,
 }
 
 impl TxnPool for TransactionPool {
@@ -37,6 +40,7 @@ impl TxnPool for TransactionPool {
     type T = TxnPoolKeyType;
     type U = TxnPoolValueType;
 
+    /// this function will create a new instance of transcation pool object
     fn new() -> TransactionPool {
         TransactionPool {
             hash_pool: BTreeMap::new(),
@@ -44,20 +48,21 @@ impl TxnPool for TransactionPool {
         }
     }
 
+    /// this function will delete txn using hash if present, from hash_pool
     fn delete_txn_hash(&mut self, key: &Self::H) {
-        // let (key, value) = m.lock().unwrap().pop_first().unwrap(); // lock the mutex, remove a value, unlock
         if self.hash_pool.contains_key(key) {
             self.hash_pool.remove(key);
         }
     }
 
+    /// this function will delete txn using order_value if present, from order_pool
     fn delete_txn_order(&mut self, key: &Self::T) {
-        // let (key, value) = m.lock().unwrap().pop_first().unwrap(); // lock the mutex, remove a value, unlock
         if self.order_pool.contains_key(key) {
             self.order_pool.remove(key);
         }
     }
 
+    /// this function will pop value in fifo order from order_pool
     fn pop_front(&mut self) -> Self::U {
         let (first_key, first_value) = self.order_pool.iter().next().unwrap();
         let value = first_value.clone();
@@ -66,19 +71,23 @@ impl TxnPool for TransactionPool {
         value
     }
 
+    /// this function will push value in both (hash & order) pool
     fn insert_op(&mut self, key: &Self::T, value: &Self::U) {
         self.hash_pool.insert(value.object_hash(), value.clone());
         self.order_pool.insert(key.clone(), value.clone());
     }
 
+    /// length of order_pool
     fn length_order_pool(&self) -> usize {
         self.order_pool.len()
     }
 
+    /// length of hash_pool
     fn length_hash_pool(&self) -> usize {
         self.hash_pool.len()
     }
 
+    /// get transaction usinng hash from hash_pool
     fn get(&self, key: &Self::H) -> Option<&Self::U> {
         if self.hash_pool.contains_key(key) {
             return self.hash_pool.get(&key);
@@ -87,6 +96,7 @@ impl TxnPool for TransactionPool {
         }
     }
 
+    /// sync both (hash & order ) pool when block committed is created by the other node
     fn sync_pool(&mut self, txn_hash_vec: &Vec<Hash>) {
         for each_hash in txn_hash_vec.iter() {
             let txn: &SignedTransaction = self.get(each_hash).unwrap();
@@ -101,8 +111,8 @@ impl TxnPool for TransactionPool {
         }
     }
 
+    /// aim of this fxn is revert all changes happened because of block proposal which didn't accepted by the consensus.
     fn sync_order_pool(&mut self, txn_hash_vec: &Vec<Hash>) {
-        // TODO: readd all txns which are deleted at the time of block proposal
         for each_hash in txn_hash_vec.iter() {
             let txn: SignedTransaction = self.get(each_hash).unwrap().clone();
             let timestamp = txn
@@ -115,30 +125,6 @@ impl TxnPool for TransactionPool {
         }
     }
 
-    fn execute(&mut self, acc_data_base: &mut HashMap<String, u64>) -> Vec<Hash> {
-        let mut temp_vec = Vec::<Hash>::with_capacity(10);
-        while temp_vec.len() < 10 && self.length_order_pool() > 0 {
-            let txn: TxnPoolValueType = self.pop_front();
-            if txn.validate() {
-                if acc_data_base.contains_key(&txn.txn.from) {
-                    let from_bal = acc_data_base.get(&txn.txn.from).unwrap().clone();
-                    if from_bal > txn.txn.amount {
-                        if acc_data_base.contains_key(&txn.txn.to) {
-                            let new_bal =
-                                txn.txn.amount + acc_data_base.get(&txn.txn.to).unwrap().clone();
-                            acc_data_base.insert(txn.txn.to.clone(), new_bal);
-                        } else {
-                            acc_data_base.insert(txn.txn.to.clone(), txn.txn.amount.clone());
-                        }
-                        acc_data_base
-                            .insert(txn.txn.from.clone(), from_bal - txn.txn.amount.clone());
-                        temp_vec.push(txn.object_hash());
-                    }
-                }
-            }
-        }
-        temp_vec
-    }
 }
 
 #[cfg(test)]
@@ -147,6 +133,7 @@ mod tests_transactions {
     #[test]
     pub fn main_transaction() {
         use super::*;
+        use crate::transaction::Txn;
         use chrono::prelude::Utc;
         use utils::keypair::{CryptoKeypair, Keypair};
 
@@ -158,8 +145,5 @@ mod tests_transactions {
         transaction_pool.insert_op(&time_instant, &one);
         let time_instant = Utc::now().timestamp_nanos();
         transaction_pool.insert_op(&time_instant, &two);
-
-        let exexuted_pool = transaction_pool.execute(&mut HashMap::<String, u64>::new());
-        println!("{:?}", exexuted_pool);
     }
 }

@@ -48,8 +48,4 @@ fn main() {
         thread::spawn(move || consensus_interface::Consensus::init_consensus(config, clone1, &mut sender));
     threads.push(handle);
     swarm.process(peer_id, config);
-    println!("hello ji");
-    for each in threads {
-        each.join().unwrap();
-    }
 }

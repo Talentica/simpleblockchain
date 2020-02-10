@@ -10,9 +10,11 @@ use db_service::db_fork_ref::SchemaFork;
 use exonum_crypto::Hash;
 use exonum_merkledb::{Fork, ObjectHash};
 use schema::block::{Block, BlockTraits, SignedBlock, SignedBlockTraits};
+use schema::transaction_pool::{TransactionPool, TxnPool};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
+use std::collections::HashMap;
 use utils::configreader::{Configuration, NODETYPE};
 use utils::keypair::{CryptoKeypair, Keypair, KeypairType};
 use futures::{channel::mpsc::*, executor::*, future, prelude::*, task::*};
@@ -20,6 +22,9 @@ use p2plib::messages::{MessageTypes, NodeMessageTypes, ConsensusMessageTypes};
 
 pub struct Consensus {
     keypair: KeypairType,
+    fork: Option<Fork>,
+    signed_block: Option<SignedBlock>,
+    blocks: HashMap<String, SignedBlock>,
 }
 
 /*{
@@ -90,11 +95,6 @@ pub struct Consensus {
 }*/
 
 impl Consensus {
-    fn init_required_connection_estd() {
-        println!(
-            "fn init_required_connection_estd will be implemented after p2p module integration"
-        );
-    }
 
     fn init_state(&self, genesis_block: bool, _db_path: &String) {
         if genesis_block {
@@ -110,61 +110,30 @@ impl Consensus {
         }
     }
 
-    fn am_i_eligible(&self) -> bool {
-        true
-    }
-
-    fn consensus_achieved(&self, fork: Option<Fork>, _signed_block: Option<&SignedBlock>) -> Fork {
-        let fork_obj = fork.unwrap_or_else(|| fork_db());
-        fork_obj
-    }
-
-    fn commit_block(&self, fork: Fork) {
-        patch_db(fork);
-    }
-
-    fn listening_to_p2_p_for_consensus(
-        &self,
-        fork: Option<Fork>,
-        signed_block: Option<&SignedBlock>,
-        sender: &mut Sender<Option<MessageTypes>>,
-    ) {
-        let fork_obj = self.consensus_achieved(fork, signed_block);
-        let data = Some(MessageTypes::NodeMsg(NodeMessageTypes::SignedBlockEnum(signed_block.unwrap().clone())));
-        sender.try_send(data);
-        self.commit_block(fork_obj);
-    }
-
-    fn propose_block(&self, _signed_block: &SignedBlock) -> bool {
-        // call P2P fn to broadcast this block for consensus
-        true
-    }
-
     fn start_mining(
-        &self,
+        &mut self,
         locked_txn_pool: Arc<std::sync::Mutex<schema::transaction_pool::TransactionPool>>,
         sender: &mut Sender<Option<MessageTypes>>,
     ) {
         loop {
             thread::sleep(Duration::from_millis(5000));
-            if self.am_i_eligible() {
-                // no polling machenism of txn_pool and create block need to implement or modified here
-                // if one want to change the create_block and txn priority then change/ implment that part in
-                // schema operations and p2p module
-                let fork = fork_db();
-                let mut signed_block: SignedBlock =
-                    SignedBlock::create_block(Block::genesis_block(), vec![]);
-                {
-                    let schema = SchemaFork::new(&fork);
-                    let mut txn_pool = locked_txn_pool.lock().unwrap();
-                    signed_block = schema.create_block(&self.keypair, &mut txn_pool);
-                    println!("{:?}", signed_block);
-                }
-                if self.propose_block(&signed_block) {}
-                self.listening_to_p2_p_for_consensus(Some(fork), Some(&signed_block), sender);
-            } else {
-                self.listening_to_p2_p_for_consensus(Option::None, Option::None, sender);
+            self.fork = Option::None;
+            self.signed_block = Option::None;
+
+            // no polling machenism of txn_pool and create block need to implement or modified here
+            // if one want to change the create_block and txn priority then change/ implment that part in
+            // schema operations and p2p module
+            let fork = fork_db();
+            {
+                let schema = SchemaFork::new(&fork);
+                let mut txn_pool = locked_txn_pool.lock().unwrap();
+                let signed_block = schema.create_block(&self.keypair, &mut txn_pool);
+                println!("new block created.. hash {}", signed_block.object_hash());
+                txn_pool.sync_pool(&signed_block.block.txn_pool);
+                let data = Some(MessageTypes::NodeMsg(NodeMessageTypes::SignedBlockEnum(signed_block.clone())));
+                sender.try_send(data);
             }
+            patch_db(fork);
         }
     }
 
@@ -175,15 +144,17 @@ impl Consensus {
         txn_pool: Arc<std::sync::Mutex<schema::transaction_pool::TransactionPool>>,
         sender: &mut Sender<Option<MessageTypes>>,
     ) {
-        Consensus::init_required_connection_estd();
-        let consensus_obj = Consensus {
+        let mut consensus_obj = Consensus {
             keypair: config.node.keypair.clone(),
+            fork: Option::None,
+            signed_block: Option::None,
+            blocks: HashMap::new(),
         };
         consensus_obj.init_state(config.node.genesis_block, &config.db.dbpath);
 
         match config.node.node_type {
-            NODETYPE::FullNode => consensus_obj.start_mining(txn_pool, sender),
-            NODETYPE::Validator => consensus_obj.auditor(),
+            NODETYPE::Validator => consensus_obj.start_mining(txn_pool, sender),
+            NODETYPE::FullNode => consensus_obj.auditor(),
         }
     }
 }

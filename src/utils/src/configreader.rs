@@ -53,7 +53,7 @@ impl Configuration {
             public: Keypair::public(&keypair),
             hex_public: tomlreader.public,
             keypair: keypair,
-            node_type: NODETYPE::FullNode,
+            node_type: NODETYPE::Validator,
             genesis_block: tomlreader.genesis_block,
             p2p_port: tomlreader.p2p_port,
         };

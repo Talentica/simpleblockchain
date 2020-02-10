@@ -1,7 +1,7 @@
 use super::constants;
-use libp2p::floodsub::{self, Topic, TopicBuilder};
-// use serde::{Deserialize, Serialize};
-use utils::serializer::{Deserialize, Serialize};
+use futures::channel::mpsc::Sender;
+use libp2p::floodsub::{self, protocol, Topic, TopicBuilder, TopicHash};
+use utils::serializer::{Deserialize, Serialize, deserialize, serialize};
 pub use schema::transaction::{SignedTransaction, Txn};
 pub use schema::block::{SignedBlock, SignedBlockTraits};
 
@@ -27,6 +27,9 @@ pub trait Message {
     }
 }
 
+const NODE_MSG_TOPIC_STR: &'static [&'static str] = &["txn-create", "block-create"];
+const CONSENSUS_MSG_TOPIC_STR: &'static [&'static str] = &["leader-elect", "block-vote"];
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TransactionCreate {
     pub nonce: i64,
@@ -35,7 +38,7 @@ pub struct TransactionCreate {
 }
 
 impl Message for TransactionCreate {
-    const TOPIC: &'static str = "txn-create";
+    const TOPIC: &'static str = CONSENSUS_MSG_TOPIC_STR[0];
     const MODULE_TOPIC: &'static str = constants::NODE;
     fn handler(&self) {
         println!("i am txn create");
@@ -43,7 +46,7 @@ impl Message for TransactionCreate {
 }
 
 impl Message for SignedTransaction{
-    const TOPIC: &'static str = "signed_transaction";
+    const TOPIC: &'static str = NODE_MSG_TOPIC_STR[0];
     const MODULE_TOPIC: &'static str = constants::NODE;
     fn handler(&self) {
         println!("i am txn create");
@@ -57,7 +60,7 @@ pub struct BlockCreate {
 }
 
 impl Message for BlockCreate {
-    const TOPIC: &'static str = "block-create";
+    const TOPIC: &'static str = CONSENSUS_MSG_TOPIC_STR[0];
     const MODULE_TOPIC: &'static str = constants::NODE;
     fn handler(&self) {
         println!("i am blockcreate");
@@ -65,7 +68,7 @@ impl Message for BlockCreate {
 }
 
 impl Message for SignedBlock {
-    const TOPIC: &'static str = "signed_block";
+    const TOPIC: &'static str = NODE_MSG_TOPIC_STR[1];
     const MODULE_TOPIC: &'static str = constants::NODE;
     fn handler(&self) {
         println!("i am blockcreate");
@@ -95,7 +98,7 @@ impl From<NodeMessageTypes> for Topic {
     fn from(msg: NodeMessageTypes) -> Topic {
         match msg {
             SignedTransactionEnum => TopicBuilder::new(SignedTransaction::TOPIC).build(),
-            SignedBlockEnum => TopicBuilder::new(SignedTransaction::TOPIC).build(),
+            SignedBlockEnum => TopicBuilder::new(SignedBlock::TOPIC).build(),
         }
     }
 }
@@ -126,4 +129,66 @@ impl From<MessageTypes> for Vec<Topic> {
         }
         ret
     }
+}
+
+///Process FloodSubMessages
+///
+pub trait MsgProcess {
+    fn process(&self, topics: &Vec<TopicHash>, data: &Vec<u8>);
+}
+
+impl MsgProcess for protocol::FloodsubMessage {
+    fn process(&self, topics: &Vec<TopicHash>, data: &Vec<u8>) {
+        if topics[0] == TopicHash::from_raw(String::from(constants::NODE)) {
+            println!("Node type msg");
+            if topics[1] == TopicBuilder::new(SignedBlock::TOPIC).build().hash().clone() {
+                let block_create_msg = deserialize::<SignedBlock>(data);
+                println!(
+                    "block create msg received in process = {:?}",
+                    block_create_msg
+                );
+                MSG_DISPATCHER
+                    .node_msg_dispatcher
+                    .as_ref()
+                    .unwrap()
+                    .clone()
+                    .try_send(NodeMessageTypes::SignedBlockEnum(block_create_msg));
+            } else if topics[1]
+                == TopicBuilder::new(SignedTransaction::TOPIC)
+                    .build()
+                    .hash()
+                    .clone()
+            {
+                let mut txn_create_msg = deserialize::<SignedTransaction>(data);
+                println!("txn create msg received in process = {:?}", txn_create_msg);
+                MSG_DISPATCHER
+                    .node_msg_dispatcher
+                    .as_ref()
+                    .unwrap()
+                    .clone()
+                    .try_send(NodeMessageTypes::SignedTransactionEnum(txn_create_msg));
+            }
+        } else if topics[0] == TopicHash::from_raw(String::from(constants::CONSENSUS)) {
+            println!("Consensus type msg");
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct MessageDispatcher {
+    pub node_msg_dispatcher: Option<Sender<NodeMessageTypes>>,
+    pub consensus_msg_dispatcher: Option<Sender<ConsensusMessageTypes>>,
+}
+
+impl MessageDispatcher {
+    pub fn new() -> Self {
+        MessageDispatcher {
+            node_msg_dispatcher: None,
+            consensus_msg_dispatcher: None,
+        }
+    }
+}
+
+lazy_static! {
+    pub static ref MSG_DISPATCHER: MessageDispatcher = MessageDispatcher::new();
 }

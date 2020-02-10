@@ -1,3 +1,5 @@
+#[macro_use]
+extern crate lazy_static;
 pub mod txn_pool_p2p;
 pub mod constants;
 pub mod messages;
