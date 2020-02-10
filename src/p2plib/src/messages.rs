@@ -119,7 +119,8 @@ pub trait MsgProcess {
 
 impl MsgProcess for protocol::FloodsubMessage {
     fn process(&self, topics: &Vec<TopicHash>, data: &Vec<u8>) {
-        if topics[0] == TopicHash::from_raw(String::from(constants::NODE)) {
+        if topics[0] == TopicBuilder::new(constants::NODE).build().hash().clone() {
+            //        TopicHash::from_raw(String::from(constants::NODE)) {
             println!("Node type msg");
             if topics[1] == TopicBuilder::new(BlockCreate::TOPIC).build().hash().clone() {
                 let block_create_msg = deserialize::<BlockCreate>(data);
@@ -148,7 +149,12 @@ impl MsgProcess for protocol::FloodsubMessage {
                     .clone()
                     .try_send(NodeMessageTypes::TransactionCreate(txn_create_msg));
             }
-        } else if topics[0] == TopicHash::from_raw(String::from(constants::CONSENSUS)) {
+        } else if topics[0]
+            == TopicBuilder::new(constants::CONSENSUS)
+                .build()
+                .hash()
+                .clone()
+        {
             println!("Consensus type msg");
         }
     }
