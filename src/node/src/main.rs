@@ -49,16 +49,22 @@ fn test_publish() {
     }
 
     thread::spawn(move || {
+        let mut ictr : i64 = 0;
+        const NUM_MSG: i64 = 10;
         loop {
+            ictr += 1;
+            if ictr > NUM_MSG{
+                break
+            }
             let msg1 = Some(MessageTypes::NodeMsg(NodeMessageTypes::BlockCreate(
                 BlockCreate {
-                    height: 1,
+                    height: ictr,
                     hash: String::from("test"),
                 },
             )));
-            let msg2 = Some(MessageTypes::ConsensusMsg(
-                ConsensusMessageTypes::LeaderElect(TransactionCreate {
-                    nonce: 1,
+            let msg2 = Some(MessageTypes::NodeMsg(
+                NodeMessageTypes::TransactionCreate(TransactionCreate {
+                    nonce: ictr,
                     payload: String::from("payload"),
                     signature: String::from("abcdefg"),
                 }),
