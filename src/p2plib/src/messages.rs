@@ -78,8 +78,8 @@ pub enum MessageTypes {
 impl From<NodeMessageTypes> for Topic {
     fn from(msg: NodeMessageTypes) -> Topic {
         match msg {
-            TransactionCreate => TopicBuilder::new(TransactionCreate::TOPIC).build(),
-            BlockCreate => TopicBuilder::new(BlockCreate::TOPIC).build(),
+            NodeMessageTypes::TransactionCreate(data) => TopicBuilder::new(data.topic()).build(),
+            NodeMessageTypes::BlockCreate(data) => TopicBuilder::new(data.topic()).build(),
         }
     }
 }
@@ -88,8 +88,8 @@ impl From<NodeMessageTypes> for Topic {
 impl From<ConsensusMessageTypes> for Topic {
     fn from(msg: ConsensusMessageTypes) -> Topic {
         match msg {
-            LeaderElect => TopicBuilder::new(TransactionCreate::TOPIC).build(),
-            BlockVote => TopicBuilder::new(BlockCreate::TOPIC).build(),
+            ConsensusMessageTypes::LeaderElect(data) => TopicBuilder::new(data.topic()).build(),
+            ConsensusMessageTypes::BlockVote(data) => TopicBuilder::new(data.topic()).build(),
         }
     }
 }
@@ -127,8 +127,7 @@ impl MsgProcess for protocol::FloodsubMessage {
         if topics[0] == TopicBuilder::new(constants::NODE).build().hash().clone() {
             //        TopicHash::from_raw(String::from(constants::NODE)) {
             println!("Node type msg");
-            if topics[1] == TopicBuilder::new(BlockCreate::TOPIC).build().hash().clone() {
-                let block_create_msg = deserialize::<BlockCreate>(data);
+                let block_create_msg = deserialize::<NodeMessageTypes>(data);
                 println!(
                     "block create msg received in process = {:?}",
                     block_create_msg
@@ -136,20 +135,7 @@ impl MsgProcess for protocol::FloodsubMessage {
                 msg_dispatcher
                     .node_msg_dispatcher
                     .clone()
-                    .try_send(Some(NodeMessageTypes::BlockCreate(block_create_msg)));
-            } else if topics[1]
-                == TopicBuilder::new(TransactionCreate::TOPIC)
-                    .build()
-                    .hash()
-                    .clone()
-            {
-                let mut txn_create_msg = deserialize::<TransactionCreate>(data);
-                println!("txn create msg received in process = {:?}", txn_create_msg);
-                msg_dispatcher
-                    .node_msg_dispatcher
-                    .clone()
-                    .try_send(Some(NodeMessageTypes::TransactionCreate(txn_create_msg)));
-            }
+                    .try_send(Some(block_create_msg));
         } else if topics[0]
             == TopicBuilder::new(constants::CONSENSUS)
                 .build()
