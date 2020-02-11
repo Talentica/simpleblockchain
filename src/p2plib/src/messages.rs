@@ -1,8 +1,9 @@
 use super::constants;
-use futures::channel::mpsc::Sender;
+use futures::{channel::mpsc::channel, channel::mpsc::Receiver, channel::mpsc::Sender};
 use libp2p::floodsub::{self, protocol, Topic, TopicBuilder, TopicHash};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::sync::Arc;
+use std::sync::Mutex;
 use utils::serialzer::*;
 
 pub trait Message {
@@ -117,6 +118,10 @@ pub trait MsgProcess {
     fn process(&self, topics: &Vec<TopicHash>, data: &Vec<u8>);
 }
 
+pub trait NodeMsgProcess {
+    fn process_node_msg(&self, topic: &TopicHash, data: &Vec<u8>);
+}
+
 impl MsgProcess for protocol::FloodsubMessage {
     fn process(&self, topics: &Vec<TopicHash>, data: &Vec<u8>) {
         if topics[0] == TopicBuilder::new(constants::NODE).build().hash().clone() {
@@ -130,10 +135,8 @@ impl MsgProcess for protocol::FloodsubMessage {
                 );
                 msg_dispatcher
                     .node_msg_dispatcher
-                    .as_ref()
-                    .unwrap()
                     .clone()
-                    .try_send(NodeMessageTypes::BlockCreate(block_create_msg));
+                    .try_send(Some(NodeMessageTypes::BlockCreate(block_create_msg)));
             } else if topics[1]
                 == TopicBuilder::new(TransactionCreate::TOPIC)
                     .build()
@@ -144,10 +147,8 @@ impl MsgProcess for protocol::FloodsubMessage {
                 println!("txn create msg received in process = {:?}", txn_create_msg);
                 msg_dispatcher
                     .node_msg_dispatcher
-                    .as_ref()
-                    .unwrap()
                     .clone()
-                    .try_send(NodeMessageTypes::TransactionCreate(txn_create_msg));
+                    .try_send(Some(NodeMessageTypes::TransactionCreate(txn_create_msg)));
             }
         } else if topics[0]
             == TopicBuilder::new(constants::CONSENSUS)
@@ -162,16 +163,22 @@ impl MsgProcess for protocol::FloodsubMessage {
 
 #[derive(Debug, Clone)]
 pub struct MessageDispatcher {
-    pub node_msg_dispatcher: Option<Sender<NodeMessageTypes>>,
-    pub consensus_msg_dispatcher: Option<Sender<ConsensusMessageTypes>>,
+    pub node_msg_dispatcher: Sender<Option<NodeMessageTypes>>,
+    pub node_msg_receiver: Arc<Mutex<Receiver<Option<NodeMessageTypes>>>>,
+    pub consensus_msg_dispatcher: Option<Sender<Option<ConsensusMessageTypes>>>,
 }
 
 impl MessageDispatcher {
     pub fn new() -> Self {
+        let (mut tx, mut rx) = channel::<Option<NodeMessageTypes>>(1024);
         MessageDispatcher {
-            node_msg_dispatcher: None,
+            node_msg_dispatcher: tx,
+            node_msg_receiver: Arc::new(Mutex::new(rx)),
             consensus_msg_dispatcher: None,
         }
+    }
+    pub fn set_node_msg_dispatcher(&mut self, tx: &Sender<Option<NodeMessageTypes>>) {
+        self.node_msg_dispatcher = tx.clone();
     }
 }
 

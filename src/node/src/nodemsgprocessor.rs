@@ -8,21 +8,22 @@ use std::sync::Mutex;
 
 #[derive(Debug)]
 pub struct NodeMsgProcessor {
-    _tx: Sender<Option<NodeMessageTypes>>,
-    pub _rx: Receiver<Option<NodeMessageTypes>>,
+    // pub _tx: Sender<Option<NodeMessageTypes>>,
+    pub _rx: Arc<Mutex<Receiver<Option<NodeMessageTypes>>>>,
 }
 
 impl NodeMsgProcessor {
-    pub fn new() -> Self {
-        let (mut tx, mut rx) = channel::<Option<NodeMessageTypes>>(1024);
-        NodeMsgProcessor { _tx: tx, _rx: rx }
+    pub fn new(rx: Arc<Mutex<Receiver<Option<NodeMessageTypes>>>>) -> Self {
+        // let (mut tx, mut rx) = channel::<Option<NodeMessageTypes>>(1024);
+        // NodeMsgProcessor { _tx: tx, _rx: rx }
+        NodeMsgProcessor { _rx: rx }
     }
     pub fn start(&mut self) {
         //, rx: &'static mut Receiver<Option<NodeMessageTypes>>) {
         // let thread_handle = thread::spawn(move || {
         block_on(future::poll_fn(move |cx: &mut Context| {
             loop {
-                match self._rx.poll_next_unpin(cx) {
+                match self._rx.lock().unwrap().poll_next_unpin(cx) {
                     Poll::Ready(Some(msg)) => {
                         println!("msg received {:?}", msg);
                         match msg {
@@ -58,7 +59,7 @@ impl NodeMsgProcessor {
     }
 }
 
-lazy_static! {
-    pub static ref thread_safe_nodemsgprocessor: Arc<Mutex<NodeMsgProcessor>> =
-        Arc::new(Mutex::new(NodeMsgProcessor::new()));
-}
+// lazy_static! {
+//     pub static ref thread_safe_nodemsgprocessor: Arc<Mutex<NodeMsgProcessor>> =
+//         Arc::new(Mutex::new(NodeMsgProcessor::new()));
+// }

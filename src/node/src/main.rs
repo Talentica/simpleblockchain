@@ -7,6 +7,7 @@ use p2plib::simpleswarm::SimpleSwarm;
 use utils::configreader;
 use utils::configreader::Configuration;
 
+use p2plib::messages::msg_dispatcher;
 use p2plib::messages::Message;
 use p2plib::messages::*;
 
@@ -37,11 +38,13 @@ fn test_publish() {
     swarm
         .topic_list
         .push(String::from(TransactionCreate::TOPIC));
+
+    let mut node_msg_processor = NodeMsgProcessor::new(msg_dispatcher.node_msg_receiver.clone());
     let mut tx = swarm.tx.clone();
 
     {
         thread::spawn(move || {
-            thread_safe_nodemsgprocessor.lock().unwrap().start();
+            node_msg_processor.start();
         });
     }
 
@@ -126,6 +129,14 @@ fn main() {
     swarm
         .topic_list
         .push(String::from(TransactionCreate::TOPIC));
+
+    let mut node_msg_processor = NodeMsgProcessor::new(msg_dispatcher.node_msg_receiver.clone());
+    let mut tx = swarm.tx.clone();
+    {
+        thread::spawn(move || {
+            node_msg_processor.start();
+        });
+    }
     swarm.process(peer_id, config);
     // let transport = libp2p::build_development_transport(libp2p::identity::Keypair::Ed25519(
 }
