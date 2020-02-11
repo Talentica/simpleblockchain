@@ -1,7 +1,5 @@
 use futures::{channel::mpsc::*, executor::*, future, prelude::*, task::*};
-use p2plib::constants::*;
 use p2plib::messages::*;
-use std::error::Error;
 
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -58,8 +56,3 @@ impl NodeMsgProcessor {
         }));
     }
 }
-
-// lazy_static! {
-//     pub static ref thread_safe_nodemsgprocessor: Arc<Mutex<NodeMsgProcessor>> =
-//         Arc::new(Mutex::new(NodeMsgProcessor::new()));
-// }

@@ -1,18 +1,9 @@
 use futures::{channel::mpsc::*, executor::*, future, prelude::*, task::*};
-use libp2p::{
-    floodsub::{self, Floodsub, FloodsubEvent, Topic},
-    identity,
-    mdns::{Mdns, MdnsEvent},
-    swarm::NetworkBehaviourEventProcess,
-    Multiaddr, NetworkBehaviour, PeerId, Swarm,
-};
+use libp2p::{floodsub::Topic, PeerId, Swarm};
 use std::error::Error;
-use std::sync::{Arc, Mutex};
 
-use utils::configreader;
 use utils::configreader::Configuration;
 
-use utils::crypto::keypair;
 use utils::serialzer::*;
 
 use super::messages::*;
@@ -27,7 +18,7 @@ pub struct SimpleSwarm {
 
 impl SimpleSwarm {
     pub fn new() -> Self {
-        let (mut tx1, mut rx1) = channel::<Option<MessageTypes>>(4194304);
+        let (tx1, rx1) = channel::<Option<MessageTypes>>(4194304);
         SimpleSwarm {
             topic_list: Vec::new(),
             tx: tx1,
@@ -83,7 +74,6 @@ impl SimpleSwarm {
                                         Vec::<Topic>::from(MessageTypes::ConsensusMsg(data));
                                     swarm.floodsub.publish_many(topics, msgdata)
                                 }
-                                _ => println!("unhandled msgs"),
                             },
                         }
                     }

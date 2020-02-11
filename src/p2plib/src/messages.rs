@@ -1,6 +1,6 @@
 use super::constants;
 use futures::{channel::mpsc::channel, channel::mpsc::Receiver, channel::mpsc::Sender};
-use libp2p::floodsub::{self, protocol, Topic, TopicBuilder, TopicHash};
+use libp2p::floodsub::{protocol, Topic, TopicBuilder, TopicHash};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -25,7 +25,7 @@ pub trait Message {
 }
 
 const NODE_MSG_TOPIC_STR: &'static [&'static str] = &["txn-create", "block-create"];
-const CONSENSUS_MSG_TOPIC_STR: &'static [&'static str] = &["leader-elect", "block-vote"];
+// const CONSENSUS_MSG_TOPIC_STR: &'static [&'static str] = &["leader-elect", "block-vote"];
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TransactionCreate {
@@ -127,15 +127,20 @@ impl MsgProcess for protocol::FloodsubMessage {
         if topics[0] == TopicBuilder::new(constants::NODE).build().hash().clone() {
             //        TopicHash::from_raw(String::from(constants::NODE)) {
             println!("Node type msg");
-                let block_create_msg = deserialize::<NodeMessageTypes>(data);
-                println!(
-                    "block create msg received in process = {:?}",
-                    block_create_msg
-                );
-                msg_dispatcher
-                    .node_msg_dispatcher
-                    .clone()
-                    .try_send(Some(block_create_msg));
+            let block_create_msg = deserialize::<NodeMessageTypes>(data);
+            println!(
+                "block create msg received in process = {:?}",
+                block_create_msg
+            );
+            let result = MSG_DISPATCHER
+                .node_msg_dispatcher
+                .clone()
+                .try_send(Some(block_create_msg));
+            //TODO find what to do with unsent message
+            //Current code is dropping that message
+            if result.is_err() {
+                result.unwrap_err().into_send_error();
+            }
         } else if topics[0]
             == TopicBuilder::new(constants::CONSENSUS)
                 .build()
@@ -156,7 +161,7 @@ pub struct MessageDispatcher {
 
 impl MessageDispatcher {
     pub fn new() -> Self {
-        let (mut tx, mut rx) = channel::<Option<NodeMessageTypes>>(1024);
+        let (tx, rx) = channel::<Option<NodeMessageTypes>>(1024);
         MessageDispatcher {
             node_msg_dispatcher: tx,
             node_msg_receiver: Arc::new(Mutex::new(rx)),
@@ -169,5 +174,5 @@ impl MessageDispatcher {
 }
 
 lazy_static! {
-    pub static ref msg_dispatcher: MessageDispatcher = MessageDispatcher::new();
+    pub static ref MSG_DISPATCHER: MessageDispatcher = MessageDispatcher::new();
 }

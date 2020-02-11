@@ -1,17 +1,13 @@
 use super::*;
 use std::env;
-use std::fs;
-use std::fs::{File, OpenOptions};
-use std::io;
-use std::io::prelude::*;
+use std::fs::{File};
 use toml;
+use std::io::Read;
 
 use crypto::keypair::CryptoKeypair;
 use crypto::keypair::Keypair;
 
 use serde::{Deserialize, Serialize};
-
-use toml::Value;
 
 #[derive(Debug)]
 pub enum NODETYPE {
