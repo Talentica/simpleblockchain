@@ -1,4 +1,4 @@
-use async_std::{io, task};
+use super::messages::*;
 use futures::{future, prelude::*};
 use libp2p::{
     floodsub::{self, Floodsub, FloodsubEvent},
@@ -18,14 +18,14 @@ pub struct P2PBehaviour<TSubstream: AsyncRead + AsyncWrite> {
 
 impl<TSubstream: AsyncRead + AsyncWrite> P2PBehaviour<TSubstream> {
     pub fn new(peer_id: PeerId) -> Self {
-        let mdns = task::block_on(Mdns::new()).unwrap();
+        let mdns = Mdns::new().unwrap();
         let mut behaviour = P2PBehaviour {
             floodsub: Floodsub::new(peer_id.clone()),
             mdns,
         };
         behaviour
     }
-    pub fn subscribe(&mut self, topic_str: String) {
+    pub fn subscribe(&mut self, topic_str: &String) {
         let floodsub_topic = floodsub::TopicBuilder::new(topic_str).build();
         self.floodsub.subscribe(floodsub_topic);
     }
@@ -59,7 +59,8 @@ impl<TSubstream: AsyncRead + AsyncWrite> NetworkBehaviourEventProcess<FloodsubEv
     fn inject_event(&mut self, pubsub_event: FloodsubEvent) {
         match pubsub_event {
             FloodsubEvent::Message(msg) => {
-                println!("Message received from {:?} \ndata = {:?}", msg.source, String::from_utf8(msg.data).unwrap());
+                println!("Message received from {:?}, msg topic {:?}", msg.source, msg.topics);
+                msg.process(&msg.topics, &msg.data);
             }
             FloodsubEvent::Subscribed { peer_id, topic } => {
                 //println!("subscribed by peer {:?} topic {:?}", peer_id, topic);

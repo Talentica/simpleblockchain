@@ -80,10 +80,7 @@ mod tests {
         let s = "97ba6f71a5311c4986e01798d525d0da8ee5c54acbf6ef7c3fadd1e2f624442f";
         let mut secret_bytes = hex::decode(s).expect("invalid secret");
         let kp = Keypair::generate_from(secret_bytes.as_mut_slice());
-        println!(
-            "pub : {:?}",
-            hex::encode(kp.public().encode())
-        );
+        println!("pub : {:?}", hex::encode(kp.public().encode()));
         // println!("secrete {:?}", hex::encode(kp.secret().as_ref()));
         let sign = Keypair::sign(&kp, b"Hello World");
         assert_eq!(

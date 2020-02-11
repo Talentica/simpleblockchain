@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate lazy_static;
+pub mod constants;
 pub mod messages;
 pub mod p2pbehaviour;
 pub mod simpleswarm;
