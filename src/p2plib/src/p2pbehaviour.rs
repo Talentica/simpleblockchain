@@ -1,7 +1,7 @@
+use super::messages::*;
 use futures::{future, prelude::*};
 use libp2p::{
     floodsub::{self, Floodsub, FloodsubEvent},
-    identity,
     mdns::{Mdns, MdnsEvent},
     swarm::NetworkBehaviourEventProcess,
     Multiaddr, NetworkBehaviour, PeerId, Swarm,
@@ -62,6 +62,7 @@ impl<TSubstream: AsyncRead + AsyncWrite> NetworkBehaviourEventProcess<FloodsubEv
                     "Message received from {:?}, msg topic {:?}",
                     msg.source, msg.topics
                 );
+                msg.process(&msg.topics, &msg.data);
             }
             FloodsubEvent::Subscribed { peer_id, topic } => {
                 //println!("subscribed by peer {:?} topic {:?}", peer_id, topic);

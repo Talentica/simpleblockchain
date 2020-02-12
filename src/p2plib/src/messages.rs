@@ -40,9 +40,9 @@ pub struct TransactionCreate {
 
 impl Message for TransactionCreate {
     const TOPIC: &'static str = CONSENSUS_MSG_TOPIC_STR[0];
-    const MODULE_TOPIC: &'static str = constants::NODE;
+    const MODULE_TOPIC: &'static str = constants::CONSENSUS;
     fn handler(&self) {
-        println!("i am txn create");
+        println!("i am txn create jabra fan of Consensus Module<>");
     }
 }
 
@@ -50,7 +50,7 @@ impl Message for SignedTransaction {
     const TOPIC: &'static str = NODE_MSG_TOPIC_STR[0];
     const MODULE_TOPIC: &'static str = constants::NODE;
     fn handler(&self) {
-        println!("i am txn create");
+        println!("i am SignedTransaction create jabra fan of Node Module");
     }
 }
 
@@ -61,10 +61,10 @@ pub struct BlockCreate {
 }
 
 impl Message for BlockCreate {
-    const TOPIC: &'static str = CONSENSUS_MSG_TOPIC_STR[0];
-    const MODULE_TOPIC: &'static str = constants::NODE;
+    const TOPIC: &'static str = CONSENSUS_MSG_TOPIC_STR[1];
+    const MODULE_TOPIC: &'static str = constants::CONSENSUS;
     fn handler(&self) {
-        println!("i am blockcreate");
+        println!("i am block create jabra fan of Consensus Module<> ");
     }
 }
 
@@ -72,7 +72,7 @@ impl Message for SignedBlock {
     const TOPIC: &'static str = NODE_MSG_TOPIC_STR[1];
     const MODULE_TOPIC: &'static str = constants::NODE;
     fn handler(&self) {
-        println!("i am blockcreate");
+        println!("i am SignedBlock create jabra fan of Node Module");
     }
 }
 
@@ -99,7 +99,9 @@ impl From<NodeMessageTypes> for Topic {
     fn from(msg: NodeMessageTypes) -> Topic {
         match msg {
             NodeMessageTypes::SignedBlockEnum(data) => TopicBuilder::new(data.topic()).build(),
-            NodeMessageTypes::SignedTransactionEnum(data) => TopicBuilder::new(data.topic()).build(),
+            NodeMessageTypes::SignedTransactionEnum(data) => {
+                TopicBuilder::new(data.topic()).build()
+            }
         }
     }
 }
@@ -155,7 +157,12 @@ impl MsgProcess for protocol::FloodsubMessage {
                 .node_msg_dispatcher
                 .clone()
                 .try_send(Some(block_create_msg));
-        } else if topics[0] == TopicHash::from_raw(String::from(constants::CONSENSUS)) {
+        } else if topics[0]
+            == TopicBuilder::new(constants::CONSENSUS)
+                .build()
+                .hash()
+                .clone()
+        {
             println!("Consensus type msg");
         }
     }

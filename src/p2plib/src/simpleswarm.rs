@@ -1,18 +1,9 @@
 use futures::{channel::mpsc::*, executor::*, future, prelude::*, task::*};
-use libp2p::{
-    floodsub::{self, Floodsub, FloodsubEvent, Topic},
-    identity,
-    mdns::{Mdns, MdnsEvent},
-    swarm::NetworkBehaviourEventProcess,
-    Multiaddr, NetworkBehaviour, PeerId, Swarm,
-};
+use libp2p::{floodsub::Topic, PeerId, Swarm};
 use std::error::Error;
-use std::sync::{Arc, Mutex};
 
-use utils::configreader;
 use utils::configreader::Configuration;
 
-use utils::crypto::keypair;
 use utils::serializer::*;
 
 use super::messages::*;
@@ -83,7 +74,6 @@ impl SimpleSwarm {
                                         Vec::<Topic>::from(MessageTypes::ConsensusMsg(data));
                                     swarm.floodsub.publish_many(topics, msgdata)
                                 }
-                                _ => println!("unhandled msgs"),
                             },
                         }
                     }
