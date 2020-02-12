@@ -1,4 +1,6 @@
+use crate::messages::{MessageTypes, NodeMessageTypes};
 use chrono::prelude::Utc;
+use futures::channel::mpsc::*;
 use schema::transaction::{SignedTransaction, Txn};
 use schema::transaction_pool::{TransactionPool, TxnPool};
 use std::sync::{Arc, Mutex};
@@ -9,6 +11,7 @@ use utils::keypair::{CryptoKeypair, Keypair, KeypairType};
 pub fn add_txn_to_txn_pool(
     kp: &KeypairType,
     txn_pool_clone: Arc<std::sync::Mutex<schema::transaction_pool::TransactionPool>>,
+    txn_sender: &mut Sender<Option<MessageTypes>>,
 ) {
     loop {
         thread::sleep(Duration::from_millis(500));
@@ -18,5 +21,9 @@ pub fn add_txn_to_txn_pool(
         one.header
             .insert("timestamp".to_string(), time_instant.to_string());
         txn_pool.insert_op(&time_instant, &one);
+        let data = Some(MessageTypes::NodeMsg(
+            NodeMessageTypes::SignedTransactionEnum(one),
+        ));
+        txn_sender.try_send(data);
     }
 }

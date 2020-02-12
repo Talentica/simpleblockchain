@@ -4,17 +4,15 @@ extern crate schema;
 extern crate utils;
 extern crate p2plib;
 
-use chrono::prelude::Utc;
-use db::db_layer::{fork_db, patch_db, snapshot_db};
+use db::db_layer::{fork_db, patch_db};
 use db_service::db_fork_ref::SchemaFork;
 use exonum_crypto::Hash;
 use exonum_merkledb::{Fork, ObjectHash};
-use schema::block::{Block, BlockTraits, SignedBlock, SignedBlockTraits};
+use schema::block::{SignedBlock, SignedBlockTraits};
 use schema::transaction_pool::{TransactionPool, TxnPool};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
-use std::collections::HashMap;
 use utils::configreader::{Configuration, NODETYPE};
 use utils::keypair::{CryptoKeypair, Keypair, KeypairType};
 use futures::{channel::mpsc::*, executor::*, future, prelude::*, task::*};
@@ -24,7 +22,6 @@ pub struct Consensus {
     keypair: KeypairType,
     fork: Option<Fork>,
     signed_block: Option<SignedBlock>,
-    blocks: HashMap<String, SignedBlock>,
 }
 
 /*{
@@ -110,7 +107,7 @@ impl Consensus {
         }
     }
 
-    fn start_mining(
+    fn validator(
         &mut self,
         locked_txn_pool: Arc<std::sync::Mutex<schema::transaction_pool::TransactionPool>>,
         sender: &mut Sender<Option<MessageTypes>>,
@@ -137,7 +134,9 @@ impl Consensus {
         }
     }
 
-    fn auditor(&self) {}
+    fn full_node(&self) {
+        
+    }
 
     pub fn init_consensus(
         config: &Configuration,
@@ -148,13 +147,12 @@ impl Consensus {
             keypair: config.node.keypair.clone(),
             fork: Option::None,
             signed_block: Option::None,
-            blocks: HashMap::new(),
         };
         consensus_obj.init_state(config.node.genesis_block, &config.db.dbpath);
 
         match config.node.node_type {
-            NODETYPE::Validator => consensus_obj.start_mining(txn_pool, sender),
-            NODETYPE::FullNode => consensus_obj.auditor(),
+            NODETYPE::Validator => consensus_obj.validator(txn_pool, sender),
+            NODETYPE::FullNode => consensus_obj.full_node(),
         }
     }
 }

@@ -74,7 +74,7 @@ impl<T: ObjectAccess> SchemaFork<T> {
      * this function will iterate over txn_order_pool and return a vec of SignedTransaction and
      * all changes due to these transaction also updated in state_trie called wallet
      * TODO: // since fxn iterate over txnz-order_pool, so in case of invalid txn or expired txn will not be
-     * deleted from txn_pool according to whole txn_pool 
+     * deleted from txn_pool according to whole txn_pool
      * Update logic for that in future.  
      */
     pub fn execute_transactions(
@@ -85,7 +85,7 @@ impl<T: ObjectAccess> SchemaFork<T> {
         let mut temp_vec = Vec::<SignedTransaction>::with_capacity(15);
         // compute until order_pool exhusted or transaction limit crossed
         for (_key, value) in txn_pool.order_pool.iter() {
-            if temp_vec.len() < 15{
+            if temp_vec.len() < 15 {
                 let txn: SignedTransaction = value.clone();
                 if txn.validate() {
                     if wallet.contains(&txn.txn.from) {
@@ -107,8 +107,7 @@ impl<T: ObjectAccess> SchemaFork<T> {
                         }
                     }
                 }
-            }
-            else{
+            } else {
                 break;
             }
         }
@@ -123,7 +122,11 @@ impl<T: ObjectAccess> SchemaFork<T> {
         let storage_trie = self.storage();
 
         let executed_txns = self.execute_transactions(txn_pool, &mut wallets);
-        println!("length {:?} {:?}", txn_pool.length_hash_pool(), txn_pool.length_order_pool());
+        println!(
+            "length {:?} {:?}",
+            txn_pool.length_hash_pool(),
+            txn_pool.length_order_pool()
+        );
         let mut vec_txn_hash = vec![];
         for each in executed_txns.iter() {
             let hash = each.object_hash();
@@ -151,7 +154,11 @@ impl<T: ObjectAccess> SchemaFork<T> {
     }
 
     /// this function will update wallet for given transaction
-    pub fn update_transaction(&self, txn : SignedTransaction, wallet: &mut RefMut<ProofMapIndex<T, String, Wallet>>) -> bool{
+    pub fn update_transaction(
+        &self,
+        txn: SignedTransaction,
+        wallet: &mut RefMut<ProofMapIndex<T, String, Wallet>>,
+    ) -> bool {
         if txn.validate() {
             if wallet.contains(&txn.txn.from) {
                 let mut from_wallet: Wallet = wallet.get(&txn.txn.from).unwrap();
@@ -171,12 +178,12 @@ impl<T: ObjectAccess> SchemaFork<T> {
                     return true;
                 }
             }
-        }   
+        }
         return false;
     }
 
     /// this function will update fork for given block
-    pub fn update_block(&self, signed_block: &SignedBlock, txn_pool: &TransactionPool) -> bool{
+    pub fn update_block(&self, signed_block: &SignedBlock, txn_pool: &TransactionPool) -> bool {
         let mut wallets = self.state();
         let mut transaction_trie = self.transactions();
         let storage_trie = self.storage();
@@ -193,10 +200,14 @@ impl<T: ObjectAccess> SchemaFork<T> {
         if signed_block.block.prev_hash != prev_hash {
             return false;
         }
-        
+
         // block signature check
         let msg = serialize(signed_block);
-        if !PublicKey::verify_from_encoded_pk(&signed_block.block.peer_id , &msg, &signed_block.signature) {
+        if !PublicKey::verify_from_encoded_pk(
+            &signed_block.block.peer_id,
+            &msg,
+            &signed_block.signature,
+        ) {
             return false;
         }
 
@@ -204,15 +215,14 @@ impl<T: ObjectAccess> SchemaFork<T> {
         let executed_txns = &signed_block.block.txn_pool;
         for each in executed_txns.iter() {
             let signed_txn = txn_pool.get(each);
-            if let Some(txn) = signed_txn{
+            if let Some(txn) = signed_txn {
                 transaction_trie.put(each, txn.clone());
                 self.update_transaction(txn.clone(), &mut wallets);
-            }
-            else{
+            } else {
                 return false;
             }
         }
-        
+
         // block header check
         let header: [Hash; 3] = [
             wallets.object_hash(),

@@ -85,7 +85,7 @@ mod tests {
     #[test]
     fn test_verify() {
         use super::*;
-        let s = "97ba6f71a5311c4986e01798d525d0da8ee5c54acbf6ef7c3fadd1e2f624442f";
+        let s = "5f7c3fadd1e2f6225d0da8ee5c5a4435acbf6ef7c3fa543dd16e2544f624442f";
         let mut secret_bytes = hex::decode(s).expect("invalid secret");
         let kp = Keypair::generate_from(secret_bytes.as_mut_slice());
         println!("pub : {:?}", hex::encode(Keypair::public(&kp).encode()));
