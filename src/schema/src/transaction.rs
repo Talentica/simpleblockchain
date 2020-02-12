@@ -1,7 +1,7 @@
 extern crate utils;
 use chrono::prelude::*;
 use exonum_crypto::Hash;
-use exonum_merkledb::{impl_object_hash_for_binary_value, BinaryValue, ObjectHash};
+pub use exonum_merkledb::{impl_object_hash_for_binary_value, BinaryValue, ObjectHash};
 use failure::Error;
 use std::{borrow::Cow, convert::AsRef};
 

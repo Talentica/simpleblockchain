@@ -3,7 +3,8 @@ use p2plib::messages::*;
 
 use std::sync::Arc;
 use std::sync::Mutex;
-
+use schema::transaction_pool::{TransactionPool, TxnPool, TRANSACTION_POOL};
+use schema::transaction::{SignedTransaction, ObjectHash};
 #[derive(Debug)]
 pub struct NodeMsgProcessor {
     // pub _tx: Sender<Option<NodeMessageTypes>>,
@@ -37,9 +38,17 @@ impl NodeMsgProcessor {
                                         //Write msg processing code
                                     }
                                     NodeMessageTypes::SignedTransactionEnum(data) => {
-                                        println!("Signed Transaction msg in NodeMsgProcessor with data {:?}", data);
-                                        //TODO
-                                        //Write msg processing code
+                                        let arc_tx_pool = TRANSACTION_POOL.clone();
+                                        let mut txn_pool = arc_tx_pool.lock().unwrap();
+                                        let txn: SignedTransaction = data;
+                                        println!("Signed Transaction msg in NodeMsgProcessor with Hash {:?}", txn.object_hash());
+                                        let timestamp = txn
+                                            .header
+                                            .get(&String::from("timestamp"))
+                                            .unwrap()
+                                            .parse::<i64>()
+                                            .unwrap();
+                                        txn_pool.insert_op(&timestamp, &txn);
                                     }
                                 }
                             }

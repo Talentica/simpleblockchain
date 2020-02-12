@@ -2,7 +2,7 @@ use super::constants;
 use futures::{channel::mpsc::channel, channel::mpsc::Receiver, channel::mpsc::Sender};
 use libp2p::floodsub::{self, protocol, Topic, TopicBuilder, TopicHash};
 pub use schema::block::{SignedBlock, SignedBlockTraits};
-pub use schema::transaction::{SignedTransaction, Txn};
+pub use schema::transaction::{SignedTransaction, Txn, ObjectHash};
 use std::sync::{Arc, Mutex};
 use utils::serializer::{deserialize, serialize, Deserialize, Serialize};
 
@@ -29,7 +29,7 @@ pub trait Message {
 }
 
 const NODE_MSG_TOPIC_STR: &'static [&'static str] = &["txn-create", "block-create"];
-const CONSENSUS_MSG_TOPIC_STR: &'static [&'static str] = &["leader-elect", "block-vote"];
+const CONSENSUS_MSG_TOPIC_STR: &'static [&'static str] = &["leader-elect", "block-create"];
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TransactionCreate {
@@ -61,16 +61,16 @@ pub struct BlockCreate {
 }
 
 impl Message for BlockCreate {
-    const TOPIC: &'static str = CONSENSUS_MSG_TOPIC_STR[1];
-    const MODULE_TOPIC: &'static str = constants::CONSENSUS;
+    const TOPIC: &'static str = NODE_MSG_TOPIC_STR[1];
+    const MODULE_TOPIC: &'static str = constants::NODE;
     fn handler(&self) {
         println!("i am block create jabra fan of Consensus Module<> ");
     }
 }
 
 impl Message for SignedBlock {
-    const TOPIC: &'static str = NODE_MSG_TOPIC_STR[1];
-    const MODULE_TOPIC: &'static str = constants::NODE;
+    const TOPIC: &'static str = CONSENSUS_MSG_TOPIC_STR[1];
+    const MODULE_TOPIC: &'static str = constants::CONSENSUS;
     fn handler(&self) {
         println!("i am SignedBlock create jabra fan of Node Module");
     }
@@ -79,13 +79,13 @@ impl Message for SignedBlock {
 #[derive(Debug, Serialize, Deserialize)]
 pub enum NodeMessageTypes {
     SignedTransactionEnum(SignedTransaction),
-    SignedBlockEnum(SignedBlock),
+    SignedBlockEnum(BlockCreate),
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum ConsensusMessageTypes {
     LeaderElect(TransactionCreate),
-    BlockVote(BlockCreate),
+    BlockVote(SignedBlock),
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -164,6 +164,15 @@ impl MsgProcess for protocol::FloodsubMessage {
                 .clone()
         {
             println!("Consensus type msg");
+            let block_create_msg = deserialize::<ConsensusMessageTypes>(data);
+            println!(
+                "block create msg received in process = {:?}",
+                block_create_msg
+            );
+            MSG_DISPATCHER
+                .consensus_msg_dispatcher
+                .clone()
+                .try_send(Some(block_create_msg));
         }
     }
 }
@@ -172,20 +181,27 @@ impl MsgProcess for protocol::FloodsubMessage {
 pub struct MessageDispatcher {
     pub node_msg_dispatcher: Sender<Option<NodeMessageTypes>>,
     pub node_msg_receiver: Arc<Mutex<Receiver<Option<NodeMessageTypes>>>>,
-    pub consensus_msg_dispatcher: Option<Sender<Option<ConsensusMessageTypes>>>,
+    pub consensus_msg_dispatcher: Sender<Option<ConsensusMessageTypes>>,
+    pub consensus_msg_receiver: Arc<Mutex<Receiver<Option<ConsensusMessageTypes>>>>,
 }
 
 impl MessageDispatcher {
     pub fn new() -> Self {
         let (mut tx, mut rx) = channel::<Option<NodeMessageTypes>>(1024);
+        let (mut tx_consensus, mut rx_consensus) = channel::<Option<ConsensusMessageTypes>>(1024);
         MessageDispatcher {
             node_msg_dispatcher: tx,
             node_msg_receiver: Arc::new(Mutex::new(rx)),
-            consensus_msg_dispatcher: None,
+            consensus_msg_dispatcher: tx_consensus,
+            consensus_msg_receiver: Arc::new(Mutex::new(rx_consensus)),
         }
     }
     pub fn set_node_msg_dispatcher(&mut self, tx: &Sender<Option<NodeMessageTypes>>) {
         self.node_msg_dispatcher = tx.clone();
+    }
+
+    pub fn set_consensus_msg_dispatcher(&mut self, tx: &Sender<Option<ConsensusMessageTypes>>) {
+        self.consensus_msg_dispatcher = tx.clone();
     }
 }
 

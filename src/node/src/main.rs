@@ -10,13 +10,13 @@ use p2plib::messages::Message;
 use p2plib::messages::*;
 use p2plib::simpleswarm::SimpleSwarm;
 use p2plib::txn_pool_p2p;
-use schema::transaction_pool::{TransactionPool, TxnPool};
+use schema::transaction_pool::{TransactionPool, TxnPool, TRANSACTION_POOL};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use utils::configreader;
-use utils::configreader::Configuration;
+use utils::configreader::{Configuration, NODETYPE};
 
-fn main() {
+fn validator_process() {
     let config: &Configuration = &configreader::GLOBAL_CONFIG;
     let pk: PublicKey = PublicKey::Ed25519(config.node.public.clone());
     let peer_id = PeerId::from_public_key(pk);
@@ -40,28 +40,18 @@ fn main() {
         });
     }
 
-    let transaction_pool: TransactionPool = TransactionPool::new();
-    let object = Arc::new(Mutex::new(transaction_pool));
-    let clone1 = object.clone();
-    let clone2 = object.clone();
-    
-
     // this thread will be responsible for adding txn in txn_pool
-    let mut threads = Vec::new();
-    let handle = thread::spawn(move || {
-        txn_pool_p2p::add_txn_to_txn_pool(&config.node.keypair.clone(), clone2, &mut txn_sender)
+    thread::spawn(move || {
+        txn_pool_p2p::add_txn_to_txn_pool(&config.node.keypair.clone(), &mut txn_sender)
     });
-    threads.push(handle);
 
     // this thread will be responsible for whole consensus part.
     // in future this thread will spwan new child thread accrding to consensus requirement.
-    let handle =
-        thread::spawn(move || consensus_interface::Consensus::init_consensus(config, clone1, &mut sender));
-    threads.push(handle);
+    thread::spawn(move || consensus_interface::Consensus::init_consensus(config, &mut sender, Option::None));
     swarm.process(peer_id, config);
 }
 
-fn main1() {
+fn fullnode_process() {
     let config: &Configuration = &configreader::GLOBAL_CONFIG;
     let pk: PublicKey = PublicKey::Ed25519(config.node.public.clone());
     let peer_id = PeerId::from_public_key(pk);
@@ -81,5 +71,16 @@ fn main1() {
             node_msg_processor.start();
         });
     }
+    let mut sender = swarm.tx.clone();
+    let mut consensus_msg_receiver_clone = MSG_DISPATCHER.consensus_msg_receiver.clone();
+    thread::spawn(move || consensus_interface::Consensus::init_consensus(config, &mut sender, Some(consensus_msg_receiver_clone)));
     swarm.process(peer_id, config);
+}
+
+fn main(){
+    let config: &Configuration = &configreader::GLOBAL_CONFIG;
+    match config.node.node_type {
+        NODETYPE::Validator => validator_process(),
+        NODETYPE::FullNode => fullnode_process(),
+    }
 }

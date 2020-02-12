@@ -1,29 +1,30 @@
 extern crate db;
 extern crate db_service;
+extern crate p2plib;
 extern crate schema;
 extern crate utils;
-extern crate p2plib;
 
 use db::db_layer::{fork_db, patch_db};
 use db_service::db_fork_ref::SchemaFork;
 use exonum_crypto::Hash;
 use exonum_merkledb::{Fork, ObjectHash};
+use futures::{channel::mpsc::*, executor::*, future, prelude::*, task::*};
+use p2plib::messages::{ConsensusMessageTypes, MessageTypes, NodeMessageTypes};
 use schema::block::{SignedBlock, SignedBlockTraits};
-use schema::transaction_pool::{TransactionPool, TxnPool};
+use schema::transaction_pool::{TransactionPool, TxnPool, TRANSACTION_POOL};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 use utils::configreader::{Configuration, NODETYPE};
 use utils::keypair::{CryptoKeypair, Keypair, KeypairType};
-use futures::{channel::mpsc::*, executor::*, future, prelude::*, task::*};
-use p2plib::messages::{MessageTypes, NodeMessageTypes, ConsensusMessageTypes};
 
 pub struct Consensus {
     keypair: KeypairType,
-    fork: Option<Fork>,
-    signed_block: Option<SignedBlock>,
 }
 
+pub struct Blocks {
+    pending_blocks: std::collections::VecDeque<SignedBlock>,
+}
 /*{
     Basic idea behind generic consensus module.
     point one -> run consensus() which will take config as a parameter and will decide genesis need to create or
@@ -92,7 +93,6 @@ pub struct Consensus {
 }*/
 
 impl Consensus {
-
     fn init_state(&self, genesis_block: bool, _db_path: &String) {
         if genesis_block {
             let fork = fork_db();
@@ -107,52 +107,129 @@ impl Consensus {
         }
     }
 
-    fn validator(
-        &mut self,
-        locked_txn_pool: Arc<std::sync::Mutex<schema::transaction_pool::TransactionPool>>,
-        sender: &mut Sender<Option<MessageTypes>>,
-    ) {
+    fn validator(&mut self, sender: &mut Sender<Option<MessageTypes>>) {
         loop {
             thread::sleep(Duration::from_millis(5000));
-            self.fork = Option::None;
-            self.signed_block = Option::None;
-
             // no polling machenism of txn_pool and create block need to implement or modified here
             // if one want to change the create_block and txn priority then change/ implment that part in
             // schema operations and p2p module
+            let arc_txn_pool = TRANSACTION_POOL.clone();
             let fork = fork_db();
             {
                 let schema = SchemaFork::new(&fork);
-                let mut txn_pool = locked_txn_pool.lock().unwrap();
+                let mut txn_pool = arc_txn_pool.lock().unwrap();
                 let signed_block = schema.create_block(&self.keypair, &mut txn_pool);
                 println!("new block created.. hash {}", signed_block.object_hash());
                 txn_pool.sync_pool(&signed_block.block.txn_pool);
-                let data = Some(MessageTypes::NodeMsg(NodeMessageTypes::SignedBlockEnum(signed_block.clone())));
+                let data = Some(MessageTypes::ConsensusMsg(
+                    ConsensusMessageTypes::BlockVote(signed_block.clone()),
+                ));
                 sender.try_send(data);
             }
             patch_db(fork);
         }
     }
 
-    fn full_node(&self) {
-        
+    fn full_node(&mut self, pending_blocks: Arc<Mutex<Blocks>>) {
+        loop {
+            thread::sleep(Duration::from_millis(2000));
+            // no polling machenism of txn_pool and create block need to implement or modified here
+            // if one want to change the create_block and txn priority then change/ implment that part in
+            // schema operations and p2p module
+            let mut block_queue = pending_blocks.lock().unwrap();
+            if block_queue.pending_blocks.len() > 0 {
+                let arc_txn_pool = TRANSACTION_POOL.clone();
+                let fork = fork_db();
+                let mut flag = true;
+                {
+                    let schema = SchemaFork::new(&fork);
+                    let mut txn_pool = arc_txn_pool.lock().unwrap();
+                    let block: &SignedBlock = block_queue.pending_blocks.get_mut(0).unwrap();
+                    if schema.update_block(block, &mut txn_pool) {
+                        txn_pool.sync_pool(&block.block.txn_pool);
+                    } else {println!("block couldn't verified");
+                        flag = false;
+                    }
+                }
+                if flag {
+                    patch_db(fork);
+                    block_queue.pending_blocks.pop_front();
+                    println!("block updated in db");
+                }
+            }
+        }
+    }
+
+    pub fn start_receiver(
+        pending_blocks: Arc<Mutex<Blocks>>,
+        rx: Arc<Mutex<Receiver<Option<ConsensusMessageTypes>>>>,
+    ) {
+        //, rx: &'static mut Receiver<Option<NodeMessageTypes>>) {
+        // let thread_handle = thread::spawn(move || {
+        thread::spawn(move || {
+            block_on(future::poll_fn(move |cx: &mut Context| {
+                loop {
+                    match rx.lock().unwrap().poll_next_unpin(cx) {
+                        Poll::Ready(Some(msg)) => {
+                            println!("msg received {:?}", msg);
+                            match msg {
+                                None => println!("Empty msg received !"),
+                                Some(msgtype) => {
+                                    match msgtype {
+                                        ConsensusMessageTypes::LeaderElect(data) => {
+                                            println!(
+                                            "Leader Elect msg in ConsensusMsgProcessor with data {:?}",
+                                            data
+                                        );
+                                            //TODO
+                                            //Write msg processing code
+                                        }
+                                        ConsensusMessageTypes::BlockVote(data) => {
+                                            let signed_block: SignedBlock = data;
+                                            println!("Signed Transaction msg in NodeMsgProcessor with Hash {:?}", signed_block.object_hash());
+                                            let mut block_queue = pending_blocks.lock().unwrap();
+                                            block_queue.pending_blocks.push_back(signed_block);
+                                            println!(
+                                                "block queue length {}",
+                                                block_queue.pending_blocks.len()
+                                            );
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        Poll::Ready(None) => {
+                            println!("channel closed !");
+                            return Poll::Ready(1);
+                        }
+                        Poll::Pending => break,
+                    }
+                }
+                Poll::Pending
+            }));
+        });
     }
 
     pub fn init_consensus(
         config: &Configuration,
-        txn_pool: Arc<std::sync::Mutex<schema::transaction_pool::TransactionPool>>,
         sender: &mut Sender<Option<MessageTypes>>,
+        msg_receiver: Option<Arc<Mutex<Receiver<Option<ConsensusMessageTypes>>>>>,
     ) {
         let mut consensus_obj = Consensus {
             keypair: config.node.keypair.clone(),
-            fork: Option::None,
-            signed_block: Option::None,
         };
+        let mut pending_blocks_obj = Blocks {
+            pending_blocks: std::collections::VecDeque::new(),
+        };
+        let pending_blocks = Arc::new(Mutex::new(pending_blocks_obj));
         consensus_obj.init_state(config.node.genesis_block, &config.db.dbpath);
-
+        match msg_receiver {
+            Some(receiver) => Consensus::start_receiver(pending_blocks.clone(), receiver),
+            None => println!("Apna Bhai Validator hai"),
+        }
         match config.node.node_type {
-            NODETYPE::Validator => consensus_obj.validator(txn_pool, sender),
-            NODETYPE::FullNode => consensus_obj.full_node(),
+            NODETYPE::Validator => consensus_obj.validator(sender),
+            NODETYPE::FullNode => consensus_obj.full_node(pending_blocks.clone()),
         }
     }
 }

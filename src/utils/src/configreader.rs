@@ -23,7 +23,7 @@ pub enum NODETYPE {
 pub struct TomlReaderConfig {
     pub public: String,
     pub secret: String,
-    node_type: i32,
+    node_type: String,
     genesis_block: bool,
     //p2p
     p2p_port: u16,
@@ -49,11 +49,19 @@ impl Configuration {
         if hex::encode(keypair.public().encode()) != tomlreader.public {
             panic!("Secret and public key pair is invalid");
         }
+        let mut node_type: NODETYPE = NODETYPE::Validator;
+        if tomlreader.node_type.to_ascii_lowercase() == "fullnode" {
+            node_type = NODETYPE::FullNode
+        } else if tomlreader.node_type.to_ascii_lowercase() == "validator" {
+            node_type = NODETYPE::Validator
+        } else {
+            panic!("node type not defined properly");
+        }
         let node_obj: Node = Node {
             public: Keypair::public(&keypair),
             hex_public: tomlreader.public,
             keypair: keypair,
-            node_type: NODETYPE::Validator,
+            node_type,
             genesis_block: tomlreader.genesis_block,
             p2p_port: tomlreader.p2p_port,
         };

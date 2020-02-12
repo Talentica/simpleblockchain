@@ -3,9 +3,9 @@ extern crate utils;
 use exonum_crypto::Hash;
 use exonum_merkledb::ObjectHash;
 
-use crate::transaction::{SignedTransaction};
-use std::collections::{BTreeMap};
-
+use crate::transaction::SignedTransaction;
+use std::collections::BTreeMap;
+use std::sync::{Arc, Mutex};
 pub type TxnPoolKeyType = i64;
 pub type TxnPoolValueType = SignedTransaction;
 
@@ -124,7 +124,11 @@ impl TxnPool for TransactionPool {
             self.order_pool.insert(timestamp, txn);
         }
     }
+}
 
+lazy_static! {
+    pub static ref TRANSACTION_POOL: Arc<std::sync::Mutex<TransactionPool>> =
+        Arc::new(Mutex::new(TransactionPool::new()));
 }
 
 #[cfg(test)]
