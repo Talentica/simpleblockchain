@@ -4,7 +4,7 @@ use libp2p::floodsub::{protocol, Topic, TopicBuilder, TopicHash};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::sync::Mutex;
-use utils::serialzer::*;
+use utils::serializer::*;
 
 pub trait Message {
     const TOPIC: &'static str;

@@ -9,8 +9,10 @@ edition = "2018"
 [dependencies]
 utils = { path = "../utils" }
 p2plib = { path = "../p2plib" }
+services = { path = "../services" }
 futures = "0.3.1"
 libp2p = "^0.15"
 async-std = "^1.4"
 env_logger = "0.7.1"
 lazy_static = "^1.4"
+ctrlc = { version = "3.0", features = ["termination"] }

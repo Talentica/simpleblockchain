@@ -2,6 +2,9 @@
 members = [
     "src/node",
     "src/db",
+    "src/schema",
+    "src/services",
+    "src/client",
 ]
 
 

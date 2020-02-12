@@ -1,6 +1,6 @@
 // Module responsible for serializing and deserializing
 use libp2p::multihash::{encode, Hash};
-use serde::{Deserialize, Serialize};
+pub use serde::{Deserialize, Serialize};
 
 /// serialize a generic type T
 /// Needs trait Serialize to be implemented
@@ -20,7 +20,7 @@ pub fn serialize_hash256<T>(to_ser: &T) -> Vec<u8>
 where
     T: Serialize,
 {
-    let to_hash = serialize(to_ser);
+    let to_hash = serialize(&to_ser);
     encode(Hash::SHA3256, &to_hash).unwrap().to_vec()
 }
 

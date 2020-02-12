@@ -4,7 +4,7 @@ use std::error::Error;
 
 use utils::configreader::Configuration;
 
-use utils::serialzer::*;
+use utils::serializer::*;
 
 use super::messages::*;
 use super::p2pbehaviour::P2PBehaviour;
