@@ -46,7 +46,7 @@ impl<T: ObjectAccess> SchemaFork<T> {
         self.storage().object_hash()
     }
 
-    pub fn initialize_db(&self, kp: &KeypairType) -> Hash {
+    pub fn initialize_db(&self, kp: &KeypairType) -> SignedBlock {
         let mut blocks = self.blocks();
         let mut wallets = self.state();
         let mut transaction_trie = self.transactions();
@@ -58,16 +58,16 @@ impl<T: ObjectAccess> SchemaFork<T> {
         let mut block = Block::genesis_block();
         let public_key = hex::encode(Keypair::public(&kp).encode());
         let mut alice_wallet: Wallet = Wallet::new();
+        block.peer_id = public_key.clone();
         alice_wallet.add_balance(100000000);
         wallets.put(&public_key, alice_wallet.clone());
         block.header[0] = wallets.object_hash();
-        // let alice_wallet = wallets.get(&public_key).unwrap();
-        // println!("{:?}", alice_wallet);
+        block.header[1] = storage_trie.object_hash();
+        block.header[2] = transaction_trie.object_hash();
         let signature = block.sign(kp);
         let genesis_block: SignedBlock = SignedBlock::create_block(block, signature);
-        let root_hash = genesis_block.object_hash();
-        blocks.push(genesis_block);
-        return root_hash;
+        blocks.push(genesis_block.clone());
+        return genesis_block;
     }
 
     /**
@@ -194,13 +194,6 @@ impl<T: ObjectAccess> SchemaFork<T> {
             return false;
         }
 
-        // block pre_hash check
-        let last_block: SignedBlock = blocks.get(length - 1).unwrap();
-        let prev_hash = last_block.object_hash();
-        if signed_block.block.prev_hash != prev_hash {
-            return false;
-        }
-
         // block signature check
         let msg = serialize(signed_block);
         if !PublicKey::verify_from_encoded_pk(
@@ -210,36 +203,67 @@ impl<T: ObjectAccess> SchemaFork<T> {
         ) {
             return false;
         }
-
-        // block txn pool validation
-        let executed_txns = &signed_block.block.txn_pool;
-        for each in executed_txns.iter() {
-            let signed_txn = txn_pool.get(each);
-            if let Some(txn) = signed_txn {
-                transaction_trie.put(each, txn.clone());
-                self.update_transaction(txn.clone(), &mut wallets);
-            } else {
+        
+        // genesis block check
+        if signed_block.block.id == 0 {
+            let mut alice_wallet: Wallet = Wallet::new();
+            alice_wallet.add_balance(100000000);
+            wallets.put(&signed_block.block.peer_id, alice_wallet.clone());
+            let header: [Hash; 3] = [
+                wallets.object_hash(),
+                storage_trie.object_hash(),
+                transaction_trie.object_hash(),
+            ];
+            if header[0] != signed_block.block.header[0] {
                 return false;
             }
+            if header[1] != signed_block.block.header[1] {
+                return false;
+            }
+            if header[2] != signed_block.block.header[2] {
+                return false;
+            }
+            blocks.push(signed_block.clone());
+            return true;
         }
+        else{
+            // block pre_hash check
+            let last_block: SignedBlock = blocks.get(length - 1).unwrap();
+            let prev_hash = last_block.object_hash();
+            if signed_block.block.prev_hash != prev_hash {
+                return false;
+            }
 
-        // block header check
-        let header: [Hash; 3] = [
-            wallets.object_hash(),
-            storage_trie.object_hash(),
-            transaction_trie.object_hash(),
-        ];
-        if header[0] != signed_block.block.header[0] {
-            return false;
+            // block txn pool validation
+            let executed_txns = &signed_block.block.txn_pool;
+            for each in executed_txns.iter() {
+                let signed_txn = txn_pool.get(each);
+                if let Some(txn) = signed_txn {
+                    transaction_trie.put(each, txn.clone());
+                    self.update_transaction(txn.clone(), &mut wallets);
+                } else {
+                    return false;
+                }
+            }
+
+            // block header check
+            let header: [Hash; 3] = [
+                wallets.object_hash(),
+                storage_trie.object_hash(),
+                transaction_trie.object_hash(),
+            ];
+            if header[0] != signed_block.block.header[0] {
+                return false;
+            }
+            if header[1] != signed_block.block.header[1] {
+                return false;
+            }
+            if header[2] != signed_block.block.header[2] {
+                return false;
+            }
+            blocks.push(signed_block.clone());
+            return true;
         }
-        if header[1] != signed_block.block.header[1] {
-            return false;
-        }
-        if header[2] != signed_block.block.header[2] {
-            return false;
-        }
-        blocks.push(signed_block.clone());
-        return true;
     }
 }
 

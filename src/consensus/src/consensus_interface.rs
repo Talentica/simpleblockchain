@@ -9,7 +9,7 @@ use db_service::db_fork_ref::SchemaFork;
 use exonum_crypto::Hash;
 use exonum_merkledb::{Fork, ObjectHash};
 use futures::{channel::mpsc::*, executor::*, future, prelude::*, task::*};
-use p2plib::messages::{ConsensusMessageTypes, MessageTypes, NodeMessageTypes};
+use p2plib::messages::{ConsensusMessageTypes, MessageTypes};
 use schema::block::{SignedBlock, SignedBlockTraits};
 use schema::transaction_pool::{TransactionPool, TxnPool, TRANSACTION_POOL};
 use std::sync::{Arc, Mutex};
@@ -93,12 +93,21 @@ pub struct Blocks {
 }*/
 
 impl Consensus {
-    fn init_state(&self, genesis_block: bool, _db_path: &String) {
+    fn init_state(
+        &self,
+        genesis_block: bool,
+        _db_path: &String,
+        sender: &mut Sender<Option<MessageTypes>>,
+    ) {
         if genesis_block {
             let fork = fork_db();
             {
                 let schema = SchemaFork::new(&fork);
-                schema.initialize_db(&self.keypair);
+                let genesis_signed_block: SignedBlock = schema.initialize_db(&self.keypair);
+                let data = Some(MessageTypes::ConsensusMsg(
+                    ConsensusMessageTypes::BlockVote(genesis_signed_block.clone()),
+                ));
+                sender.try_send(data);
             }
             patch_db(fork);
         } else {
@@ -147,7 +156,8 @@ impl Consensus {
                     let block: &SignedBlock = block_queue.pending_blocks.get_mut(0).unwrap();
                     if schema.update_block(block, &mut txn_pool) {
                         txn_pool.sync_pool(&block.block.txn_pool);
-                    } else {println!("block couldn't verified");
+                    } else {
+                        println!("block couldn't verified");
                         flag = false;
                     }
                 }
@@ -222,7 +232,7 @@ impl Consensus {
             pending_blocks: std::collections::VecDeque::new(),
         };
         let pending_blocks = Arc::new(Mutex::new(pending_blocks_obj));
-        consensus_obj.init_state(config.node.genesis_block, &config.db.dbpath);
+        consensus_obj.init_state(config.node.genesis_block, &config.db.dbpath, sender);
         match msg_receiver {
             Some(receiver) => Consensus::start_receiver(pending_blocks.clone(), receiver),
             None => println!("Apna Bhai Validator hai"),
