@@ -2,7 +2,7 @@ use super::constants;
 use futures::{channel::mpsc::channel, channel::mpsc::Receiver, channel::mpsc::Sender};
 use libp2p::floodsub::{self, protocol, Topic, TopicBuilder, TopicHash};
 pub use schema::block::{SignedBlock, SignedBlockTraits};
-pub use schema::transaction::{SignedTransaction, Txn, ObjectHash};
+pub use schema::transaction::{ObjectHash, SignedTransaction, Txn};
 use std::sync::{Arc, Mutex};
 use utils::serializer::{deserialize, serialize, Deserialize, Serialize};
 
@@ -147,12 +147,8 @@ pub trait NodeMsgProcess {
 impl MsgProcess for protocol::FloodsubMessage {
     fn process(&self, topics: &Vec<TopicHash>, data: &Vec<u8>) {
         if topics[0] == TopicBuilder::new(constants::NODE).build().hash().clone() {
-            println!("Node type msg");
+            println!("NodeMessageTypes data received");
             let block_create_msg = deserialize::<NodeMessageTypes>(data);
-            println!(
-                "block create msg received in process = {:?}",
-                block_create_msg
-            );
             MSG_DISPATCHER
                 .node_msg_dispatcher
                 .clone()
@@ -163,12 +159,8 @@ impl MsgProcess for protocol::FloodsubMessage {
                 .hash()
                 .clone()
         {
-            println!("Consensus type msg");
+            println!("ConsensusMessageTypes data received");
             let block_create_msg = deserialize::<ConsensusMessageTypes>(data);
-            println!(
-                "block create msg received in process = {:?}",
-                block_create_msg
-            );
             MSG_DISPATCHER
                 .consensus_msg_dispatcher
                 .clone()

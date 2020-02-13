@@ -24,7 +24,7 @@ impl NodeMsgProcessor {
             loop {
                 match self._rx.lock().unwrap().poll_next_unpin(cx) {
                     Poll::Ready(Some(msg)) => {
-                        println!("msg received {:?}", msg);
+                        // println!("msg received {:?}", msg);
                         match msg {
                             None => println!("Empty msg received !"),
                             Some(msgtype) => {

@@ -58,17 +58,18 @@ impl SimpleSwarm {
             loop {
                 match self.rx.poll_next_unpin(cx) {
                     Poll::Ready(Some(msg)) => {
-                        println!("msg received {:?}", msg);
                         match msg {
                             None => println!("empty message !"),
                             Some(msgtype) => match msgtype {
                                 MessageTypes::NodeMsg(data) => {
+                                    println!("NodeMsg received {:?}", data);
                                     let msgdata: Vec<u8> = serialize(&data);
                                     let topics: Vec<Topic> =
                                         Vec::<Topic>::from(MessageTypes::NodeMsg(data)); //TODO Find way to get rid of clone
                                     swarm.floodsub.publish_many(topics, msgdata)
                                 }
                                 MessageTypes::ConsensusMsg(data) => {
+                                    println!("ConsensusMsg received {:?}", data);
                                     let msgdata: Vec<u8> = serialize(&data);
                                     let topics: Vec<Topic> =
                                         Vec::<Topic>::from(MessageTypes::ConsensusMsg(data));

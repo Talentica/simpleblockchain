@@ -105,7 +105,7 @@ impl Consensus {
                 let schema = SchemaFork::new(&fork);
                 let genesis_signed_block: SignedBlock = schema.initialize_db(&self.keypair);
                 let data = Some(MessageTypes::ConsensusMsg(
-                    ConsensusMessageTypes::BlockVote(genesis_signed_block.clone()),
+                    ConsensusMessageTypes::BlockVote(genesis_signed_block),
                 ));
                 sender.try_send(data);
             }
@@ -118,7 +118,7 @@ impl Consensus {
 
     fn validator(&mut self, sender: &mut Sender<Option<MessageTypes>>) {
         loop {
-            thread::sleep(Duration::from_millis(5000));
+            thread::sleep(Duration::from_millis(10000));
             // no polling machenism of txn_pool and create block need to implement or modified here
             // if one want to change the create_block and txn priority then change/ implment that part in
             // schema operations and p2p module
@@ -131,7 +131,7 @@ impl Consensus {
                 println!("new block created.. hash {}", signed_block.object_hash());
                 txn_pool.sync_pool(&signed_block.block.txn_pool);
                 let data = Some(MessageTypes::ConsensusMsg(
-                    ConsensusMessageTypes::BlockVote(signed_block.clone()),
+                    ConsensusMessageTypes::BlockVote(signed_block),
                 ));
                 sender.try_send(data);
             }
@@ -141,7 +141,7 @@ impl Consensus {
 
     fn full_node(&mut self, pending_blocks: Arc<Mutex<Blocks>>) {
         loop {
-            thread::sleep(Duration::from_millis(2000));
+            thread::sleep(Duration::from_millis(4000));
             // no polling machenism of txn_pool and create block need to implement or modified here
             // if one want to change the create_block and txn priority then change/ implment that part in
             // schema operations and p2p module
@@ -181,7 +181,7 @@ impl Consensus {
                 loop {
                     match rx.lock().unwrap().poll_next_unpin(cx) {
                         Poll::Ready(Some(msg)) => {
-                            println!("msg received {:?}", msg);
+                            // println!("msg received {:?}", msg);
                             match msg {
                                 None => println!("Empty msg received !"),
                                 Some(msgtype) => {
@@ -196,7 +196,7 @@ impl Consensus {
                                         }
                                         ConsensusMessageTypes::BlockVote(data) => {
                                             let signed_block: SignedBlock = data;
-                                            println!("Signed Transaction msg in NodeMsgProcessor with Hash {:?}", signed_block.object_hash());
+                                            println!("Signed Block msg in ConsensusMsgProcessor with Hash {:?}", signed_block.object_hash());
                                             let mut block_queue = pending_blocks.lock().unwrap();
                                             block_queue.pending_blocks.push_back(signed_block);
                                             println!(

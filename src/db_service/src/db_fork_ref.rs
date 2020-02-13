@@ -191,6 +191,10 @@ impl<T: ObjectAccess> SchemaFork<T> {
         let length = blocks.len();
         // block height check
         if signed_block.block.id != length {
+            eprintln!(
+                "block length mismatched block height {} blockchain height {}",
+                signed_block.block.id, length
+            );
             return false;
         }
 
@@ -201,9 +205,10 @@ impl<T: ObjectAccess> SchemaFork<T> {
             &msg,
             &signed_block.signature,
         ) {
+            eprintln!("block signature couldn't verified");
             return false;
         }
-        
+
         // genesis block check
         if signed_block.block.id == 0 {
             let mut alice_wallet: Wallet = Wallet::new();
@@ -215,22 +220,28 @@ impl<T: ObjectAccess> SchemaFork<T> {
                 transaction_trie.object_hash(),
             ];
             if header[0] != signed_block.block.header[0] {
+                eprintln!("block header state_trie merkle root mismatched");
                 return false;
             }
             if header[1] != signed_block.block.header[1] {
+                eprintln!("block header storage_trie merkle root mismatched");
                 return false;
             }
             if header[2] != signed_block.block.header[2] {
+                eprintln!("block header transaction_trie merkle root mismatched");
                 return false;
             }
             blocks.push(signed_block.clone());
             return true;
-        }
-        else{
+        } else {
             // block pre_hash check
             let last_block: SignedBlock = blocks.get(length - 1).unwrap();
             let prev_hash = last_block.object_hash();
             if signed_block.block.prev_hash != prev_hash {
+                eprintln!(
+                    "block prev_hash mismatched block prev_hash {}, blockchain root {}",
+                    signed_block.block.prev_hash, prev_hash
+                );
                 return false;
             }
 
@@ -242,6 +253,7 @@ impl<T: ObjectAccess> SchemaFork<T> {
                     transaction_trie.put(each, txn.clone());
                     self.update_transaction(txn.clone(), &mut wallets);
                 } else {
+                    eprintln!("block transaction execution error");
                     return false;
                 }
             }
@@ -253,12 +265,15 @@ impl<T: ObjectAccess> SchemaFork<T> {
                 transaction_trie.object_hash(),
             ];
             if header[0] != signed_block.block.header[0] {
+                eprintln!("block header state_trie merkle root mismatched");
                 return false;
             }
             if header[1] != signed_block.block.header[1] {
+                eprintln!("block header storage_trie merkle root mismatched");
                 return false;
             }
             if header[2] != signed_block.block.header[2] {
+                eprintln!("block header transaction_trie merkle root mismatched");
                 return false;
             }
             blocks.push(signed_block.clone());

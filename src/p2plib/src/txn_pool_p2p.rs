@@ -13,7 +13,7 @@ pub fn add_txn_to_txn_pool(
     txn_sender: &mut Sender<Option<MessageTypes>>,
 ) {
     loop {
-        thread::sleep(Duration::from_millis(500));
+        thread::sleep(Duration::from_millis(1000));
         let arc_tx_pool = TRANSACTION_POOL.clone();
         let mut txn_pool = arc_tx_pool.lock().unwrap();
         let mut one = SignedTransaction::generate(kp);
