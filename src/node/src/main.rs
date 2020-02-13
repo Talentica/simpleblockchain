@@ -3,15 +3,13 @@ extern crate p2plib;
 extern crate schema;
 
 mod nodemsgprocessor;
-use nodemsgprocessor::*;
 use consensus::consensus_interface;
 use libp2p::{identity::PublicKey, PeerId};
+use nodemsgprocessor::*;
 use p2plib::messages::Message;
 use p2plib::messages::*;
 use p2plib::simpleswarm::SimpleSwarm;
 use p2plib::txn_pool_p2p;
-use schema::transaction_pool::{TransactionPool, TxnPool, TRANSACTION_POOL};
-use std::sync::{Arc, Mutex};
 use std::thread;
 use utils::configreader;
 use utils::configreader::{Configuration, NODETYPE};
@@ -47,7 +45,9 @@ fn validator_process() {
 
     // this thread will be responsible for whole consensus part.
     // in future this thread will spwan new child thread accrding to consensus requirement.
-    thread::spawn(move || consensus_interface::Consensus::init_consensus(config, &mut sender, Option::None));
+    thread::spawn(move || {
+        consensus_interface::Consensus::init_consensus(config, &mut sender, Option::None)
+    });
     swarm.process(peer_id, config);
 }
 
@@ -73,11 +73,17 @@ fn fullnode_process() {
     }
     let mut sender = swarm.tx.clone();
     let mut consensus_msg_receiver_clone = MSG_DISPATCHER.consensus_msg_receiver.clone();
-    thread::spawn(move || consensus_interface::Consensus::init_consensus(config, &mut sender, Some(consensus_msg_receiver_clone)));
+    thread::spawn(move || {
+        consensus_interface::Consensus::init_consensus(
+            config,
+            &mut sender,
+            Some(consensus_msg_receiver_clone),
+        )
+    });
     swarm.process(peer_id, config);
 }
 
-fn main(){
+fn main() {
     let config: &Configuration = &configreader::GLOBAL_CONFIG;
     match config.node.node_type {
         NODETYPE::Validator => validator_process(),

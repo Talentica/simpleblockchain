@@ -18,7 +18,7 @@ pub struct SimpleSwarm {
 
 impl SimpleSwarm {
     pub fn new() -> Self {
-        let (mut tx1, mut rx1) = channel::<Option<MessageTypes>>(4194304);
+        let (tx1, rx1) = channel::<Option<MessageTypes>>(4194304);
         SimpleSwarm {
             topic_list: Vec::new(),
             tx: tx1,

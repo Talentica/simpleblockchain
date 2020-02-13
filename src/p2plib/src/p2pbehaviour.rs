@@ -1,10 +1,10 @@
 use super::messages::*;
-use futures::{future, prelude::*};
+use futures::prelude::*;
 use libp2p::{
     floodsub::{self, Floodsub, FloodsubEvent},
     mdns::{Mdns, MdnsEvent},
     swarm::NetworkBehaviourEventProcess,
-    Multiaddr, NetworkBehaviour, PeerId, Swarm,
+    NetworkBehaviour, PeerId,
 };
 
 /// Network behavior defined combining, floodsub and mdns (for discovery)
@@ -18,7 +18,7 @@ pub struct P2PBehaviour<TSubstream: AsyncRead + AsyncWrite> {
 impl<TSubstream: AsyncRead + AsyncWrite> P2PBehaviour<TSubstream> {
     pub fn new(peer_id: PeerId) -> Self {
         let mdns = Mdns::new().unwrap();
-        let mut behaviour = P2PBehaviour {
+        let behaviour = P2PBehaviour {
             floodsub: Floodsub::new(peer_id.clone()),
             mdns,
         };
@@ -64,10 +64,16 @@ impl<TSubstream: AsyncRead + AsyncWrite> NetworkBehaviourEventProcess<FloodsubEv
                 );
                 msg.process(&msg.topics, &msg.data);
             }
-            FloodsubEvent::Subscribed { peer_id, topic } => {
+            FloodsubEvent::Subscribed {
+                peer_id: _,
+                topic: _,
+            } => {
                 //println!("subscribed by peer {:?} topic {:?}", peer_id, topic);
             }
-            FloodsubEvent::Unsubscribed { peer_id, topic } => {
+            FloodsubEvent::Unsubscribed {
+                peer_id: _,
+                topic: _,
+            } => {
                 //println!("unsubscribed by peer {:?} topic {:?}", peer_id, topic);
             }
         }

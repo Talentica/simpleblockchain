@@ -1,10 +1,10 @@
 use futures::{channel::mpsc::*, executor::*, future, prelude::*, task::*};
 use p2plib::messages::*;
 
+use schema::transaction::{ObjectHash, SignedTransaction};
+use schema::transaction_pool::{TxnPool, TRANSACTION_POOL};
 use std::sync::Arc;
 use std::sync::Mutex;
-use schema::transaction_pool::{TransactionPool, TxnPool, TRANSACTION_POOL};
-use schema::transaction::{SignedTransaction, ObjectHash};
 #[derive(Debug)]
 pub struct NodeMsgProcessor {
     // pub _tx: Sender<Option<NodeMessageTypes>>,

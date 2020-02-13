@@ -1,9 +1,9 @@
 extern crate db;
 extern crate schema;
 extern crate utils;
-use db::db_layer::{fork_db, patch_db};
+
 use exonum_crypto::Hash;
-use exonum_merkledb::{Fork, ListIndex, ObjectAccess, ObjectHash, ProofMapIndex, RefMut};
+use exonum_merkledb::{ListIndex, ObjectAccess, ObjectHash, ProofMapIndex, RefMut};
 use schema::block::{Block, BlockTraits, SignedBlock, SignedBlockTraits};
 use schema::transaction::{SignedTransaction, Txn};
 use schema::transaction_pool::{TransactionPool, TxnPool};
@@ -176,16 +176,13 @@ impl<T: ObjectAccess> SchemaFork<T> {
                     from_wallet.increase_nonce();
                     wallet.put(&txn.txn.from.clone(), from_wallet);
                     return true;
-                }
-                else{
+                } else {
                     eprintln!("balance error");
                 }
-            }
-            else{
+            } else {
                 eprintln!("txn sender wallet doesn't exists");
             }
-        }
-        else{
+        } else {
             eprintln!("transaction signature couldn't verified");
         }
         return false;
@@ -201,7 +198,7 @@ impl<T: ObjectAccess> SchemaFork<T> {
         // block height check
         if signed_block.block.id != length {
             eprintln!(
-                "block length mismatched block height {} blockchain height {}",
+                "block length error block height {} blockchain height {}",
                 signed_block.block.id, length
             );
             return false;
@@ -229,15 +226,15 @@ impl<T: ObjectAccess> SchemaFork<T> {
                 transaction_trie.object_hash(),
             ];
             if header[0] != signed_block.block.header[0] {
-                eprintln!("block header state_trie merkle root mismatched");
+                eprintln!("block header state_trie merkle root error");
                 return false;
             }
             if header[1] != signed_block.block.header[1] {
-                eprintln!("block header storage_trie merkle root mismatched");
+                eprintln!("block header storage_trie merkle root error");
                 return false;
             }
             if header[2] != signed_block.block.header[2] {
-                eprintln!("block header transaction_trie merkle root mismatched");
+                eprintln!("block header transaction_trie merkle root error");
                 return false;
             }
             blocks.push(signed_block.clone());
@@ -248,7 +245,7 @@ impl<T: ObjectAccess> SchemaFork<T> {
             let prev_hash = last_block.object_hash();
             if signed_block.block.prev_hash != prev_hash {
                 eprintln!(
-                    "block prev_hash mismatched block prev_hash {}, blockchain root {}",
+                    "block prev_hash error block prev_hash {}, blockchain root {}",
                     signed_block.block.prev_hash, prev_hash
                 );
                 return false;
@@ -274,15 +271,15 @@ impl<T: ObjectAccess> SchemaFork<T> {
                 transaction_trie.object_hash(),
             ];
             if header[0] != signed_block.block.header[0] {
-                eprintln!("block header state_trie merkle root mismatched");
+                eprintln!("block header state_trie merkle root error");
                 return false;
             }
             if header[1] != signed_block.block.header[1] {
-                eprintln!("block header storage_trie merkle root mismatched");
+                eprintln!("block header storage_trie merkle root error");
                 return false;
             }
             if header[2] != signed_block.block.header[2] {
-                eprintln!("block header transaction_trie merkle root mismatched");
+                eprintln!("block header transaction_trie merkle root error");
                 return false;
             }
             blocks.push(signed_block.clone());
@@ -298,6 +295,7 @@ mod test_db_service {
     pub fn test_schema() {
         use super::*;
         use chrono::prelude::Utc;
+        use db::db_layer::{fork_db, patch_db};
         let mut secret =
             hex::decode("97ba6f71a5311c4986e01798d525d0da8ee5c54acbf6ef7c3fadd1e2f624442f")
                 .expect("invalid secret");

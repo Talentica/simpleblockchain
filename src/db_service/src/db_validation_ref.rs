@@ -3,11 +3,10 @@ extern crate schema;
 extern crate utils;
 use exonum_crypto::Hash;
 use exonum_merkledb::{ListIndex, ObjectAccess, ObjectHash, ProofMapIndex, RefMut};
-use schema::block::{Block, BlockTraits, SignedBlock, SignedBlockTraits};
+use schema::block::{BlockTraits, SignedBlock};
 use schema::transaction::{SignedTransaction, Txn};
 use schema::transaction_pool::{TransactionPool, TxnPool};
 use schema::wallet::Wallet;
-use utils::keypair::{CryptoKeypair, Keypair, KeypairType};
 
 pub struct SchemaValidate<T: ObjectAccess>(T);
 
@@ -134,27 +133,5 @@ impl<T: ObjectAccess> SchemaValidate<T> {
             }
         }
         return true;
-    }
-}
-
-#[cfg(test)]
-mod test_db_service {
-
-    #[test]
-    pub fn test_schema() {
-        use super::*;
-        use chrono::prelude::Utc;
-        use db::db_layer::{fork_db};
-        use utils::keypair::{CryptoKeypair, Keypair};
-        let mut secret = hex::decode("97ba6f71a5311c4986e01798d525d0da8ee5c54acbf6ef7c3fadd1e2f624442f")
-                .expect("invalid secret");
-        let keypair = Keypair::generate_from(secret.as_mut_slice());
-        let _public_key = String::from("2c8a35450e1d198e3834d933a35962600c33d1d0f8f6481d6e08f140791374d0");
-        let fork = fork_db();
-        {
-            let schema = SchemaValidate::new(&fork);
-            // let block = schema.validate_block(signed_block: &SignedBlock, txn_pool: &mut TransactionPool)(&keypair, &mut txn_pool);
-            // println!("{:?}", block);
-        }
     }
 }

@@ -2,16 +2,12 @@ use crate::messages::{MessageTypes, NodeMessageTypes};
 use chrono::prelude::Utc;
 use futures::channel::mpsc::*;
 use schema::transaction::{SignedTransaction, Txn};
-use schema::transaction_pool::{TransactionPool, TxnPool, TRANSACTION_POOL};
-use std::sync::{Arc, Mutex};
+use schema::transaction_pool::{TxnPool, TRANSACTION_POOL};
 use std::thread;
 use std::time::Duration;
-use utils::keypair::{CryptoKeypair, Keypair, KeypairType};
+use utils::keypair::KeypairType;
 
-pub fn add_txn_to_txn_pool(
-    kp: &KeypairType,
-    txn_sender: &mut Sender<Option<MessageTypes>>,
-) {
+pub fn add_txn_to_txn_pool(kp: &KeypairType, txn_sender: &mut Sender<Option<MessageTypes>>) {
     thread::sleep(Duration::from_millis(5000));
     loop {
         thread::sleep(Duration::from_millis(1000));

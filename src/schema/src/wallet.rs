@@ -49,10 +49,9 @@ impl Wallet {
     }
 
     pub fn add_balance(&mut self, amount: u64) {
-        if self.balance > self.balance + amount{
+        if self.balance > self.balance + amount {
             panic!("do balance check before fxn calling");
-        }
-        else{
+        } else {
             self.balance = self.balance + amount;
         }
     }
