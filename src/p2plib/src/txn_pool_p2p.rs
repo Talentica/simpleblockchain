@@ -12,6 +12,7 @@ pub fn add_txn_to_txn_pool(
     kp: &KeypairType,
     txn_sender: &mut Sender<Option<MessageTypes>>,
 ) {
+    thread::sleep(Duration::from_millis(5000));
     loop {
         thread::sleep(Duration::from_millis(1000));
         let arc_tx_pool = TRANSACTION_POOL.clone();

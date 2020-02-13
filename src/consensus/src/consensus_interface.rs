@@ -232,11 +232,13 @@ impl Consensus {
             pending_blocks: std::collections::VecDeque::new(),
         };
         let pending_blocks = Arc::new(Mutex::new(pending_blocks_obj));
-        consensus_obj.init_state(config.node.genesis_block, &config.db.dbpath, sender);
         match msg_receiver {
             Some(receiver) => Consensus::start_receiver(pending_blocks.clone(), receiver),
             None => println!("Apna Bhai Validator hai"),
         }
+        thread::sleep(Duration::from_millis(5000));
+        consensus_obj.init_state(config.node.genesis_block, &config.db.dbpath, sender);
+        
         match config.node.node_type {
             NODETYPE::Validator => consensus_obj.validator(sender),
             NODETYPE::FullNode => consensus_obj.full_node(pending_blocks.clone()),

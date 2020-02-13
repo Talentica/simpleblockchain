@@ -177,7 +177,16 @@ impl<T: ObjectAccess> SchemaFork<T> {
                     wallet.put(&txn.txn.from.clone(), from_wallet);
                     return true;
                 }
+                else{
+                    eprintln!("balance error");
+                }
             }
+            else{
+                eprintln!("txn sender wallet doesn't exists");
+            }
+        }
+        else{
+            eprintln!("transaction signature couldn't verified");
         }
         return false;
     }
@@ -199,7 +208,7 @@ impl<T: ObjectAccess> SchemaFork<T> {
         }
 
         // block signature check
-        let msg = serialize(signed_block);
+        let msg = serialize(&signed_block.block);
         if !PublicKey::verify_from_encoded_pk(
             &signed_block.block.peer_id,
             &msg,
