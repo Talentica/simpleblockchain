@@ -1,4 +1,3 @@
-extern crate db;
 extern crate schema;
 extern crate utils;
 
@@ -46,7 +45,7 @@ impl<T: ObjectAccess> SchemaFork<T> {
         self.storage().object_hash()
     }
 
-    pub fn initialize_db(&self, kp: &KeypairType) -> SignedBlock {
+    pub fn initialize_db(&self, kp: &KeypairType, public_keys: &Vec<String>) -> (SignedBlock, Vec<SignedTransaction>) {
         let mut blocks = self.blocks();
         let mut wallets = self.state();
         let mut transaction_trie = self.transactions();
@@ -57,17 +56,41 @@ impl<T: ObjectAccess> SchemaFork<T> {
         blocks.clear();
         let mut block = Block::genesis_block();
         let public_key = hex::encode(Keypair::public(&kp).encode());
-        let mut alice_wallet: Wallet = Wallet::new();
         block.peer_id = public_key.clone();
-        alice_wallet.add_balance(100000000);
-        wallets.put(&public_key, alice_wallet.clone());
+        let mut genesis_txn_vec : Vec<SignedTransaction> = Vec::new();
+        // genesis transactions
+        for each in public_keys.iter() {
+            let mut signed_txn = SignedTransaction::generate(kp);
+            signed_txn.txn.amount = 100000000;
+            signed_txn.txn.to = each.clone();
+            signed_txn.signature = Vec::new();
+            signed_txn.txn.from = String::from("");
+            self.execute_genesis_transactions(&signed_txn, &mut wallets);
+            transaction_trie.put(&signed_txn.object_hash(), signed_txn.clone());
+            block.txn_pool.push(signed_txn.object_hash());
+            genesis_txn_vec.push(signed_txn);
+        }
         block.header[0] = wallets.object_hash();
         block.header[1] = storage_trie.object_hash();
         block.header[2] = transaction_trie.object_hash();
         let signature = block.sign(kp);
         let genesis_block: SignedBlock = SignedBlock::create_block(block, signature);
         blocks.push(genesis_block.clone());
-        return genesis_block;
+        return (genesis_block, genesis_txn_vec);
+    }
+
+    /**
+     * this function will do computation on genesis block transactions
+     */
+    pub fn execute_genesis_transactions(
+        &self,
+        genesis_txn: &SignedTransaction,
+        wallet: &mut RefMut<ProofMapIndex<T, String, Wallet>>,
+    )  {
+        // compute until order_pool exhusted or transaction limit crossed
+        let mut to_wallet = Wallet::new();
+        to_wallet.add_balance(genesis_txn.txn.amount);
+        wallet.put(&genesis_txn.txn.to.clone(), to_wallet);
     }
 
     /**
@@ -217,9 +240,17 @@ impl<T: ObjectAccess> SchemaFork<T> {
 
         // genesis block check
         if signed_block.block.id == 0 {
-            let mut alice_wallet: Wallet = Wallet::new();
-            alice_wallet.add_balance(100000000);
-            wallets.put(&signed_block.block.peer_id, alice_wallet.clone());
+            let executed_txns = &signed_block.block.txn_pool;
+            for each in executed_txns.iter() {
+                let signed_txn = txn_pool.get(each);
+                if let Some(txn) = signed_txn {
+                    transaction_trie.put(each, txn.clone());
+                    self.execute_genesis_transactions(txn, &mut wallets);
+                } else {
+                    eprintln!("block transaction execution error");
+                    return false;
+                }
+            }
             let header: [Hash; 3] = [
                 wallets.object_hash(),
                 storage_trie.object_hash(),
@@ -294,8 +325,8 @@ mod test_db_service {
     #[test]
     pub fn test_schema() {
         use super::*;
+        use crate::db_layer::{fork_db, patch_db};
         use chrono::prelude::Utc;
-        use db::db_layer::{fork_db, patch_db};
         let mut secret =
             hex::decode("97ba6f71a5311c4986e01798d525d0da8ee5c54acbf6ef7c3fadd1e2f624442f")
                 .expect("invalid secret");
@@ -306,7 +337,7 @@ mod test_db_service {
         // put genesis blockin database
         {
             let schema = SchemaFork::new(&fork);
-            schema.initialize_db(&keypair);
+            schema.initialize_db(&keypair, &Vec::new());
         }
         patch_db(fork);
         println!("block proposal testing");

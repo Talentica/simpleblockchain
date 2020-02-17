@@ -1,6 +1,12 @@
 public = "2c8a35450e1d198e3834d933a35962600c33d1d0f8f6481d6e08f140791374d0"
 secret = "97ba6f71a5311c4986e01798d525d0da8ee5c54acbf6ef7c3fadd1e2f624442f"
-node_type = "fullnode"
+node_type = "validator"
 genesis_block = false
 dbpath = "./rockdb/db"
 p2p_port = 4444
+
+# [consensus]
+public_keys = ["2039b89d46f8a630b68824a6f851e2a5855c1d21915ee4f35fb09d44f1e6e37f",
+               "2c8a35450e1d198e3834d933a35962600c33d1d0f8f6481d6e08f140791374d0",
+               "a986f7e76ec53d46d78f69fb2d76ae9378b439a6db43afba7a6761a01ccf3a7d",
+            ]

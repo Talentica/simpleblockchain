@@ -1,4 +1,3 @@
-extern crate db;
 extern crate schema;
 extern crate utils;
 
@@ -109,7 +108,7 @@ mod test_db_service {
     #[test]
     pub fn test_schema() {
         use super::*;
-        use db::db_layer::snapshot_db;
+        use crate::db_layer::snapshot_db;
         let public_key =
             String::from("2c8a35450e1d198e3834d933a35962600c33d1d0f8f6481d6e08f140791374d0");
         let snapshot = snapshot_db();

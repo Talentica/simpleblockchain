@@ -1,4 +1,3 @@
-extern crate db;
 extern crate schema;
 extern crate utils;
 use exonum_crypto::Hash;

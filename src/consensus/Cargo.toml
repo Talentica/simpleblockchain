@@ -8,7 +8,6 @@ edition = "2018"
 
 [dependencies]
 utils = { path = "../utils" }
-db = { path = "../db" }
 schema = { path = "../schema" }
 db_service = { path = "../db_service" }
 hex = "^0.4"
@@ -21,3 +20,5 @@ failure = "0.1"
 bincode = "1.0"
 futures = "^0.3"
 p2plib = {path = "../p2plib"}
+toml = "0.5.5"
+lazy_static = "1.4.0"

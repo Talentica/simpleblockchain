@@ -10,7 +10,7 @@ use utils::keypair::KeypairType;
 pub fn add_txn_to_txn_pool(kp: &KeypairType, txn_sender: &mut Sender<Option<MessageTypes>>) {
     thread::sleep(Duration::from_millis(5000));
     loop {
-        thread::sleep(Duration::from_millis(1000));
+        thread::sleep(Duration::from_millis(3000));
         let arc_tx_pool = TRANSACTION_POOL.clone();
         let mut txn_pool = arc_tx_pool.lock().unwrap();
         let mut one = SignedTransaction::generate(kp);

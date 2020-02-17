@@ -20,10 +20,10 @@ fn validator_process() {
     let peer_id = PeerId::from_public_key(pk);
     println!("peer id = {:?}", peer_id);
     let mut swarm = SimpleSwarm::new();
-    swarm.topic_list.push(String::from(BlockCreate::TOPIC));
     swarm
         .topic_list
-        .push(String::from(TransactionCreate::TOPIC));
+        .push(String::from(SignedLeaderElection::TOPIC));
+    swarm.topic_list.push(String::from(BlockConsensus::TOPIC));
     swarm.topic_list.push(String::from(SignedBlock::TOPIC));
     swarm
         .topic_list
@@ -45,8 +45,9 @@ fn validator_process() {
 
     // this thread will be responsible for whole consensus part.
     // in future this thread will spwan new child thread accrding to consensus requirement.
+    let mut consensus_msg_receiver_clone = MSG_DISPATCHER.consensus_msg_receiver.clone();
     thread::spawn(move || {
-        consensus_interface::Consensus::init_consensus(config, &mut sender, Option::None)
+        consensus_interface::Consensus::init_consensus(config, &mut sender, consensus_msg_receiver_clone)
     });
     swarm.process(peer_id, config);
 }
@@ -56,10 +57,10 @@ fn fullnode_process() {
     let pk: PublicKey = PublicKey::Ed25519(config.node.public.clone());
     let peer_id = PeerId::from_public_key(pk);
     let mut swarm = SimpleSwarm::new();
-    swarm.topic_list.push(String::from(BlockCreate::TOPIC));
     swarm
         .topic_list
-        .push(String::from(TransactionCreate::TOPIC));
+        .push(String::from(SignedLeaderElection::TOPIC));
+    swarm.topic_list.push(String::from(BlockConsensus::TOPIC));
     swarm.topic_list.push(String::from(SignedBlock::TOPIC));
     swarm
         .topic_list
@@ -71,15 +72,6 @@ fn fullnode_process() {
             node_msg_processor.start();
         });
     }
-    let mut sender = swarm.tx.clone();
-    let mut consensus_msg_receiver_clone = MSG_DISPATCHER.consensus_msg_receiver.clone();
-    thread::spawn(move || {
-        consensus_interface::Consensus::init_consensus(
-            config,
-            &mut sender,
-            Some(consensus_msg_receiver_clone),
-        )
-    });
     swarm.process(peer_id, config);
 }
 

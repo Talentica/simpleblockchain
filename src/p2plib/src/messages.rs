@@ -28,21 +28,40 @@ pub trait Message {
     }
 }
 
-const NODE_MSG_TOPIC_STR: &'static [&'static str] = &["txn-create", "block-create"];
-const CONSENSUS_MSG_TOPIC_STR: &'static [&'static str] = &["leader-elect", "block-create"];
+const NODE_MSG_TOPIC_STR: &'static [&'static str] = &["SignedTransaction", "SignedBlock"];
+const CONSENSUS_MSG_TOPIC_STR: &'static [&'static str] = &["LeaderElection", "BlockConsensus"];
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct TransactionCreate {
-    pub nonce: i64,
-    pub signature: String,
-    pub payload: String,
+pub struct LeaderElection {
+    pub block_height: u64,
+    pub public_key: String,
 }
 
-impl Message for TransactionCreate {
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SignedLeaderElection {
+    pub leader_payload: LeaderElection,
+    pub signature: Vec<u8>,
+}
+
+impl Message for SignedLeaderElection {
     const TOPIC: &'static str = CONSENSUS_MSG_TOPIC_STR[0];
     const MODULE_TOPIC: &'static str = constants::CONSENSUS;
     fn handler(&self) {
-        println!("i am TransactionCreate handler");
+        println!("i am LeaderElection handler");
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct BlockConsensus {
+    pub height: i64,
+    pub hash: String,
+}
+
+impl Message for BlockConsensus {
+    const TOPIC: &'static str = CONSENSUS_MSG_TOPIC_STR[1];
+    const MODULE_TOPIC: &'static str = constants::CONSENSUS;
+    fn handler(&self) {
+        println!("i am BlockConsensus handler");
     }
 }
 
@@ -54,23 +73,9 @@ impl Message for SignedTransaction {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct BlockCreate {
-    pub height: i64,
-    pub hash: String,
-}
-
-impl Message for BlockCreate {
+impl Message for SignedBlock {
     const TOPIC: &'static str = NODE_MSG_TOPIC_STR[1];
     const MODULE_TOPIC: &'static str = constants::NODE;
-    fn handler(&self) {
-        println!("i am BlockCreate handler");
-    }
-}
-
-impl Message for SignedBlock {
-    const TOPIC: &'static str = CONSENSUS_MSG_TOPIC_STR[1];
-    const MODULE_TOPIC: &'static str = constants::CONSENSUS;
     fn handler(&self) {
         println!("i am SignedBlock handler");
     }
@@ -79,13 +84,13 @@ impl Message for SignedBlock {
 #[derive(Debug, Serialize, Deserialize)]
 pub enum NodeMessageTypes {
     SignedTransactionEnum(SignedTransaction),
-    SignedBlockEnum(BlockCreate),
+    SignedBlockEnum(SignedBlock),
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum ConsensusMessageTypes {
-    LeaderElect(TransactionCreate),
-    BlockVote(SignedBlock),
+    LeaderElect(SignedLeaderElection),
+    BlockVote(BlockConsensus),
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -148,11 +153,11 @@ impl MsgProcess for protocol::FloodsubMessage {
     fn process(&self, topics: &Vec<TopicHash>, data: &Vec<u8>) {
         if topics[0] == TopicBuilder::new(constants::NODE).build().hash().clone() {
             println!("NodeMessageTypes data received");
-            let block_create_msg = deserialize::<NodeMessageTypes>(data);
+            let deserialize_msg = deserialize::<NodeMessageTypes>(data);
             let result = MSG_DISPATCHER
                 .node_msg_dispatcher
                 .clone()
-                .try_send(Some(block_create_msg));
+                .try_send(Some(deserialize_msg));
             if result.is_err() {
                 result.unwrap_err().into_send_error();
             }
@@ -163,11 +168,11 @@ impl MsgProcess for protocol::FloodsubMessage {
                 .clone()
         {
             println!("ConsensusMessageTypes data received");
-            let block_create_msg = deserialize::<ConsensusMessageTypes>(data);
+            let deserialize_msg = deserialize::<ConsensusMessageTypes>(data);
             let result = MSG_DISPATCHER
                 .consensus_msg_dispatcher
                 .clone()
-                .try_send(Some(block_create_msg));
+                .try_send(Some(deserialize_msg));
             if result.is_err() {
                 result.unwrap_err().into_send_error();
             }

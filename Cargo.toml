@@ -1,7 +1,7 @@
 [workspace]
 members = [
     "src/node",
-    "src/db",
+    "src/db_service",
     "src/schema",
 ]
 

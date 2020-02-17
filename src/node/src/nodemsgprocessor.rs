@@ -1,14 +1,22 @@
+extern crate db_service;
 use futures::{channel::mpsc::*, executor::*, future, prelude::*, task::*};
 use p2plib::messages::*;
 
+use db_service::db_fork_ref::SchemaFork;
+use db_service::db_layer::{fork_db, patch_db};
 use schema::transaction::{ObjectHash, SignedTransaction};
 use schema::transaction_pool::{TxnPool, TRANSACTION_POOL};
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::thread;
+use std::time::Duration;
 #[derive(Debug)]
 pub struct NodeMsgProcessor {
-    // pub _tx: Sender<Option<NodeMessageTypes>>,
     pub _rx: Arc<Mutex<Receiver<Option<NodeMessageTypes>>>>,
+}
+
+pub struct Blocks {
+    pending_blocks: std::collections::VecDeque<SignedBlock>,
 }
 
 impl NodeMsgProcessor {
@@ -20,6 +28,11 @@ impl NodeMsgProcessor {
     pub fn start(&mut self) {
         //, rx: &'static mut Receiver<Option<NodeMessageTypes>>) {
         // let thread_handle = thread::spawn(move || {
+        let pending_blocks_obj = Blocks {
+            pending_blocks: std::collections::VecDeque::new(),
+        };
+        let pending_blocks = Arc::new(Mutex::new(pending_blocks_obj));
+        NodeMsgProcessor::pending_block_processing_thread(pending_blocks.clone());
         block_on(future::poll_fn(move |cx: &mut Context| {
             loop {
                 match self._rx.lock().unwrap().poll_next_unpin(cx) {
@@ -32,10 +45,16 @@ impl NodeMsgProcessor {
                                     NodeMessageTypes::SignedBlockEnum(data) => {
                                         println!(
                                             "Signed Block msg in NodeMsgProcessor with data {:?}",
-                                            data
+                                            data.object_hash()
                                         );
-                                        //TODO
-                                        //Write msg processing code
+                                        let signed_block: SignedBlock = data;
+                                        println!("Signed Block msg in ConsensusMsgProcessor with Hash {:?}", signed_block.object_hash());
+                                        let mut block_queue = pending_blocks.lock().unwrap();
+                                        block_queue.pending_blocks.push_back(signed_block);
+                                        println!(
+                                            "block queue length {}",
+                                            block_queue.pending_blocks.len()
+                                        );
                                     }
                                     NodeMessageTypes::SignedTransactionEnum(data) => {
                                         let arc_tx_pool = TRANSACTION_POOL.clone();
@@ -63,5 +82,38 @@ impl NodeMsgProcessor {
             }
             Poll::Pending
         }));
+    }
+
+    fn pending_block_processing_thread(pending_blocks: Arc<Mutex<Blocks>>) {
+        thread::spawn(move || {
+            loop {
+                thread::sleep(Duration::from_millis(4000));
+                // no polling machenism of txn_pool and create block need to implement or modified here
+                // if one want to change the create_block and txn priority then change/ implment that part in
+                // schema operations and p2p module
+                let mut block_queue = pending_blocks.lock().unwrap();
+                if block_queue.pending_blocks.len() > 0 {
+                    let arc_txn_pool = TRANSACTION_POOL.clone();
+                    let fork = fork_db();
+                    let mut flag = true;
+                    {
+                        let schema = SchemaFork::new(&fork);
+                        let mut txn_pool = arc_txn_pool.lock().unwrap();
+                        let block: &SignedBlock = block_queue.pending_blocks.get_mut(0).unwrap();
+                        if schema.update_block(block, &mut txn_pool) {
+                            txn_pool.sync_pool(&block.block.txn_pool);
+                        } else {
+                            println!("block couldn't verified");
+                            flag = false;
+                        }
+                    }
+                    if flag {
+                        patch_db(fork);
+                        block_queue.pending_blocks.pop_front();
+                        println!("block updated in db");
+                    }
+                }
+            }
+        });
     }
 }
