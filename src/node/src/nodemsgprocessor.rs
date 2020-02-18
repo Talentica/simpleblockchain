@@ -4,8 +4,9 @@ use p2plib::messages::*;
 
 use db_service::db_fork_ref::SchemaFork;
 use db_service::db_layer::{fork_db, patch_db};
+use schema::block::SignedBlock;
 use schema::transaction::{ObjectHash, SignedTransaction};
-use schema::transaction_pool::{TxnPool, TRANSACTION_POOL};
+use schema::transaction_pool::{TxnPool, TxnPoolKeyType, TRANSACTION_POOL};
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::thread;
@@ -31,8 +32,9 @@ impl NodeMsgProcessor {
         let pending_blocks_obj = Blocks {
             pending_blocks: std::collections::VecDeque::new(),
         };
-        let pending_blocks = Arc::new(Mutex::new(pending_blocks_obj));
-        NodeMsgProcessor::pending_block_processing_thread(pending_blocks.clone());
+        let arc_pending_blocks = Arc::new(Mutex::new(pending_blocks_obj));
+        NodeMsgProcessor::pending_block_processing_thread(arc_pending_blocks.clone());
+        let pending_blocks = arc_pending_blocks.clone();
         block_on(future::poll_fn(move |cx: &mut Context| {
             loop {
                 match self._rx.lock().unwrap().poll_next_unpin(cx) {
@@ -65,7 +67,7 @@ impl NodeMsgProcessor {
                                             .header
                                             .get(&String::from("timestamp"))
                                             .unwrap()
-                                            .parse::<i64>()
+                                            .parse::<TxnPoolKeyType>()
                                             .unwrap();
                                         txn_pool.insert_op(&timestamp, &txn);
                                     }

@@ -1,14 +1,10 @@
 use super::*;
 use std::env;
-use std::fs;
-use std::fs::{File, OpenOptions};
-use std::io;
+use std::fs::File;
 use std::io::prelude::*;
 use toml;
 
 use serde::{Deserialize, Serialize};
-
-use toml::Value;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Configuration {
@@ -54,6 +50,9 @@ mod tests {
     #[test]
     fn test_config() {
         use super::*;
-        println!("conf data = {:?}", consensus_config::GLOBAL_CONFIG.public_keys);
+        println!(
+            "conf data = {:?}",
+            consensus_config::GLOBAL_CONFIG.public_keys
+        );
     }
 }

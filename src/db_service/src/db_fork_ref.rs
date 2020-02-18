@@ -45,7 +45,11 @@ impl<T: ObjectAccess> SchemaFork<T> {
         self.storage().object_hash()
     }
 
-    pub fn initialize_db(&self, kp: &KeypairType, public_keys: &Vec<String>) -> (SignedBlock, Vec<SignedTransaction>) {
+    pub fn initialize_db(
+        &self,
+        kp: &KeypairType,
+        public_keys: &Vec<String>,
+    ) -> (SignedBlock, Vec<SignedTransaction>) {
         let mut blocks = self.blocks();
         let mut wallets = self.state();
         let mut transaction_trie = self.transactions();
@@ -57,7 +61,7 @@ impl<T: ObjectAccess> SchemaFork<T> {
         let mut block = Block::genesis_block();
         let public_key = hex::encode(Keypair::public(&kp).encode());
         block.peer_id = public_key.clone();
-        let mut genesis_txn_vec : Vec<SignedTransaction> = Vec::new();
+        let mut genesis_txn_vec: Vec<SignedTransaction> = Vec::new();
         // genesis transactions
         for each in public_keys.iter() {
             let mut signed_txn = SignedTransaction::generate(kp);
@@ -86,7 +90,7 @@ impl<T: ObjectAccess> SchemaFork<T> {
         &self,
         genesis_txn: &SignedTransaction,
         wallet: &mut RefMut<ProofMapIndex<T, String, Wallet>>,
-    )  {
+    ) {
         // compute until order_pool exhusted or transaction limit crossed
         let mut to_wallet = Wallet::new();
         to_wallet.add_balance(genesis_txn.txn.amount);
@@ -327,6 +331,7 @@ mod test_db_service {
         use super::*;
         use crate::db_layer::{fork_db, patch_db};
         use chrono::prelude::Utc;
+        use std::time::SystemTime;
         let mut secret =
             hex::decode("97ba6f71a5311c4986e01798d525d0da8ee5c54acbf6ef7c3fadd1e2f624442f")
                 .expect("invalid secret");
@@ -345,7 +350,10 @@ mod test_db_service {
         {
             let mut txn_pool = TransactionPool::new();
             for _ in 1..10 {
-                let time_instant = Utc::now().timestamp_nanos();
+                let time_instant = SystemTime::now()
+                    .duration_since(SystemTime::UNIX_EPOCH)
+                    .unwrap()
+                    .as_micros();
                 txn_pool.insert_op(&time_instant, &SignedTransaction::generate(&keypair));
             }
             let schema = SchemaFork::new(&fork);

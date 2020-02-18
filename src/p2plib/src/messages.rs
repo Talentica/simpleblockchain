@@ -1,8 +1,9 @@
 use super::constants;
 use futures::{channel::mpsc::channel, channel::mpsc::Receiver, channel::mpsc::Sender};
 use libp2p::floodsub::{protocol, Topic, TopicBuilder, TopicHash};
-pub use schema::block::{SignedBlock, SignedBlockTraits};
-pub use schema::transaction::{ObjectHash, SignedTransaction, Txn};
+use schema::block::SignedBlock;
+use schema::transaction::SignedTransaction;
+use std::hash::{Hash, Hasher};
 use std::sync::{Arc, Mutex};
 use utils::serializer::{deserialize, Deserialize, Serialize};
 
@@ -34,7 +35,16 @@ const CONSENSUS_MSG_TOPIC_STR: &'static [&'static str] = &["LeaderElection", "Bl
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LeaderElection {
     pub block_height: u64,
-    pub public_key: String,
+    pub old_leader: String,
+    pub new_leader: String,
+}
+
+impl Hash for LeaderElection {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.block_height.hash(state);
+        self.old_leader.hash(state);
+        self.new_leader.hash(state);
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -210,4 +220,35 @@ impl MessageDispatcher {
 
 lazy_static! {
     pub static ref MSG_DISPATCHER: MessageDispatcher = MessageDispatcher::new();
+}
+
+#[cfg(test)]
+mod test_messages {
+
+    #[test]
+    pub fn check_leader_election_hash_comparison() {
+        use super::*;
+        use std::collections::hash_map::DefaultHasher;
+        let mut hasher = DefaultHasher::new();
+        let leader_1 = LeaderElection {
+            block_height: 0,
+            old_leader: "String".to_string(),
+            new_leader: "String".to_string(),
+        };
+        let mut hasher_1 = DefaultHasher::new();
+        let leader_2 = LeaderElection {
+            block_height: 0,
+            old_leader: "Strin3g".to_string(),
+            new_leader: "String".to_string(),
+        };
+        leader_1.hash(&mut hasher);
+        leader_2.hash(&mut hasher_1);
+        println!("Hash is {:x}!", hasher_1.finish());
+        println!("Hash is {:x}!", hasher.finish());
+        if hasher.finish() > hasher_1.finish() {
+            println!("leader_1");
+        } else {
+            println!("leader_2");
+        }
+    }
 }

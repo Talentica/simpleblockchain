@@ -6,7 +6,7 @@ use exonum_merkledb::ObjectHash;
 use crate::transaction::SignedTransaction;
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
-pub type TxnPoolKeyType = i64;
+pub type TxnPoolKeyType = u128;
 pub type TxnPoolValueType = SignedTransaction;
 
 pub trait TxnPool {
@@ -104,7 +104,7 @@ impl TxnPool for TransactionPool {
                 .header
                 .get(&String::from("timestamp"))
                 .unwrap()
-                .parse::<i64>()
+                .parse::<TxnPoolKeyType>()
                 .unwrap();
             self.delete_txn_order(&timestamp);
             self.delete_txn_hash(each_hash);
@@ -119,7 +119,7 @@ impl TxnPool for TransactionPool {
                 .header
                 .get(&String::from("timestamp"))
                 .unwrap()
-                .parse::<i64>()
+                .parse::<TxnPoolKeyType>()
                 .unwrap();
             self.order_pool.insert(timestamp, txn);
         }
@@ -138,16 +138,22 @@ mod tests_transactions {
     pub fn main_transaction() {
         use super::*;
         use crate::transaction::Txn;
-        use chrono::prelude::Utc;
+        use std::time::SystemTime;
         use utils::keypair::{CryptoKeypair, Keypair};
 
         let mut transaction_pool = TransactionPool::new();
         let kp = Keypair::generate();
         let one = SignedTransaction::generate(&kp);
         let two = SignedTransaction::generate(&kp);
-        let time_instant = Utc::now().timestamp_nanos();
+        let time_instant = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_micros();
         transaction_pool.insert_op(&time_instant, &one);
-        let time_instant = Utc::now().timestamp_nanos();
+        let time_instant = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_micros();
         transaction_pool.insert_op(&time_instant, &two);
     }
 }

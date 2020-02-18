@@ -6,10 +6,12 @@ mod nodemsgprocessor;
 use consensus::consensus_interface;
 use libp2p::{identity::PublicKey, PeerId};
 use nodemsgprocessor::*;
-use p2plib::messages::Message;
 use p2plib::messages::*;
+use p2plib::messages::{Message, SignedLeaderElection};
 use p2plib::simpleswarm::SimpleSwarm;
 use p2plib::txn_pool_p2p;
+use schema::block::SignedBlock;
+use schema::transaction::SignedTransaction;
 use std::thread;
 use utils::configreader;
 use utils::configreader::{Configuration, NODETYPE};
@@ -47,7 +49,11 @@ fn validator_process() {
     // in future this thread will spwan new child thread accrding to consensus requirement.
     let mut consensus_msg_receiver_clone = MSG_DISPATCHER.consensus_msg_receiver.clone();
     thread::spawn(move || {
-        consensus_interface::Consensus::init_consensus(config, &mut sender, consensus_msg_receiver_clone)
+        consensus_interface::Consensus::init_consensus(
+            config,
+            &mut sender,
+            consensus_msg_receiver_clone,
+        )
     });
     swarm.process(peer_id, config);
 }

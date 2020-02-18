@@ -1,8 +1,8 @@
 extern crate utils;
-use chrono::prelude::*;
 use exonum_crypto::Hash;
 pub use exonum_merkledb::{impl_object_hash_for_binary_value, BinaryValue, ObjectHash};
 use failure::Error;
+use std::time::SystemTime;
 use std::{borrow::Cow, convert::AsRef};
 
 use std::collections::HashMap;
@@ -112,7 +112,11 @@ impl Txn for SignedTransaction {
         };
         let txn_sign = txn.sign(&kp);
         let mut header = HashMap::default();
-        header.insert("timestamp".to_string(), Local::now().to_string());
+        let time_stamp = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_micros();
+        header.insert("timestamp".to_string(), time_stamp.to_string());
         SignedTransaction {
             txn,
             signature: txn_sign,
