@@ -47,7 +47,7 @@ fn validator_process() {
 
     // this thread will be responsible for whole consensus part.
     // in future this thread will spwan new child thread accrding to consensus requirement.
-    let mut consensus_msg_receiver_clone = MSG_DISPATCHER.consensus_msg_receiver.clone();
+    let consensus_msg_receiver_clone = MSG_DISPATCHER.consensus_msg_receiver.clone();
     thread::spawn(move || {
         consensus_interface::Consensus::init_consensus(
             config,

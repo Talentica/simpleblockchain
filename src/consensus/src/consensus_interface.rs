@@ -137,6 +137,7 @@ impl Consensus {
             let signed_block = schema.create_block(&self.keypair, &mut txn_pool);
             println!("new block created.. hash {}", signed_block.object_hash());
             txn_pool.sync_pool(&signed_block.block.txn_pool);
+            self.round_number = signed_block.block.id;
             let data = Some(MessageTypes::NodeMsg(NodeMessageTypes::SignedBlockEnum(
                 signed_block,
             )));

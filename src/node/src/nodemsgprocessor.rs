@@ -104,6 +104,11 @@ impl NodeMsgProcessor {
                         let block: &SignedBlock = block_queue.pending_blocks.get_mut(0).unwrap();
                         if schema.update_block(block, &mut txn_pool) {
                             txn_pool.sync_pool(&block.block.txn_pool);
+                            println!(
+                                "block height {}, block hash {}",
+                                block.block.id,
+                                block.object_hash()
+                            );
                         } else {
                             println!("block couldn't verified");
                             flag = false;
