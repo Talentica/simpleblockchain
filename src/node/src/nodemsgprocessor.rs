@@ -50,7 +50,6 @@ impl NodeMsgProcessor {
                                             data.object_hash()
                                         );
                                         let signed_block: SignedBlock = data;
-                                        println!("Signed Block msg in ConsensusMsgProcessor with Hash {:?}", signed_block.object_hash());
                                         let mut block_queue = pending_blocks.lock().unwrap();
                                         block_queue.pending_blocks.push_back(signed_block);
                                         println!(
@@ -60,7 +59,6 @@ impl NodeMsgProcessor {
                                     }
                                     NodeMessageTypes::SignedTransactionEnum(data) => {
                                         let arc_tx_pool = TRANSACTION_POOL.clone();
-                                        let mut txn_pool = arc_tx_pool.lock().unwrap();
                                         let txn: SignedTransaction = data;
                                         println!("Signed Transaction msg in NodeMsgProcessor with Hash {:?}", txn.object_hash());
                                         let timestamp = txn
@@ -69,6 +67,7 @@ impl NodeMsgProcessor {
                                             .unwrap()
                                             .parse::<TxnPoolKeyType>()
                                             .unwrap();
+                                        let mut txn_pool = arc_tx_pool.lock().unwrap();
                                         txn_pool.insert_op(&timestamp, &txn);
                                     }
                                 }

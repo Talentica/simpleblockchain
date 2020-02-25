@@ -1,19 +1,21 @@
 [package]
-name = "p2plib"
+name = "app_2"
 version = "0.1.0"
-authors = ["Pankajm"]
+authors = ["GauravA"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-utils = { path = "../utils" }
-generic_traits = { path = "../generic_traits" }
-schema = { path = "../schema" }
+utils = { path = "../../utils" }
+generic_traits = { path = "../../generic_traits" }
 chrono = { version = "0.4", features = ["serde"] }
 futures = "^0.3"
-libp2p = "^0.15"
 env_logger = "0.7.1"
 serde = { version = "1.0", features = ["derive"] }
 serde_cbor = "^0.11"
-lazy_static = "^1.4"
+exonum-merkledb = "0.12.0"
+exonum-crypto = "0.12.0"
+hex = "^0.4"
+failure = "0.1"
+bincode = "1.0"

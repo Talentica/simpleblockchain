@@ -66,6 +66,42 @@ version = "1.0.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
+name = "app_1"
+version = "0.1.0"
+dependencies = [
+ "bincode 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "chrono 0.4.10 (registry+https://github.com/rust-lang/crates.io-index)",
+ "env_logger 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "exonum-crypto 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "exonum-merkledb 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "failure 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "futures 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "generic_traits 0.1.0",
+ "hex 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_cbor 0.11.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "utils 0.1.0",
+]
+
+[[package]]
+name = "app_2"
+version = "0.1.0"
+dependencies = [
+ "bincode 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "chrono 0.4.10 (registry+https://github.com/rust-lang/crates.io-index)",
+ "env_logger 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "exonum-crypto 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "exonum-merkledb 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "failure 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "futures 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "generic_traits 0.1.0",
+ "hex 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_cbor 0.11.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "utils 0.1.0",
+]
+
+[[package]]
 name = "arrayref"
 version = "0.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -562,11 +598,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "db_service"
 version = "0.1.0"
 dependencies = [
+ "app_1 0.1.0",
+ "app_2 0.1.0",
  "bincode 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono 0.4.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "exonum-crypto 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "exonum-merkledb 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "generic_traits 0.1.0",
  "hex 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rocksdb 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -915,6 +954,14 @@ version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "typenum 1.11.2 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "generic_traits"
+version = "0.1.0"
+dependencies = [
+ "exonum-merkledb 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "utils 0.1.0",
 ]
 
 [[package]]
@@ -1828,6 +1875,7 @@ dependencies = [
  "chrono 0.4.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "env_logger 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "generic_traits 0.1.0",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libp2p 0.15.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "schema 0.1.0",
@@ -2400,11 +2448,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "schema"
 version = "0.1.0"
 dependencies = [
+ "app_1 0.1.0",
+ "app_2 0.1.0",
  "bincode 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono 0.4.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "exonum-crypto 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "exonum-merkledb 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "generic_traits 0.1.0",
  "hex 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",

@@ -5,13 +5,13 @@ use exonum_crypto::Hash;
 use exonum_merkledb::{ListIndex, ObjectAccess, ObjectHash, ProofMapIndex};
 use schema::block::SignedBlock;
 use schema::transaction::SignedTransaction;
-use schema::wallet::Wallet;
+use app_2::state::State;
 // use utils::keypair::{CryptoKeypair, Keypair, PublicKey, Verify};
 
 pub struct SchemaSnap<T: ObjectAccess> {
     txn_trie: ProofMapIndex<T, Hash, SignedTransaction>,
     block_list: ListIndex<T, SignedBlock>,
-    state_trie: ProofMapIndex<T, String, Wallet>,
+    state_trie: ProofMapIndex<T, String, State>,
     storage_trie: ProofMapIndex<T, Hash, SignedTransaction>,
 }
 
@@ -41,7 +41,7 @@ impl<T: ObjectAccess> SchemaSnap<T> {
         &self.block_list
     }
 
-    pub fn state(&self) -> &ProofMapIndex<T, String, Wallet> {
+    pub fn state(&self) -> &ProofMapIndex<T, String, State> {
         &self.state_trie
     }
 
@@ -97,7 +97,7 @@ impl<T: ObjectAccess> SchemaSnap<T> {
         self.blocks().len()
     }
 
-    pub fn get_wallet(&self, public_key: String) -> Option<Wallet> {
+    pub fn get_state(&self, public_key: String) -> Option<State> {
         self.state().get(&public_key)
     }
 }
@@ -126,7 +126,7 @@ mod test_db_service {
             );
             println!("state_trie_hash {}", schema.get_state_trie_hash());
             println!("storage_trie_hash {}", schema.get_storage_trie_hash());
-            println!("user wallet {:?}", schema.get_wallet(public_key));
+            println!("user state {:?}", schema.get_state(public_key));
         }
     }
 }

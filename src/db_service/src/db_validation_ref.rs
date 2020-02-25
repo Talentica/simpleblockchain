@@ -1,11 +1,12 @@
 extern crate schema;
 extern crate utils;
+use app_2::state::State;
 use exonum_crypto::Hash;
 use exonum_merkledb::{ListIndex, ObjectAccess, ObjectHash, ProofMapIndex, RefMut};
+use generic_traits::traits::{StateTraits, TransactionTrait};
 use schema::block::{BlockTraits, SignedBlock};
-use schema::transaction::{SignedTransaction, Txn};
+use schema::transaction::SignedTransaction;
 use schema::transaction_pool::{TransactionPool, TxnPool};
-use schema::wallet::Wallet;
 
 pub struct SchemaValidate<T: ObjectAccess>(T);
 
@@ -26,7 +27,7 @@ impl<T: ObjectAccess> SchemaValidate<T> {
         self.0.get_object("blocks")
     }
 
-    pub fn state(&self) -> RefMut<ProofMapIndex<T, String, Wallet>> {
+    pub fn state(&self) -> RefMut<ProofMapIndex<T, String, State>> {
         self.0.get_object("state_trie")
     }
 
@@ -47,7 +48,7 @@ impl<T: ObjectAccess> SchemaValidate<T> {
         signed_block: &SignedBlock,
         txn_pool: &mut TransactionPool,
     ) -> bool {
-        let mut wallets = self.state();
+        let mut state_trie = self.state();
         let mut transaction_trie = self.transactions();
         let storage_trie = self.storage();
         let block = &signed_block.block;
@@ -57,7 +58,7 @@ impl<T: ObjectAccess> SchemaValidate<T> {
         // TODO: this logic should be modified after consesus integration
         if self.validate_transactions(
             &block.txn_pool,
-            &mut wallets,
+            &mut state_trie,
             &mut transaction_trie,
             &txn_pool,
         ) {
@@ -73,7 +74,7 @@ impl<T: ObjectAccess> SchemaValidate<T> {
                 println!("check2");
                 return false;
             }
-            if wallets.object_hash() != block.header[0] {
+            if state_trie.object_hash() != block.header[0] {
                 println!("check3");
                 return false;
             }
@@ -95,7 +96,7 @@ impl<T: ObjectAccess> SchemaValidate<T> {
     pub fn validate_transactions(
         &self,
         hash_vec: &Vec<Hash>,
-        wallet: &mut RefMut<ProofMapIndex<T, String, Wallet>>,
+        state_trie: &mut RefMut<ProofMapIndex<T, String, State>>,
         transaction_trie: &mut RefMut<ProofMapIndex<T, Hash, SignedTransaction>>,
         txn_pool: &TransactionPool,
     ) -> bool {
@@ -105,25 +106,8 @@ impl<T: ObjectAccess> SchemaValidate<T> {
                 Some(txn) => txn.clone(),
             };
             if txn.validate() {
-                if wallet.contains(&txn.txn.from) {
-                    let mut from_wallet: Wallet = wallet.get(&txn.txn.from).unwrap();
-                    if from_wallet.get_balance() > txn.txn.amount {
-                        if wallet.contains(&txn.txn.to) {
-                            let mut to_wallet = wallet.get(&txn.txn.to).unwrap();
-                            to_wallet.add_balance(txn.txn.amount);
-                            wallet.put(&txn.txn.to.clone(), to_wallet);
-                        } else {
-                            let mut to_wallet: Wallet = Wallet::new();
-                            to_wallet.add_balance(txn.txn.amount);
-                            wallet.put(&txn.txn.to.clone(), to_wallet);
-                        }
-                        from_wallet.deduct_balance(txn.txn.amount);
-                        from_wallet.increase_nonce();
-                        wallet.put(&txn.txn.from.clone(), from_wallet);
-                        transaction_trie.put(&txn_hash, txn.clone());
-                    } else {
-                        return false;
-                    }
+                if txn.txn.execute(state_trie) {
+                    transaction_trie.put(&txn_hash, txn.clone());
                 } else {
                     return false;
                 }

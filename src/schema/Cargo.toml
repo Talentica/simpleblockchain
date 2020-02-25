@@ -8,6 +8,9 @@ edition = "2018"
 
 [dependencies]
 utils = { path = "../utils" }
+app_1 = { path = "../user/app_1" }
+app_2 = { path = "../user/app_2" }
+generic_traits = { path = "../generic_traits" }
 hex = "^0.4"
 serde = { version = "1.0", features = ["derive"] }
 serde_cbor = "^0.10"

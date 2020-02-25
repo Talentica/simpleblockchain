@@ -111,7 +111,8 @@ mod tests_blocks {
     #[test]
     pub fn test_block() {
         use super::*;
-        use crate::transaction::{SignedTransaction, Txn};
+        use crate::transaction::SignedTransaction;
+        use generic_traits::traits::TransactionTrait;
         let block: Block = Block::genesis_block();
         let kp = Keypair::generate();
         let public_key = &hex::encode(kp.public().encode());

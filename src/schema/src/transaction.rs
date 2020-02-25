@@ -5,88 +5,22 @@ use failure::Error;
 use std::time::SystemTime;
 use std::{borrow::Cow, convert::AsRef};
 
+use app_2::transaction::CryptoTransaction;
+use generic_traits::traits::TransactionTrait;
 use std::collections::HashMap;
 use utils::keypair::{CryptoKeypair, Keypair, KeypairType, PublicKey, Verify};
 use utils::serializer::{serialize, Deserialize, Serialize};
-pub trait Txn {
-    type T;
-    type U;
-    // generate trait is only for testing purpose
-    fn generate(kp: &Self::U) -> Self::T;
-    fn validate(&self) -> bool;
-    fn sign(&self, kp: &Self::U) -> Vec<u8>;
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub enum DataTypes {
-    String,
-    Vec(String),
-    Number(u64),
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Transaction {
-    /* TODO:
-    // Priority for a transaction. Additive. Higher is better.
-    pub type TransactionPriority = u64;
-    // Minimum number of blocks a transaction will remain valid for.
-    // `TransactionLongevity::max_value()` means "forever".
-    pub type TransactionLongevity = u64;
-    // Tag for a transaction. No two transactions with the same tag should be placed on-chain.
-    pub type TransactionTag = Vec<u8>;
-    */
-    pub nonce: u64,
-    pub from: String,
-    pub to: String,
-    pub fxn_call: String,
-    // TODO:: payload is for fxn_call variables
-    // update payload type and add/remove in future as per requirement
-    pub payload: Vec<DataTypes>,
-    pub amount: u64,
-}
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct SignedTransaction {
-    pub txn: Transaction,
+    pub txn: CryptoTransaction,
     // TODO::
     // update header type and add/remove in future as per requirement
     pub header: HashMap<String, String>,
     pub signature: Vec<u8>,
 }
 
-impl Txn for Transaction {
-    type T = Transaction;
-    type U = KeypairType;
-
-    fn validate(&self) -> bool {
-        unimplemented!();
-    }
-
-    fn sign(&self, kp: &KeypairType) -> Vec<u8> {
-        let ser_txn = serialize(&self);
-        let sign = Keypair::sign(&kp, &ser_txn);
-        sign
-    }
-
-    fn generate(kp: &KeypairType) -> Transaction {
-        let from: String = hex::encode(kp.public().encode());
-        let to_add_kp = Keypair::generate();
-        let to: String = hex::encode(to_add_kp.public().encode());
-        Transaction {
-            nonce: 0,
-            from,
-            to,
-            amount: 32,
-            fxn_call: String::from("transfer"),
-            payload: vec![],
-        }
-    }
-}
-
-impl Txn for SignedTransaction {
-    type T = SignedTransaction;
-    type U = KeypairType;
-
+impl TransactionTrait<SignedTransaction> for SignedTransaction {
     fn validate(&self) -> bool {
         let ser_txn = serialize(&self.txn);
         PublicKey::verify_from_encoded_pk(&self.txn.from, &ser_txn, &self.signature.as_ref())
@@ -102,7 +36,7 @@ impl Txn for SignedTransaction {
         let from: String = hex::encode(kp.public().encode());
         let to_add_kp = Keypair::generate();
         let to: String = hex::encode(to_add_kp.public().encode());
-        let txn: Transaction = Transaction {
+        let txn: CryptoTransaction = CryptoTransaction {
             nonce: 0,
             from,
             to,

@@ -286,9 +286,3 @@ impl Consensus {
         consensus_obj.state_machine(leader_map.clone(), &mut sender.clone());
     }
 }
-
-/*
-how to control mining function on the basis of leader function
-only genesis created will start mining defult other will create block on leader calling.
-do this first
-*/

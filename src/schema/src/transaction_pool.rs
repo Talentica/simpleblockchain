@@ -137,7 +137,7 @@ mod tests_transactions {
     #[test]
     pub fn main_transaction() {
         use super::*;
-        use crate::transaction::Txn;
+        use generic_traits::traits::TransactionTrait;
         use std::time::SystemTime;
         use utils::keypair::{CryptoKeypair, Keypair};
 
