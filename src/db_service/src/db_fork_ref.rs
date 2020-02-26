@@ -66,10 +66,17 @@ impl<T: ObjectAccess> SchemaFork<T> {
         // genesis transactions
         for each in public_keys.iter() {
             let mut signed_txn = SignedTransaction::generate(kp);
-            signed_txn.txn.amount = 100000000;
-            signed_txn.txn.to = each.clone();
+            match &mut signed_txn.txn {
+                Some(txn) => {
+                    txn.amount = 100000000;
+                    txn.to = each.clone();
+                    txn.from = String::from("");
+                }
+                None => {
+                    panic!("genesis transaction error");
+                }
+            }
             signed_txn.signature = Vec::new();
-            signed_txn.txn.from = String::from("");
             self.execute_genesis_transactions(&signed_txn, &mut state_trie);
             transaction_trie.put(&signed_txn.object_hash(), signed_txn.clone());
             block.txn_pool.push(signed_txn.object_hash());
@@ -94,8 +101,15 @@ impl<T: ObjectAccess> SchemaFork<T> {
     ) {
         // compute until order_pool exhusted or transaction limit crossed
         let mut to_wallet = State::new();
-        to_wallet.add_balance(genesis_txn.txn.amount);
-        state_trie.put(&genesis_txn.txn.to.clone(), to_wallet);
+        match &genesis_txn.txn {
+            Some(txn) => {
+                to_wallet.add_balance(txn.amount);
+                state_trie.put(&txn.to.clone(), to_wallet);
+            }
+            None => {
+                panic!("genesis transaction error");
+            }
+        }
     }
 
     /**
@@ -116,25 +130,7 @@ impl<T: ObjectAccess> SchemaFork<T> {
             if temp_vec.len() < 15 {
                 let txn: SignedTransaction = value.clone();
                 if txn.validate() {
-                    // if state_trie.contains(&txn.txn.from) {
-                    //     let mut from_wallet: State = state_trie.get(&txn.txn.from).unwrap();
-                    //     if from_wallet.get_balance() > txn.txn.amount {
-                    //         if state_trie.contains(&txn.txn.to) {
-                    //             let mut to_wallet: State = state_trie.get(&txn.txn.to).unwrap();
-                    //             to_wallet.add_balance(txn.txn.amount);
-                    //             state_trie.put(&txn.txn.to.clone(), to_wallet);
-                    //         } else {
-                    //             let mut to_wallet = State::new();
-                    //             to_wallet.add_balance(txn.txn.amount);
-                    //             state_trie.put(&txn.txn.to.clone(), to_wallet);
-                    //         }
-                    //         from_wallet.deduct_balance(txn.txn.amount);
-                    //         from_wallet.increase_nonce();
-                    //         state_trie.put(&txn.txn.from.clone(), from_wallet);
-                    //         temp_vec.push(txn);
-                    //     }
-                    // }
-                    if txn.txn.execute(state_trie) {
+                    if txn.execute(state_trie) {
                         temp_vec.push(txn);
                     }
                 }
@@ -191,29 +187,7 @@ impl<T: ObjectAccess> SchemaFork<T> {
         state_trie: &mut RefMut<ProofMapIndex<T, String, State>>,
     ) -> bool {
         if txn.validate() {
-            // if state_trie.contains(&txn.txn.from) {
-            //     let mut from_wallet: State = state_trie.get(&txn.txn.from).unwrap();
-            //     if from_wallet.get_balance() > txn.txn.amount {
-            //         if state_trie.contains(&txn.txn.to) {
-            //             let mut to_wallet: State = state_trie.get(&txn.txn.to).unwrap();
-            //             to_wallet.add_balance(txn.txn.amount);
-            //             state_trie.put(&txn.txn.to.clone(), to_wallet);
-            //         } else {
-            //             let mut to_wallet = State::new();
-            //             to_wallet.add_balance(txn.txn.amount);
-            //             state_trie.put(&txn.txn.to.clone(), to_wallet);
-            //         }
-            //         from_wallet.deduct_balance(txn.txn.amount);
-            //         from_wallet.increase_nonce();
-            //         state_trie.put(&txn.txn.from.clone(), from_wallet);
-            //         return true;
-            //     } else {
-            //         eprintln!("balance error");
-            //     }
-            // } else {
-            //     eprintln!("txn sender state doesn't exists");
-            // }
-            return txn.txn.execute(state_trie);
+            return txn.execute(state_trie);
         } else {
             eprintln!("transaction signature couldn't verified");
         }
@@ -338,7 +312,6 @@ mod test_db_service {
     pub fn test_schema() {
         use super::*;
         use crate::db_layer::{fork_db, patch_db};
-        use chrono::prelude::Utc;
         use std::time::SystemTime;
         let mut secret =
             hex::decode("97ba6f71a5311c4986e01798d525d0da8ee5c54acbf6ef7c3fadd1e2f624442f")

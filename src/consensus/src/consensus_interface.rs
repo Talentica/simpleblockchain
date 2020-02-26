@@ -166,10 +166,6 @@ impl Consensus {
                                 Some(msgtype) => {
                                     match msgtype {
                                         ConsensusMessageTypes::LeaderElect(data) => {
-                                            println!(
-                                                "Leader Elect msg in ConsensusMsgProcessor with data {:?}",
-                                                data
-                                            );
                                             let new_leader_obj: SignedLeaderElection = data;
                                             let ser_leader_election =
                                                 serialize(&new_leader_obj.leader_payload);
@@ -186,6 +182,11 @@ impl Consensus {
                                                         .leader_payload
                                                         .new_leader
                                                         .clone(),
+                                                );
+                                                println!(
+                                                    "New Leader for block height {} {} -> ",
+                                                    new_leader_obj.leader_payload.block_height,
+                                                    new_leader_obj.leader_payload.new_leader,
                                                 );
                                             }
                                             // update leader selection process here.

@@ -1,0 +1,19 @@
+[package]
+name = "client"
+version = "0.1.0"
+authors = ["Prem Baranwal <prem.baranwal@mistsys.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+bytes = "0.5.4"
+actix-web = "2.0.0"
+actix-rt = "1.0.0"
+awc = "1.0.1"
+futures = "0.3.1"
+prost = "0.6.1"
+prost-derive = "0.6.1"
+
+schema = { path = "../schema" }
+utils = { path = "../utils" }

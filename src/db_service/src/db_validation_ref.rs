@@ -106,7 +106,7 @@ impl<T: ObjectAccess> SchemaValidate<T> {
                 Some(txn) => txn.clone(),
             };
             if txn.validate() {
-                if txn.txn.execute(state_trie) {
+                if txn.execute(state_trie) {
                     transaction_trie.put(&txn_hash, txn.clone());
                 } else {
                     return false;
