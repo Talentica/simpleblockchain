@@ -6,7 +6,9 @@ use std::path::{Path, PathBuf};
 fn add_serialization_to_attribute_list(fullpath: &PathBuf) -> io::Result<()> {
     let line_to_be_replaced = "#[derive(Clone, PartialEq, ::prost::Message)]";
     let line_to_replace_with =
-        "//// Auto-generated using build.rs and proto files. Don't edit by hand. //// \r\n#[derive(Clone, PartialEq, Serialize, Deserialize, ::prost::Message)]";
+        "//// Auto-generated using build.rs and proto files. Don't edit by hand. //// \r\n#[derive(Clone, PartialEq, Serialize, Deserialize, ::prost::Message)]
+#[derive(BinaryValue, ObjectHash)]
+#[binary_value(codec = \"bincode\")]";
     let mut src_file = File::open(&fullpath)?;
     let mut filedata = String::new();
     src_file.read_to_string(&mut filedata)?;

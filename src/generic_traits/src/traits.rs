@@ -1,4 +1,4 @@
-use exonum_merkledb::{ObjectAccess, ProofMapIndex, RefMut};
+use exonum_merkledb::{access::Access, ProofMapIndex};
 use utils::keypair::KeypairType;
 
 pub trait TransactionTrait<T> {
@@ -8,9 +8,6 @@ pub trait TransactionTrait<T> {
     fn sign(&self, kp: &KeypairType) -> Vec<u8>;
 }
 
-pub trait StateTraits<T, S>
-where
-    T: ObjectAccess,
-{
-    fn execute(&self, fork: &mut RefMut<ProofMapIndex<T, String, S>>) -> bool;
+pub trait StateTraits<T: Access, S> {
+    fn execute(&self, fork: &mut ProofMapIndex<T::Base, String, S>) -> bool;
 }

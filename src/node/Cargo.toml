@@ -8,18 +8,19 @@ edition = "2018"
 
 [dependencies]
 consensus = { path = "../consensus" }
-utils = { path = "../utils" }
-schema = { path = "../schema" }
+db_service = { path = "../db_service"}
 p2plib = { path = "../p2plib" }
+schema = { path = "../schema" }
+utils = { path = "../utils" }
+
 hex = "^0.4"
 serde = { version = "1.0", features = ["derive"] }
 serde_cbor = "^0.10"
-chrono = { version = "0.4", features = ["serde"] }
 libp2p = "^0.15"
 futures = "0.3.1"
 async-std = "^1.4"
 env_logger = "0.7.1"
 lazy_static = "^1.4"
-db_service = { path = "../db_service"}
+
 [profile.release]
 panic = 'abort'

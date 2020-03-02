@@ -41,7 +41,7 @@ impl Consensus {
     ) {
         let fork = fork_db();
         {
-            let schema = SchemaFork::new(&fork);
+            let mut schema = SchemaFork::new(&fork);
             let (genesis_signed_block, txn_vec) =
                 schema.initialize_db(&self.keypair, &self.public_keys);
             for each in txn_vec.iter() {
@@ -77,6 +77,7 @@ impl Consensus {
 
     fn select_leader(&self) -> SignedLeaderElection {
         let mut iter_vec_pk: usize = 0;
+        #[allow(unused_assignments)]
         let mut current_lowest_hash: u64 = 0;
         if self.public_keys[iter_vec_pk].clone() != self.pk {
             let may_be_leader: LeaderElection = LeaderElection {
@@ -132,7 +133,7 @@ impl Consensus {
         let arc_txn_pool = TRANSACTION_POOL.clone();
         let fork = fork_db();
         {
-            let schema = SchemaFork::new(&fork);
+            let mut schema = SchemaFork::new(&fork);
             let mut txn_pool = arc_txn_pool.lock().unwrap();
             let signed_block = schema.create_block(&self.keypair, &mut txn_pool);
             println!("new block created.. hash {}", signed_block.object_hash());

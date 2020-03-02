@@ -1,38 +1,17 @@
 extern crate utils;
 use crate::state::State;
-pub use exonum_merkledb::{
-    impl_object_hash_for_binary_value, BinaryValue, ObjectAccess, ObjectHash, ProofMapIndex, RefMut,
+use crate::user_messages::CryptoTransaction;
+pub use crate::user_messages::SignedTransaction;
+use exonum_merkledb::{
+    access::{Access, RawAccessMut},
+    ProofMapIndex,
 };
-use generic_traits::traits::{StateTraits, TransactionTrait};
-use utils::keypair::{CryptoKeypair, Keypair, KeypairType};
-use utils::serializer::{serialize, Deserialize, Serialize};
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub enum DataTypes {
-    String,
-    Vec(String),
-    Number(u64),
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct CryptoTransaction {
-    /* TODO:
-    // Priority for a transaction. Additive. Higher is better.
-    pub type TransactionPriority = u64;
-    // Minimum number of blocks a transaction will remain valid for.
-    // `TransactionLongevity::max_value()` means "forever".
-    pub type TransactionLongevity = u64;
-    // Tag for a transaction. No two transactions with the same tag should be placed on-chain.
-    pub type TransactionTag = Vec<u8>;
-    */
-    pub nonce: u64,
-    pub from: String,
-    pub to: String,
-    pub fxn_call: String,
-    // TODO:: payload is for fxn_call variables
-    // update payload type in future as per requirement
-    pub payload: Vec<DataTypes>,
-    pub amount: u64,
-}
+pub use generic_traits::traits::{StateTraits, TransactionTrait};
+use std::collections::HashMap;
+use std::convert::AsRef;
+use std::time::SystemTime;
+use utils::keypair::{CryptoKeypair, Keypair, KeypairType, PublicKey, Verify};
+use utils::serializer::serialize;
 
 impl TransactionTrait<CryptoTransaction> for CryptoTransaction {
     fn validate(&self) -> bool {
@@ -61,25 +40,89 @@ impl TransactionTrait<CryptoTransaction> for CryptoTransaction {
     }
 }
 
-impl<T: ObjectAccess> StateTraits<T, State> for CryptoTransaction {
-    fn execute(&self, state_trie: &mut RefMut<ProofMapIndex<T, String, State>>) -> bool {
-        if self.fxn_call == String::from("transfer") {
-            self.transfer(state_trie)
-        } else {
-            false
+impl TransactionTrait<SignedTransaction> for SignedTransaction {
+    fn validate(&self) -> bool {
+        match &self.txn {
+            Some(txn) => {
+                let ser_txn = serialize(&txn);
+                PublicKey::verify_from_encoded_pk(&txn.from, &ser_txn, &self.signature.as_ref())
+            }
+            None => false,
+        }
+    }
+
+    fn sign(&self, kp: &KeypairType) -> Vec<u8> {
+        match &self.txn {
+            Some(txn) => {
+                let ser_txn = serialize(&txn);
+                let sign = Keypair::sign(&kp, &ser_txn);
+                sign
+            }
+            None => Vec::new(),
+        }
+    }
+
+    fn generate(kp: &KeypairType) -> SignedTransaction {
+        let from: String = hex::encode(kp.public().encode());
+        let to_add_kp = Keypair::generate();
+        let to: String = hex::encode(to_add_kp.public().encode());
+        let txn: CryptoTransaction = CryptoTransaction {
+            nonce: 0,
+            from,
+            to,
+            amount: 32,
+            fxn_call: String::from("transfer"),
+            payload: vec![],
+        };
+        let txn_sign = txn.sign(&kp);
+        let mut header = HashMap::default();
+        let time_stamp = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_micros();
+        header.insert("timestamp".to_string(), time_stamp.to_string());
+        SignedTransaction {
+            txn: Some(txn),
+            signature: txn_sign,
+            header,
         }
     }
 }
 
-pub trait ModuleTraits<T>
+impl<T: Access> StateTraits<T, State> for SignedTransaction
 where
-    T: ObjectAccess,
+    T::Base: RawAccessMut,
 {
-    fn transfer(&self, state_trie: &mut RefMut<ProofMapIndex<T, String, State>>) -> bool;
+    fn execute(&self, state_trie: &mut ProofMapIndex<T::Base, String, State>) -> bool {
+        match &self.txn {
+            Some(txn) => {
+                let crypto_txn = &txn.clone() as &dyn ModuleTraits<T>;
+                if txn.fxn_call == String::from("transfer") {
+                    crypto_txn.transfer(state_trie)
+                } else if txn.fxn_call == String::from("mint") {
+                    crypto_txn.mint(state_trie)
+                } else {
+                    return false;
+                }
+            }
+            None => return false,
+        }
+    }
 }
 
-impl<T: ObjectAccess> ModuleTraits<T> for CryptoTransaction {
-    fn transfer(&self, state_trie: &mut RefMut<ProofMapIndex<T, String, State>>) -> bool {
+pub trait ModuleTraits<T: Access>
+where
+    T::Base: RawAccessMut,
+{
+    fn transfer(&self, state_trie: &mut ProofMapIndex<T::Base, String, State>) -> bool;
+    fn mint(&self, state_trie: &mut ProofMapIndex<T::Base, String, State>) -> bool;
+}
+
+impl<T: Access> ModuleTraits<T> for CryptoTransaction
+where
+    T::Base: RawAccessMut,
+{
+    fn transfer(&self, state_trie: &mut ProofMapIndex<T::Base, String, State>) -> bool {
         if self.validate() {
             if state_trie.contains(&self.from) {
                 let mut from_wallet: State = state_trie.get(&self.from).unwrap();
@@ -99,6 +142,22 @@ impl<T: ObjectAccess> ModuleTraits<T> for CryptoTransaction {
                     return true;
                 }
             }
+        }
+        false
+    }
+
+    fn mint(&self, state_trie: &mut ProofMapIndex<T::Base, String, State>) -> bool {
+        if self.validate() {
+            if state_trie.contains(&self.to) {
+                let mut to_wallet: State = state_trie.get(&self.to).unwrap();
+                to_wallet.add_balance(self.amount);
+                state_trie.put(&self.to.clone(), to_wallet);
+            } else {
+                let mut to_wallet = State::new();
+                to_wallet.add_balance(self.amount);
+                state_trie.put(&self.to.clone(), to_wallet);
+            }
+            return true;
         }
         false
     }

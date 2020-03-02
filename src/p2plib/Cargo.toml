@@ -10,7 +10,7 @@ edition = "2018"
 utils = { path = "../utils" }
 generic_traits = { path = "../generic_traits" }
 schema = { path = "../schema" }
-chrono = { version = "0.4", features = ["serde"] }
+
 futures = "^0.3"
 libp2p = "^0.15"
 env_logger = "0.7.1"

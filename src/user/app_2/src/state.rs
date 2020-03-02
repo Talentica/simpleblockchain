@@ -1,12 +1,13 @@
 extern crate utils;
 use exonum_crypto::Hash;
-use exonum_merkledb::{impl_object_hash_for_binary_value, BinaryValue, ObjectHash};
-use failure::Error;
-use std::{borrow::Cow, convert::AsRef};
+use std::convert::AsRef;
 
 use utils::serializer::{Deserialize, Serialize};
 
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(
+    Clone, Copy, Debug, PartialEq, Serialize, Deserialize, Default, BinaryValue, ObjectHash,
+)]
+#[binary_value(codec = "bincode")]
 pub struct State {
     nonce: u64,
     balance: u64,
@@ -64,17 +65,6 @@ impl State {
         self.code_hash = new_code_hash;
     }
 }
-
-impl BinaryValue for State {
-    fn to_bytes(&self) -> Vec<u8> {
-        bincode::serialize(self).unwrap()
-    }
-
-    fn from_bytes(bytes: Cow<[u8]>) -> Result<Self, Error> {
-        bincode::deserialize(bytes.as_ref()).map_err(From::from)
-    }
-}
-impl_object_hash_for_binary_value! { State }
 
 #[cfg(test)]
 mod test_state {

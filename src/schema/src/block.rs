@@ -111,19 +111,12 @@ mod tests_blocks {
     #[test]
     pub fn test_block() {
         use super::*;
-        use crate::transaction::SignedTransaction;
-        use generic_traits::traits::TransactionTrait;
         let block: Block = Block::genesis_block();
         let kp = Keypair::generate();
         let public_key = &hex::encode(kp.public().encode());
         let sign = block.sign(&kp);
         let signed_block: SignedBlock = SignedBlock::create_block(block, sign);
         println!("{}", signed_block.validate(&public_key));
-        let mut txn_pool = vec![];
-        for _i in 0..5 {
-            let signed_txn = SignedTransaction::generate(&kp);
-            txn_pool.push(signed_txn);
-        }
         let prev_hash = signed_block.object_hash();
         let id = signed_block.block.id;
         let block: Block = Block {

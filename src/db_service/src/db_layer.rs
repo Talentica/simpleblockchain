@@ -27,7 +27,8 @@ mod tests_db_layer {
     use super::*;
     use exonum_crypto::Hash;
     use exonum_merkledb::{
-        impl_object_hash_for_binary_value, BinaryValue, ObjectHash, ProofMapIndex,
+        access::CopyAccessExt, impl_object_hash_for_binary_value, BinaryValue, ObjectHash,
+        ProofMapIndex,
     };
     use failure::Error;
     use std::{borrow::Cow, convert::AsRef};
@@ -65,7 +66,7 @@ mod tests_db_layer {
         let fork = fork_db();
         let name = "name";
         {
-            let mut mut_index: ProofMapIndex<_, Hash, Txn> = ProofMapIndex::new(name, &fork);
+            let mut mut_index: ProofMapIndex<_, Hash, Txn> = fork.get_proof_map(name);
             let value = Txn::new();
             let key = value.object_hash();
             mut_index.put(&key, value);
@@ -75,7 +76,7 @@ mod tests_db_layer {
         patch_db(fork);
         let snapshot = snapshot_db();
         {
-            let mut_index: ProofMapIndex<_, Hash, Txn> = ProofMapIndex::new(name, &snapshot);
+            let mut_index: ProofMapIndex<_, Hash, Txn> = snapshot.get_proof_map(name);
             println!(" data from snapshot");
             for (_key, _value) in mut_index.iter() {
                 println!("{} {:?} ", _key, _value);

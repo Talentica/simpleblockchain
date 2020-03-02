@@ -2,15 +2,14 @@ extern crate utils;
 use crate::state::State;
 use crate::user_messages::CryptoTransaction;
 pub use crate::user_messages::SignedTransaction;
-use exonum_crypto::Hash;
-pub use exonum_merkledb::{
-    impl_object_hash_for_binary_value, BinaryValue, ObjectAccess, ObjectHash, ProofMapIndex, RefMut,
+use exonum_merkledb::{
+    access::{Access, RawAccessMut},
+    ProofMapIndex,
 };
-use failure::Error;
-use generic_traits::traits::{StateTraits, TransactionTrait};
+pub use generic_traits::traits::{StateTraits, TransactionTrait};
 use std::collections::HashMap;
+use std::convert::AsRef;
 use std::time::SystemTime;
-use std::{borrow::Cow, convert::AsRef};
 use utils::keypair::{CryptoKeypair, Keypair, KeypairType, PublicKey, Verify};
 use utils::serializer::serialize;
 
@@ -90,45 +89,40 @@ impl TransactionTrait<SignedTransaction> for SignedTransaction {
     }
 }
 
-impl BinaryValue for SignedTransaction {
-    fn to_bytes(&self) -> Vec<u8> {
-        bincode::serialize(self).unwrap()
-    }
-
-    fn from_bytes(bytes: Cow<'_, [u8]>) -> Result<Self, Error> {
-        bincode::deserialize(bytes.as_ref()).map_err(From::from)
-    }
-}
-
-impl_object_hash_for_binary_value! { SignedTransaction}
-
-impl<T: ObjectAccess> StateTraits<T, State> for SignedTransaction {
-    fn execute(&self, state_trie: &mut RefMut<ProofMapIndex<T, String, State>>) -> bool {
+impl<T: Access> StateTraits<T, State> for SignedTransaction
+where
+    T::Base: RawAccessMut,
+{
+    fn execute(&self, state_trie: &mut ProofMapIndex<T::Base, String, State>) -> bool {
         match &self.txn {
             Some(txn) => {
+                let crypto_txn = &txn.clone() as &dyn ModuleTraits<T>;
                 if txn.fxn_call == String::from("transfer") {
-                    txn.transfer(state_trie)
+                    crypto_txn.transfer(state_trie)
                 } else if txn.fxn_call == String::from("mint") {
-                    txn.mint(state_trie)
+                    crypto_txn.mint(state_trie)
                 } else {
-                    false
+                    return false;
                 }
             }
-            None => false,
+            None => return false,
         }
     }
 }
 
-pub trait ModuleTraits<T>
+pub trait ModuleTraits<T: Access>
 where
-    T: ObjectAccess,
+    T::Base: RawAccessMut,
 {
-    fn transfer(&self, state_trie: &mut RefMut<ProofMapIndex<T, String, State>>) -> bool;
-    fn mint(&self, state_trie: &mut RefMut<ProofMapIndex<T, String, State>>) -> bool;
+    fn transfer(&self, state_trie: &mut ProofMapIndex<T::Base, String, State>) -> bool;
+    fn mint(&self, state_trie: &mut ProofMapIndex<T::Base, String, State>) -> bool;
 }
 
-impl<T: ObjectAccess> ModuleTraits<T> for CryptoTransaction {
-    fn transfer(&self, state_trie: &mut RefMut<ProofMapIndex<T, String, State>>) -> bool {
+impl<T: Access> ModuleTraits<T> for CryptoTransaction
+where
+    T::Base: RawAccessMut,
+{
+    fn transfer(&self, state_trie: &mut ProofMapIndex<T::Base, String, State>) -> bool {
         if self.validate() {
             if state_trie.contains(&self.from) {
                 let mut from_wallet: State = state_trie.get(&self.from).unwrap();
@@ -152,7 +146,7 @@ impl<T: ObjectAccess> ModuleTraits<T> for CryptoTransaction {
         false
     }
 
-    fn mint(&self, state_trie: &mut RefMut<ProofMapIndex<T, String, State>>) -> bool {
+    fn mint(&self, state_trie: &mut ProofMapIndex<T::Base, String, State>) -> bool {
         if self.validate() {
             if state_trie.contains(&self.to) {
                 let mut to_wallet: State = state_trie.get(&self.to).unwrap();

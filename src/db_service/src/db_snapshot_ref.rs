@@ -1,30 +1,34 @@
 extern crate schema;
 extern crate utils;
 
+use app_2::state::State;
 use exonum_crypto::Hash;
-use exonum_merkledb::{ListIndex, ObjectAccess, ObjectHash, ProofMapIndex};
+use exonum_derive::FromAccess;
+use exonum_merkledb::{
+    access::{Access, FromAccess, RawAccess},
+    ListIndex, ObjectHash, ProofMapIndex,
+};
 use schema::block::SignedBlock;
 use schema::transaction::SignedTransaction;
-use app_2::state::State;
-// use utils::keypair::{CryptoKeypair, Keypair, PublicKey, Verify};
 
-pub struct SchemaSnap<T: ObjectAccess> {
-    txn_trie: ProofMapIndex<T, Hash, SignedTransaction>,
-    block_list: ListIndex<T, SignedBlock>,
-    state_trie: ProofMapIndex<T, String, State>,
-    storage_trie: ProofMapIndex<T, Hash, SignedTransaction>,
+#[derive(FromAccess)]
+pub struct SchemaSnap<T: Access> {
+    txn_trie: ProofMapIndex<T::Base, Hash, SignedTransaction>,
+    block_list: ListIndex<T::Base, SignedBlock>,
+    state_trie: ProofMapIndex<T::Base, String, State>,
+    storage_trie: ProofMapIndex<T::Base, Hash, SignedTransaction>,
 }
 
-impl<T: ObjectAccess> SchemaSnap<T> {
-    pub fn new(object_access: T) -> Self {
-        Self {
-            txn_trie: ProofMapIndex::new("transactions", object_access.clone()),
-            block_list: ListIndex::new("blocks", object_access.clone()),
-            state_trie: ProofMapIndex::new("state_trie", object_access.clone()),
-            storage_trie: ProofMapIndex::new("storage_trie", object_access),
-        }
+impl<T: Access> SchemaSnap<T> {
+    pub fn new(access: T) -> Self {
+        Self::from_root(access).unwrap()
     }
+}
 
+impl<T: Access> SchemaSnap<T>
+where
+    T::Base: RawAccess,
+{
     pub fn is_db_initialized(&self) -> bool {
         if self.get_blockchain_length() > 0 {
             true
@@ -33,19 +37,19 @@ impl<T: ObjectAccess> SchemaSnap<T> {
         }
     }
 
-    pub fn transactions(&self) -> &ProofMapIndex<T, Hash, SignedTransaction> {
+    pub fn transactions(&self) -> &ProofMapIndex<T::Base, Hash, SignedTransaction> {
         &self.txn_trie
     }
 
-    pub fn blocks(&self) -> &ListIndex<T, SignedBlock> {
+    pub fn blocks(&self) -> &ListIndex<T::Base, SignedBlock> {
         &self.block_list
     }
 
-    pub fn state(&self) -> &ProofMapIndex<T, String, State> {
+    pub fn state(&self) -> &ProofMapIndex<T::Base, String, State> {
         &self.state_trie
     }
 
-    pub fn storage(&self) -> &ProofMapIndex<T, Hash, SignedTransaction> {
+    pub fn storage(&self) -> &ProofMapIndex<T::Base, Hash, SignedTransaction> {
         &self.storage_trie
     }
 

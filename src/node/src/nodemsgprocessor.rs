@@ -98,7 +98,7 @@ impl NodeMsgProcessor {
                     let fork = fork_db();
                     let mut flag = true;
                     {
-                        let schema = SchemaFork::new(&fork);
+                        let mut schema = SchemaFork::new(&fork);
                         let mut txn_pool = arc_txn_pool.lock().unwrap();
                         let block: &SignedBlock = block_queue.pending_blocks.get_mut(0).unwrap();
                         if schema.update_block(block, &mut txn_pool) {

@@ -1,8 +1,6 @@
 use super::*;
 use std::env;
-use std::fs;
-use std::fs::{File, OpenOptions};
-use std::io;
+use std::fs::{File};
 use std::io::prelude::*;
 use toml;
 
@@ -10,8 +8,6 @@ use crypto::keypair::CryptoKeypair;
 use crypto::keypair::Keypair;
 
 use serde::{Deserialize, Serialize};
-
-use toml::Value;
 
 #[derive(Debug)]
 pub enum NODETYPE {
@@ -52,9 +48,7 @@ impl Configuration {
         let mut node_type: NODETYPE = NODETYPE::Validator;
         if tomlreader.node_type.to_ascii_lowercase() == "fullnode" {
             node_type = NODETYPE::FullNode
-        } else if tomlreader.node_type.to_ascii_lowercase() == "validator" {
-            node_type = NODETYPE::Validator
-        } else {
+        } else if tomlreader.node_type.to_ascii_lowercase() != "validator" {
             panic!("node type not defined properly");
         }
         let node_obj: Node = Node {
