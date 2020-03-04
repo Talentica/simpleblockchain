@@ -1,7 +1,7 @@
 extern crate schema;
 extern crate utils;
 
-use app_2::state::State;
+use app_1::state::State;
 use exonum_crypto::Hash;
 use exonum_derive::FromAccess;
 use exonum_merkledb::{
@@ -59,25 +59,25 @@ where
         block.peer_id = public_key.clone();
         let mut genesis_txn_vec: Vec<SignedTransaction> = Vec::new();
         // genesis transactions
-        for each in public_keys.iter() {
-            let mut signed_txn = SignedTransaction::generate(kp);
-            match &mut signed_txn.txn {
-                Some(txn) => {
-                    txn.amount = 100000000;
-                    txn.to = each.clone();
-                    txn.from = String::from("");
-                }
-                None => {
-                    panic!("genesis transaction error");
-                }
-            }
-            signed_txn.signature = Vec::new();
-            self.execute_genesis_transactions(&signed_txn);
-            self.txn_trie
-                .put(&signed_txn.object_hash(), signed_txn.clone());
-            block.txn_pool.push(signed_txn.object_hash());
-            genesis_txn_vec.push(signed_txn);
-        }
+        // for each in public_keys.iter() {
+        //     let mut signed_txn = SignedTransaction::generate(kp);
+        //     match &mut signed_txn.txn {
+        //         Some(txn) => {
+        //             txn.amount = 100000000;
+        //             txn.to = each.clone();
+        //             txn.from = String::from("");
+        //         }
+        //         None => {
+        //             panic!("genesis transaction error");
+        //         }
+        //     }
+        //     signed_txn.signature = Vec::new();
+        //     self.execute_genesis_transactions(&signed_txn);
+        //     self.txn_trie
+        //         .put(&signed_txn.object_hash(), signed_txn.clone());
+        //     block.txn_pool.push(signed_txn.object_hash());
+        //     genesis_txn_vec.push(signed_txn);
+        // }
         block.header[0] = self.state_trie_merkle_hash();
         block.header[1] = self.storage_trie_merkle_hash();
         block.header[2] = self.txn_trie_merkle_hash();
@@ -92,16 +92,16 @@ where
      */
     pub fn execute_genesis_transactions(&mut self, genesis_txn: &SignedTransaction) {
         // compute until order_pool exhusted or transaction limit crossed
-        let mut to_wallet = State::new();
-        match &genesis_txn.txn {
-            Some(txn) => {
-                to_wallet.add_balance(txn.amount);
-                self.state_trie.put(&txn.to.clone(), to_wallet);
-            }
-            None => {
-                panic!("genesis transaction error");
-            }
-        }
+        // let mut to_wallet = State::new();
+        // match &genesis_txn.txn {
+        //     Some(txn) => {
+        //         to_wallet.add_balance(txn.amount);
+        //         self.state_trie.put(&txn.to.clone(), to_wallet);
+        //     }
+        //     None => {
+        //         panic!("genesis transaction error");
+        //     }
+        // }
     }
 
     /**

@@ -1,6 +1,6 @@
 extern crate schema;
 extern crate utils;
-use app_2::state::State;
+use app_1::state::State;
 use exonum_crypto::Hash;
 use exonum_derive::FromAccess;
 use exonum_merkledb::{
