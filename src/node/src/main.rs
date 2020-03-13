@@ -16,7 +16,7 @@ use p2plib::messages::*;
 
 use std::{thread, time};
 
-fn test_publish() {
+fn publish() {
     let config: &Configuration = &configreader::GLOBAL_CONFIG;
     let peer_id = PeerId::from_public_key(config.node.public.clone());
     println!("peer id = {:?}", peer_id);
@@ -84,19 +84,24 @@ fn main() {
     let terminate = Arc::new(AtomicBool::new(false));
     register_signals(Arc::clone(&terminate));
 
-    let mut swarm = SimpleSwarm::new();
-    swarm.topic_list.push(String::from(BlockCreate::TOPIC));
-    swarm
-        .topic_list
-        .push(String::from(TransactionCreate::TOPIC));
+    if config.node.genesis_block {
+        publish();
+    } else {
+        let mut swarm = SimpleSwarm::new();
+        swarm.topic_list.push(String::from(BlockCreate::TOPIC));
+        swarm
+            .topic_list
+            .push(String::from(TransactionCreate::TOPIC));
 
-    let mut node_msg_processor = NodeMsgProcessor::new(MSG_DISPATCHER.node_msg_receiver.clone());
-    {
-        thread::spawn(move || {
-            node_msg_processor.start();
-        });
+        let mut node_msg_processor =
+            NodeMsgProcessor::new(MSG_DISPATCHER.node_msg_receiver.clone());
+        {
+            thread::spawn(move || {
+                node_msg_processor.start();
+            });
+        }
+        swarm.process(peer_id, config);
     }
-    swarm.process(peer_id, config);
 
     //Starting the Transaction Service
     //TODO: host/port details need to come from config
