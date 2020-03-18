@@ -1,0 +1,28 @@
+version: "3.7"
+services:
+  node1:
+    image: simplebc:latest
+    expose:
+      - 4444
+    volumes:
+      - ./config1:/config 
+    command: bash -c "cp /config/config.toml /simpleblockchain && cd /simpleblockchain && ./node"
+    depends_on:
+      - node2
+      - node3
+
+  node2:
+    image: simplebc:latest
+    expose:
+      - 4444
+    volumes:
+      - ./config2:/config 
+    command: bash -c "cp /config/config.toml /simpleblockchain && cd /simpleblockchain && ./node"
+  node3:
+    image: simplebc:latest
+    expose:
+      - 4444
+    volumes:
+      - ./config3:/config 
+    command: bash -c "cp /config/config.toml /simpleblockchain && cd /simpleblockchain && ./node"
+    # cd /simpleblockchain; bash ./node"

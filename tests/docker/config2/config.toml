@@ -1,0 +1,6 @@
+public = "5f0323b9825360402401878d0e97f6c583c6896c79dc76d91e8375aec47918c0"
+secret = "06281e5c72a4795bf9b9a5ba273d36b28355edf9952c6e266edaeddd729b3b0c"
+node_type = 1
+genesis_block = false
+p2p_port = 4444
+dbpath = "./rockdb/db"
