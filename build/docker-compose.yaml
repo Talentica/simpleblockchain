@@ -1,0 +1,7 @@
+version: "3.7"
+services:
+  buildimage:
+    build:
+      context: ..
+      dockerfile: ./build/Dockerfile
+      target: simplebc
