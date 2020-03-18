@@ -49,8 +49,8 @@ impl Configuration {
             hex_public: tomlreader.public,
             keypair: keypair,
             node_type: NODETYPE::FullNode,
-            genesis_block: true,
-            p2p_port: 4444,
+            genesis_block: tomlreader.genesis_block,
+            p2p_port: tomlreader.p2p_port,
         };
         let db_path: Database = Database {
             dbpath: "utils/rocksdb".to_string(),
