@@ -6,7 +6,7 @@ use db_service::db_fork_ref::SchemaFork;
 use db_service::db_layer::{fork_db, patch_db};
 use schema::block::SignedBlock;
 use schema::transaction::{ObjectHash, SignedTransaction};
-use schema::transaction_pool::{TxnPool, TxnPoolKeyType, TRANSACTION_POOL};
+use schema::transaction_pool::{TxnPool, TxnPoolKeyType, POOL};
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::thread;
@@ -58,7 +58,6 @@ impl NodeMsgProcessor {
                                         );
                                     }
                                     NodeMessageTypes::SignedTransactionEnum(data) => {
-                                        let arc_tx_pool = TRANSACTION_POOL.clone();
                                         let txn: SignedTransaction = data;
                                         println!("Signed Transaction msg in NodeMsgProcessor with Hash {:?}", txn.object_hash());
                                         let timestamp = txn
@@ -67,8 +66,7 @@ impl NodeMsgProcessor {
                                             .unwrap()
                                             .parse::<TxnPoolKeyType>()
                                             .unwrap();
-                                        let mut txn_pool = arc_tx_pool.lock().unwrap();
-                                        txn_pool.insert_op(&timestamp, &txn);
+                                        POOL.insert_op(&timestamp, &txn);
                                     }
                                 }
                             }
@@ -94,15 +92,13 @@ impl NodeMsgProcessor {
                 // schema operations and p2p module
                 let mut block_queue = pending_blocks.lock().unwrap();
                 if block_queue.pending_blocks.len() > 0 {
-                    let arc_txn_pool = TRANSACTION_POOL.clone();
                     let fork = fork_db();
                     let mut flag = true;
                     {
                         let mut schema = SchemaFork::new(&fork);
-                        let mut txn_pool = arc_txn_pool.lock().unwrap();
                         let block: &SignedBlock = block_queue.pending_blocks.get_mut(0).unwrap();
-                        if schema.update_block(block, &mut txn_pool) {
-                            txn_pool.sync_pool(&block.block.txn_pool);
+                        if schema.update_block(block) {
+                            POOL.sync_pool(&block.block.txn_pool);
                             println!(
                                 "block height {}, block hash {}",
                                 block.block.id,

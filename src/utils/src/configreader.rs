@@ -1,6 +1,6 @@
 use super::*;
 use std::env;
-use std::fs::{File};
+use std::fs::File;
 use std::io::prelude::*;
 use toml;
 

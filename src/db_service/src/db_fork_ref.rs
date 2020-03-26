@@ -1,17 +1,16 @@
 extern crate schema;
 extern crate utils;
 
-use app_1::state::State;
 use exonum_crypto::Hash;
 use exonum_derive::FromAccess;
 use exonum_merkledb::{
     access::{Access, FromAccess, RawAccessMut},
     ListIndex, ObjectHash, ProofMapIndex,
 };
-use generic_traits::traits::{StateTraits, TransactionTrait};
+use generic_traits::traits::PoolTrait;
 use schema::block::{Block, BlockTraits, SignedBlock, SignedBlockTraits};
-use schema::transaction::SignedTransaction;
-use schema::transaction_pool::{TransactionPool, TxnPool};
+use schema::transaction::{SignedTransaction, State};
+use schema::transaction_pool::{TransactionPool, POOL};
 use utils::keypair::{CryptoKeypair, Keypair, KeypairType, PublicKey, Verify};
 use utils::serializer::serialize;
 
@@ -45,11 +44,7 @@ where
         self.storage_trie.object_hash()
     }
 
-    pub fn initialize_db(
-        &mut self,
-        kp: &KeypairType,
-        public_keys: &Vec<String>,
-    ) -> (SignedBlock, Vec<SignedTransaction>) {
+    pub fn initialize_db(&mut self, kp: &KeypairType) -> (SignedBlock, Vec<SignedTransaction>) {
         self.state_trie.clear();
         self.txn_trie.clear();
         self.storage_trie.clear();
@@ -57,51 +52,13 @@ where
         let mut block = Block::genesis_block();
         let public_key = hex::encode(Keypair::public(&kp).encode());
         block.peer_id = public_key.clone();
-        let mut genesis_txn_vec: Vec<SignedTransaction> = Vec::new();
-        // genesis transactions
-        // for each in public_keys.iter() {
-        //     let mut signed_txn = SignedTransaction::generate(kp);
-        //     match &mut signed_txn.txn {
-        //         Some(txn) => {
-        //             txn.amount = 100000000;
-        //             txn.to = each.clone();
-        //             txn.from = String::from("");
-        //         }
-        //         None => {
-        //             panic!("genesis transaction error");
-        //         }
-        //     }
-        //     signed_txn.signature = Vec::new();
-        //     self.execute_genesis_transactions(&signed_txn);
-        //     self.txn_trie
-        //         .put(&signed_txn.object_hash(), signed_txn.clone());
-        //     block.txn_pool.push(signed_txn.object_hash());
-        //     genesis_txn_vec.push(signed_txn);
-        // }
         block.header[0] = self.state_trie_merkle_hash();
         block.header[1] = self.storage_trie_merkle_hash();
         block.header[2] = self.txn_trie_merkle_hash();
         let signature = block.sign(kp);
         let genesis_block: SignedBlock = SignedBlock::create_block(block, signature);
         self.block_list.push(genesis_block.clone());
-        return (genesis_block, genesis_txn_vec);
-    }
-
-    /**
-     * this function will do computation on genesis block transactions
-     */
-    pub fn execute_genesis_transactions(&mut self, genesis_txn: &SignedTransaction) {
-        // compute until order_pool exhusted or transaction limit crossed
-        // let mut to_wallet = State::new();
-        // match &genesis_txn.txn {
-        //     Some(txn) => {
-        //         to_wallet.add_balance(txn.amount);
-        //         self.state_trie.put(&txn.to.clone(), to_wallet);
-        //     }
-        //     None => {
-        //         panic!("genesis transaction error");
-        //     }
-        // }
+        return (genesis_block, vec![]);
     }
 
     /**
@@ -111,48 +68,26 @@ where
      * deleted from txn_pool according to whole txn_pool
      * Update logic for that in future.  
      */
-    pub fn execute_transactions(
-        &mut self,
-        txn_pool: &mut TransactionPool,
-    ) -> Vec<SignedTransaction> {
-        let mut temp_vec = Vec::<SignedTransaction>::with_capacity(15);
-        // compute until order_pool exhusted or transaction limit crossed
-        for (_key, value) in txn_pool.order_pool.iter() {
-            if temp_vec.len() < 15 {
-                let txn: SignedTransaction = value.clone();
-                if txn.validate() {
-                    let sign_txn = &txn as &dyn StateTraits<T, State>;
-                    if sign_txn.execute(&mut self.state_trie) {
-                        temp_vec.push(txn);
-                    }
-                }
-            } else {
-                break;
-            }
-        }
-        temp_vec
+    pub fn execute_transactions(&mut self, txn_pool: &TransactionPool) -> Vec<Hash> {
+        let txn_pool_as_trait = txn_pool as &dyn PoolTrait<T, State, SignedTransaction>;
+        txn_pool_as_trait.execute_transactions(&mut self.state_trie, &mut self.txn_trie)
     }
 
     /// this function only will called when the node willing to propose block and for that agree to compute block
-    pub fn create_block(
-        &mut self,
-        kp: &KeypairType,
-        txn_pool: &mut TransactionPool,
-    ) -> SignedBlock {
+    pub fn create_block(&mut self, kp: &KeypairType) -> SignedBlock {
         // all trie's state before current block computation
-        let executed_txns = self.execute_transactions(txn_pool);
-        println!(
-            "length {:?} {:?}",
-            txn_pool.length_hash_pool(),
-            txn_pool.length_order_pool()
-        );
-        let mut vec_txn_hash = vec![];
-        for each in executed_txns.iter() {
-            let hash = each.object_hash();
-            self.txn_trie.put(&hash, each.clone());
-            vec_txn_hash.push(hash);
+        #[allow(unused_assignments)]
+        let mut executed_txns: Vec<Hash> = vec![];
+        {
+            let mut txn_pool = POOL.pool.lock().unwrap();
+            executed_txns = self.execute_transactions(&mut txn_pool);
         }
-        println!("txn count in proposed block {}", vec_txn_hash.len());
+        // println!(
+        //     "length {:?} {:?}",
+        //     txn_pool.length_hash_pool(),
+        //     txn_pool.length_order_pool()
+        // );
+        println!("txn count in proposed block {}", executed_txns.len());
         let length = self.block_list.len();
         let last_block: SignedBlock = self.block_list.get(length - 1).unwrap();
         // println!("{:?}", last_block);
@@ -164,7 +99,7 @@ where
         ];
         // updated merkle root of all tries
         let public_key = hex::encode(Keypair::public(&kp).encode());
-        let block = Block::new_block(length, public_key, prev_hash, vec_txn_hash, header);
+        let block = Block::new_block(length, public_key, prev_hash, executed_txns, header);
         let signature: Vec<u8> = block.sign(kp);
         let signed_block: SignedBlock = SignedBlock::create_block(block, signature);
         self.block_list.push(signed_block.clone());
@@ -172,18 +107,17 @@ where
     }
 
     /// this function will update state_trie for given transaction
-    pub fn update_transaction(&mut self, txn: SignedTransaction) -> bool {
-        if txn.validate() {
-            let sign_txn = &txn as &dyn StateTraits<T, State>;
-            return sign_txn.execute(&mut self.state_trie);
-        } else {
-            eprintln!("transaction signature couldn't verified");
-        }
-        return false;
+    pub fn update_transactions(
+        &mut self,
+        txn_pool: &TransactionPool,
+        hash_vec: &Vec<Hash>,
+    ) -> bool {
+        let txn_pool_as_trait = txn_pool as &dyn PoolTrait<T, State, SignedTransaction>;
+        txn_pool_as_trait.update_transactions(&mut self.state_trie, &mut self.txn_trie, hash_vec)
     }
 
     /// this function will update fork for given block
-    pub fn update_block(&mut self, signed_block: &SignedBlock, txn_pool: &TransactionPool) -> bool {
+    pub fn update_block(&mut self, signed_block: &SignedBlock) -> bool {
         let length = self.block_list.len();
         // block height check
         if signed_block.block.id != length {
@@ -207,17 +141,17 @@ where
 
         // genesis block check
         if signed_block.block.id == 0 {
-            let executed_txns = &signed_block.block.txn_pool;
-            for each in executed_txns.iter() {
-                let signed_txn = txn_pool.get(each);
-                if let Some(txn) = signed_txn {
-                    self.txn_trie.put(each, txn.clone());
-                    self.execute_genesis_transactions(txn);
-                } else {
-                    eprintln!("block transaction execution error");
-                    return false;
-                }
-            }
+            // let executed_txns = &signed_block.block.txn_pool;
+            // for each in executed_txns.iter() {
+            //     let signed_txn = txn_pool.get(each);
+            //     if let Some(txn) = signed_txn {
+            //         self.txn_trie.put(each, txn.clone());
+            //         self.execute_genesis_transactions(&txn);
+            //     } else {
+            //         eprintln!("block transaction execution error");
+            //         return false;
+            //     }
+            // }
             let header: [Hash; 3] = [
                 self.state_trie_merkle_hash(),
                 self.storage_trie_merkle_hash(),
@@ -250,17 +184,10 @@ where
             }
 
             // block txn pool validation
-            let executed_txns = &signed_block.block.txn_pool;
-            for each in executed_txns.iter() {
-                let signed_txn = txn_pool.get(each);
-                if let Some(txn) = signed_txn {
-                    self.txn_trie.put(each, txn.clone());
-                    if !self.update_transaction(txn.clone()) {
-                        eprintln!("block transaction state varification error");
-                        return false;
-                    }
-                } else {
-                    eprintln!("block transaction execution error");
+            {
+                let txn_pool = POOL.pool.lock().unwrap();
+                if !self.update_transactions(&txn_pool, &signed_block.block.txn_pool) {
+                    eprintln!("block txn_pool couldn't updated, block declined");
                     return false;
                 }
             }
@@ -296,6 +223,8 @@ mod test_db_service {
     pub fn test_schema() {
         use super::*;
         use crate::db_layer::{fork_db, patch_db};
+        use generic_traits::traits::TransactionTrait;
+        use schema::transaction_pool::TxnPool;
         use std::time::SystemTime;
         let mut secret =
             hex::decode("97ba6f71a5311c4986e01798d525d0da8ee5c54acbf6ef7c3fadd1e2f624442f")
@@ -307,22 +236,21 @@ mod test_db_service {
         // put genesis blockin database
         {
             let mut schema = SchemaFork::new(&fork);
-            schema.initialize_db(&keypair, &Vec::new());
+            schema.initialize_db(&keypair);
         }
         patch_db(fork);
         println!("block proposal testing");
         let fork = fork_db();
         {
-            let mut txn_pool = TransactionPool::new();
             for _ in 1..10 {
                 let time_instant = SystemTime::now()
                     .duration_since(SystemTime::UNIX_EPOCH)
                     .unwrap()
                     .as_micros();
-                txn_pool.insert_op(&time_instant, &SignedTransaction::generate(&keypair));
+                POOL.insert_op(&time_instant, &SignedTransaction::generate(&keypair));
             }
             let mut schema = SchemaFork::new(&fork);
-            let block = schema.create_block(&keypair, &mut txn_pool);
+            let block = schema.create_block(&keypair);
             println!("{:?}", block);
         }
     }

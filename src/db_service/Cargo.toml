@@ -9,8 +9,6 @@ edition = "2018"
 exonum-build = "1.0.0-rc.1"
 
 [dependencies]
-app_1 = { path = "../user/app_1" }
-app_2 = { path = "../user/app_2" }
 generic_traits = { path = "../generic_traits" }
 schema = { path = "../schema" }
 utils = { path = "../utils" }

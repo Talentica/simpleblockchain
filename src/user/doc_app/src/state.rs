@@ -57,7 +57,7 @@ impl State {
     }
 
     pub fn set_hash(&mut self, token_hash: Hash, file_hash: Hash) -> bool {
-        if !self.file_hash.contains_key(&token_hash){
+        if !self.file_hash.contains_key(&token_hash) {
             self.file_hash.insert(token_hash, file_hash);
             return true;
         }
@@ -66,7 +66,7 @@ impl State {
 
     pub fn check_hash(&self, token_hash: Hash, file_hash: Hash) -> bool {
         if let Some(hash_value) = self.file_hash.get(&token_hash) {
-            if hash_value.clone() == file_hash{
+            if hash_value.clone() == file_hash {
                 return true;
             }
         }
@@ -74,18 +74,18 @@ impl State {
     }
 
     pub fn add_nft_token(&mut self, token_hash: Hash, token: NFTToken) -> bool {
-        if !self.tokens.contains_key(&token_hash){
+        if !self.tokens.contains_key(&token_hash) {
             self.tokens.insert(token_hash, token);
             return true;
         }
         false
     }
 
-    pub fn replace_nft_token(&mut self, token_hash: Hash, token: NFTToken){
+    pub fn replace_nft_token(&mut self, token_hash: Hash, token: NFTToken) {
         self.tokens.insert(token_hash, token);
     }
 
-    pub fn get_nft_token(&self, token_hash: Hash) -> Option<&NFTToken>{
+    pub fn get_nft_token(&self, token_hash: Hash) -> Option<&NFTToken> {
         self.tokens.get(&token_hash)
     }
 
@@ -99,22 +99,25 @@ impl State {
         }
     }
 
-    pub fn get_pkg_list(& self, pkg_no: &String,) -> Option<&Vec<Hash>>{
+    pub fn get_pkg_list(&self, pkg_no: &String) -> Option<&Vec<Hash>> {
         self.pkg_no.get(pkg_no)
     }
 
-    pub fn add_into_confirmation_list(&mut self, to_address: &String, doc_list: &Vec<Hash>) -> bool {
+    pub fn add_into_confirmation_list(
+        &mut self,
+        to_address: &String,
+        doc_list: &Vec<Hash>,
+    ) -> bool {
         if let Some(list) = self.confirmation_list.get(to_address) {
             let mut mut_list: Vec<Hash> = list.clone();
             println!("Matched {:?}!", list);
-            for each in doc_list{
+            for each in doc_list {
                 mut_list.push(each.clone());
             }
             self.confirmation_list.insert(to_address.clone(), mut_list);
-        }
-        else{
+        } else {
             let mut mut_list: Vec<Hash> = Vec::new();
-            for each in doc_list{
+            for each in doc_list {
                 mut_list.push(each.clone());
             }
             self.confirmation_list.insert(to_address.clone(), mut_list);
@@ -122,8 +125,9 @@ impl State {
         true
     }
 
-    pub fn update_confirmation_list(&mut self, to_address: &String, doc_list: &Vec<Hash>){
-        self.confirmation_list.insert(to_address.clone(), doc_list.clone());
+    pub fn update_confirmation_list(&mut self, to_address: &String, doc_list: &Vec<Hash>) {
+        self.confirmation_list
+            .insert(to_address.clone(), doc_list.clone());
     }
 
     pub fn get_confirmation_waiting_list(&self, to_address: &String) -> Option<&Vec<Hash>> {
@@ -135,26 +139,25 @@ impl State {
             let mut mut_list: Vec<String> = list.clone();
             mut_list.push(pkg_no.clone());
             self.pending_view.insert(to_address.clone(), mut_list);
-        }
-        else{
+        } else {
             let mut mut_list: Vec<String> = Vec::new();
             mut_list.push(pkg_no.clone());
             self.pending_view.insert(to_address.clone(), mut_list);
         }
     }
 
-    pub fn remove_pkg_no_from_review_list(&mut self, to_address: &String, pkg_no: &String) -> bool{
-        match self.pending_view.get(to_address){
+    pub fn remove_pkg_no_from_review_list(&mut self, to_address: &String, pkg_no: &String) -> bool {
+        match self.pending_view.get(to_address) {
             Some(list) => {
                 let mut list = list.clone();
-                let index = match list.iter().position(|r| r == pkg_no ){
+                let index = match list.iter().position(|r| r == pkg_no) {
                     Some(index) => index,
                     None => return false,
                 };
                 list.remove(index);
                 self.pending_view.insert(to_address.clone(), list);
                 true
-            },
+            }
             None => false,
         }
     }
@@ -176,7 +179,10 @@ mod test_state {
         let token_hash = default_token.object_hash();
         state.tokens.insert(token_hash, default_token);
         println!("{:?}", state);
-        println!("{:?}",state.set_hash(token_hash.clone(), Hash::zero()));
-        println!("{:?}", state.check_hash(token_hash.clone(), token_hash.clone()));
+        println!("{:?}", state.set_hash(token_hash.clone(), Hash::zero()));
+        println!(
+            "{:?}",
+            state.check_hash(token_hash.clone(), token_hash.clone())
+        );
     }
 }

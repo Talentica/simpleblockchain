@@ -1,10 +1,10 @@
 extern crate utils;
 use crate::state::State;
-use crate::user_messages::CryptoTransaction;
-pub use crate::user_messages::SignedTransaction;
+pub use crate::user_messages::{CryptoTransaction, SignedTransaction};
+use exonum_crypto::Hash;
 use exonum_merkledb::{
     access::{Access, RawAccessMut},
-    ProofMapIndex,
+    ObjectHash, ProofMapIndex,
 };
 pub use generic_traits::traits::{StateTraits, TransactionTrait};
 use std::collections::HashMap;
@@ -35,8 +35,11 @@ impl TransactionTrait<CryptoTransaction> for CryptoTransaction {
             to,
             amount: 32,
             fxn_call: String::from("transfer"),
-            payload: vec![],
         }
+    }
+
+    fn get_hash(&self) -> Hash {
+        self.object_hash()
     }
 }
 
@@ -72,7 +75,6 @@ impl TransactionTrait<SignedTransaction> for SignedTransaction {
             to,
             amount: 32,
             fxn_call: String::from("transfer"),
-            payload: vec![],
         };
         let txn_sign = txn.sign(&kp);
         let mut header = HashMap::default();
@@ -87,25 +89,41 @@ impl TransactionTrait<SignedTransaction> for SignedTransaction {
             header,
         }
     }
+
+    fn get_hash(&self) -> Hash {
+        self.object_hash()
+    }
 }
 
-impl<T: Access> StateTraits<T, State> for SignedTransaction
+impl<T: Access> StateTraits<T, State, SignedTransaction> for SignedTransaction
 where
     T::Base: RawAccessMut,
 {
-    fn execute(&self, state_trie: &mut ProofMapIndex<T::Base, String, State>) -> bool {
-        match &self.txn {
-            Some(txn) => {
-                let crypto_txn = &txn.clone() as &dyn ModuleTraits<T>;
-                if txn.fxn_call == String::from("transfer") {
-                    crypto_txn.transfer(state_trie)
-                } else if txn.fxn_call == String::from("mint") {
-                    crypto_txn.mint(state_trie)
-                } else {
-                    return false;
+    fn execute(
+        &self,
+        state_trie: &mut ProofMapIndex<T::Base, String, State>,
+        txn_trie: &mut ProofMapIndex<T::Base, Hash, SignedTransaction>,
+    ) -> bool {
+        let mut flag: bool = false;
+        if self.validate() {
+            match &self.txn {
+                Some(txn) => {
+                    let crypto_txn = &txn.clone() as &dyn ModuleTraits<T>;
+                    if txn.fxn_call == String::from("transfer") {
+                        flag = crypto_txn.transfer(state_trie);
+                    } else if txn.fxn_call == String::from("mint") {
+                        flag = crypto_txn.mint(state_trie);
+                    } else {
+                    }
                 }
+                None => {}
             }
-            None => return false,
+        }
+        if flag {
+            txn_trie.put(&self.get_hash(), self.clone());
+            flag
+        } else {
+            false
         }
     }
 }

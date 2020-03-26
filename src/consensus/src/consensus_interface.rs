@@ -8,10 +8,9 @@ use db_service::db_layer::{fork_db, patch_db, snapshot_db};
 use db_service::db_snapshot_ref::SchemaSnap;
 use exonum_merkledb::ObjectHash;
 use futures::{channel::mpsc::*, executor::*, future, prelude::*, task::*};
-use p2plib::messages::{
-    ConsensusMessageTypes, LeaderElection, MessageTypes, NodeMessageTypes, SignedLeaderElection,
-};
-use schema::transaction_pool::{TxnPool, TRANSACTION_POOL};
+use p2plib::message_sender::MessageSender;
+use p2plib::messages::{ConsensusMessageTypes, LeaderElection, MessageTypes, SignedLeaderElection};
+use schema::transaction_pool::{TxnPool, POOL};
 use std::collections::{hash_map::DefaultHasher, BTreeMap};
 use std::hash::{Hash, Hasher};
 use std::sync::{Arc, Mutex};
@@ -42,18 +41,11 @@ impl Consensus {
         let fork = fork_db();
         {
             let mut schema = SchemaFork::new(&fork);
-            let (genesis_signed_block, txn_vec) =
-                schema.initialize_db(&self.keypair, &self.public_keys);
+            let (genesis_signed_block, txn_vec) = schema.initialize_db(&self.keypair);
             for each in txn_vec.iter() {
-                let data = Some(MessageTypes::NodeMsg(
-                    NodeMessageTypes::SignedTransactionEnum(each.clone()),
-                ));
-                sender.try_send(data);
+                MessageSender::send_transaction_msg(sender, each.clone());
             }
-            let data = Some(MessageTypes::NodeMsg(NodeMessageTypes::SignedBlockEnum(
-                genesis_signed_block,
-            )));
-            sender.try_send(data);
+            MessageSender::send_block_msg(sender, genesis_signed_block);
         }
         patch_db(fork);
         let leader_payload: LeaderElection = LeaderElection {
@@ -67,12 +59,9 @@ impl Consensus {
             leader_payload,
             signature,
         };
-        let data = Some(MessageTypes::ConsensusMsg(
-            ConsensusMessageTypes::LeaderElect(signed_new_leader),
-        ));
+        MessageSender::send_leader_election_msg(sender, signed_new_leader);
         let mut leader_map_locked = leader_map.lock().unwrap();
         leader_map_locked.map.insert(1, self.pk.clone());
-        sender.try_send(data);
     }
 
     fn select_leader(&self) -> SignedLeaderElection {
@@ -130,27 +119,19 @@ impl Consensus {
         // no polling machenism of txn_pool and create block need to implement or modified here
         // if one want to change the create_block and txn priority then change/ implment that part in
         // schema operations and p2p module
-        let arc_txn_pool = TRANSACTION_POOL.clone();
         let fork = fork_db();
         {
             let mut schema = SchemaFork::new(&fork);
-            let mut txn_pool = arc_txn_pool.lock().unwrap();
-            let signed_block = schema.create_block(&self.keypair, &mut txn_pool);
+            let signed_block = schema.create_block(&self.keypair);
             println!("new block created.. hash {}", signed_block.object_hash());
-            txn_pool.sync_pool(&signed_block.block.txn_pool);
+            POOL.sync_pool(&signed_block.block.txn_pool);
             self.round_number = signed_block.block.id;
-            let data = Some(MessageTypes::NodeMsg(NodeMessageTypes::SignedBlockEnum(
-                signed_block,
-            )));
-            sender.try_send(data);
+            MessageSender::send_block_msg(sender, signed_block);
         }
         patch_db(fork);
         let signed_new_leader: SignedLeaderElection = self.select_leader();
         self.round_number = self.round_number + 1;
-        let data = Some(MessageTypes::ConsensusMsg(
-            ConsensusMessageTypes::LeaderElect(signed_new_leader),
-        ));
-        sender.try_send(data);
+        MessageSender::send_leader_election_msg(sender, signed_new_leader);
     }
 
     pub fn consensus_msg_receiver(

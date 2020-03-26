@@ -10,8 +10,8 @@ exonum-build = "1.0.0-rc.1"
 prost-build = { version = "0.6.1" }
 
 [dependencies]
-app_1 = { path = "../user/app_1" }
-app_2 = { path = "../user/app_2" }
+doc_app = { path = "../user/doc_app" }
+wallet_app = { path = "../user/wallet_app" }
 generic_traits = { path = "../generic_traits" }
 utils = { path = "../utils" }
 

@@ -1,16 +1,16 @@
-extern crate app_1;
 extern crate db_service;
-use app_1::{
+extern crate doc_app;
+use db_service::db_fork_ref::SchemaFork;
+use db_service::db_layer::{fork_db, patch_db};
+use db_service::db_snapshot_ref::SchemaSnap;
+use doc_app::{
     state::NFTToken,
     transaction::{SignedTransaction, STATE_KEY},
     user_messages::DataTypes,
 };
-use db_service::db_fork_ref::SchemaFork;
-use db_service::db_layer::{fork_db, patch_db};
-use db_service::db_snapshot_ref::SchemaSnap;
 use exonum_crypto::Hash;
 use exonum_merkledb::ObjectHash;
-use schema::transaction_pool::{TransactionPool, TxnPool, TxnPoolKeyType};
+use schema::transaction_pool::{TxnPool, TxnPoolKeyType, POOL};
 use utils::keypair::{CryptoKeypair, Keypair};
 
 fn test_document_transfer_valid_scenario() {
@@ -25,7 +25,7 @@ fn test_document_transfer_valid_scenario() {
     // put genesis blockin database
     {
         let mut schema = SchemaFork::new(&fork);
-        schema.initialize_db(&keypair, &Vec::new());
+        schema.initialize_db(&keypair);
     }
     patch_db(fork);
 
@@ -46,18 +46,17 @@ fn test_document_transfer_valid_scenario() {
         Some(txn) => txn.from.clone(),
         None => String::default(),
     };
-    let mut txn_pool = TransactionPool::new();
     let timestamp = txn
         .header
         .get(&String::from("timestamp"))
         .unwrap()
         .parse::<TxnPoolKeyType>()
         .unwrap();
-    txn_pool.insert_op(&timestamp, &txn);
+    POOL.insert_op(&timestamp, &txn);
     let fork = fork_db();
     {
         let mut schema = SchemaFork::new(&fork);
-        let block = schema.create_block(&keypair, &mut txn_pool);
+        let block = schema.create_block(&keypair);
         println!("{:?}", block);
     }
     patch_db(fork);
@@ -85,18 +84,17 @@ fn test_document_transfer_valid_scenario() {
     payload.push(DataTypes::StringVal(to_address.clone()));
     let fxn_call = String::from("transfer_sc");
     let txn = SignedTransaction::generate_from(&keypair, payload.clone(), fxn_call);
-    let mut txn_pool = TransactionPool::new();
     let timestamp = txn
         .header
         .get(&String::from("timestamp"))
         .unwrap()
         .parse::<TxnPoolKeyType>()
         .unwrap();
-    txn_pool.insert_op(&timestamp, &txn);
+    POOL.insert_op(&timestamp, &txn);
     let fork = fork_db();
     {
         let mut schema = SchemaFork::new(&fork);
-        let block = schema.create_block(&keypair, &mut txn_pool);
+        let block = schema.create_block(&keypair);
         println!("{:?}", block);
     }
     patch_db(fork);
@@ -128,18 +126,17 @@ fn test_document_transfer_valid_scenario() {
     payload.push(DataTypes::StringVal(pkg_no.clone()));
     let fxn_call = String::from("set_pkg_no");
     let txn = SignedTransaction::generate_from(&keypair, payload.clone(), fxn_call);
-    let mut txn_pool = TransactionPool::new();
     let timestamp = txn
         .header
         .get(&String::from("timestamp"))
         .unwrap()
         .parse::<TxnPoolKeyType>()
         .unwrap();
-    txn_pool.insert_op(&timestamp, &txn);
+    POOL.insert_op(&timestamp, &txn);
     let fork = fork_db();
     {
         let mut schema = SchemaFork::new(&fork);
-        let block = schema.create_block(&keypair, &mut txn_pool);
+        let block = schema.create_block(&keypair);
         println!("{:?}", block);
     }
     patch_db(fork);
@@ -175,18 +172,17 @@ fn test_document_transfer_valid_scenario() {
     payload.push(DataTypes::StringVal(self_address.clone()));
     let fxn_call = String::from("transfer_for_review");
     let txn = SignedTransaction::generate_from(&keypair, payload.clone(), fxn_call);
-    let mut txn_pool = TransactionPool::new();
     let timestamp = txn
         .header
         .get(&String::from("timestamp"))
         .unwrap()
         .parse::<TxnPoolKeyType>()
         .unwrap();
-    txn_pool.insert_op(&timestamp, &txn);
+    POOL.insert_op(&timestamp, &txn);
     let fork = fork_db();
     {
         let mut schema = SchemaFork::new(&fork);
-        let block = schema.create_block(&keypair, &mut txn_pool);
+        let block = schema.create_block(&keypair);
         println!("{:?}", block);
     }
     patch_db(fork);
@@ -227,18 +223,17 @@ fn test_document_transfer_valid_scenario() {
     payload.push(DataTypes::BoolVal(false));
     let fxn_call = String::from("review_docs");
     let txn = SignedTransaction::generate_from(&keypair, payload.clone(), fxn_call);
-    let mut txn_pool = TransactionPool::new();
     let timestamp = txn
         .header
         .get(&String::from("timestamp"))
         .unwrap()
         .parse::<TxnPoolKeyType>()
         .unwrap();
-    txn_pool.insert_op(&timestamp, &txn);
+    POOL.insert_op(&timestamp, &txn);
     let fork = fork_db();
     {
         let mut schema = SchemaFork::new(&fork);
-        let block = schema.create_block(&keypair, &mut txn_pool);
+        let block = schema.create_block(&keypair);
         println!("{:?}", block);
     }
     patch_db(fork);
@@ -278,18 +273,17 @@ fn test_document_transfer_valid_scenario() {
     payload.push(DataTypes::StringVal(pkg_no.clone()));
     let fxn_call = String::from("publish_docs");
     let txn = SignedTransaction::generate_from(&keypair, payload.clone(), fxn_call);
-    let mut txn_pool = TransactionPool::new();
     let timestamp = txn
         .header
         .get(&String::from("timestamp"))
         .unwrap()
         .parse::<TxnPoolKeyType>()
         .unwrap();
-    txn_pool.insert_op(&timestamp, &txn);
+    POOL.insert_op(&timestamp, &txn);
     let fork = fork_db();
     {
         let mut schema = SchemaFork::new(&fork);
-        let block = schema.create_block(&keypair, &mut txn_pool);
+        let block = schema.create_block(&keypair);
         println!("{:?}", block);
     }
     patch_db(fork);

@@ -1,5 +1,5 @@
 [package]
-name = "app_2"
+name = "doc_app"
 version = "0.1.0"
 authors = ["GauravA"]
 edition = "2018"

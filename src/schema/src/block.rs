@@ -40,6 +40,38 @@ pub struct SignedBlock {
     pub signature: Vec<u8>,
 }
 
+impl Block {
+    pub fn to_string_format(&self) -> String {
+        let mut to_string: String = String::new();
+        to_string.extend("id: ".chars());
+        to_string.extend(self.id.to_string().chars());
+        to_string.extend(", peer_id: ".chars());
+        to_string.extend(self.peer_id.chars());
+        to_string.extend(", prev_hash: ".chars());
+        to_string.extend(self.prev_hash.to_hex().chars());
+        to_string.extend(", txn_pool: ".chars());
+        for each in self.txn_pool.iter() {
+            to_string.extend(each.to_hex().chars());
+            to_string.extend(", ".chars());
+        }
+        to_string.extend(", header: ".chars());
+        for each in 0..3 {
+            to_string.extend(self.header[each].to_hex().chars());
+            to_string.extend(", ".chars());
+        }
+        to_string
+    }
+}
+
+impl SignedBlock {
+    pub fn to_string_format(&self) -> String {
+        let mut to_string: String = String::new();
+        to_string.extend("Block: ".chars());
+        to_string.extend(self.block.to_string_format().chars());
+        to_string
+    }
+}
+
 impl BlockTraits<KeypairType> for Block {
     fn validate(&self, publickey: &String, signature: &[u8]) -> bool {
         // unimplemented!();

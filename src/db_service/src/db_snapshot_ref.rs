@@ -1,7 +1,6 @@
 extern crate schema;
 extern crate utils;
 
-use app_1::state::State;
 use exonum_crypto::Hash;
 use exonum_derive::FromAccess;
 use exonum_merkledb::{
@@ -9,11 +8,11 @@ use exonum_merkledb::{
     ListIndex, ObjectHash, ProofMapIndex,
 };
 use schema::block::SignedBlock;
-use schema::transaction::SignedTransaction;
+use schema::transaction::{SignedTransaction, State};
 
 #[derive(FromAccess)]
 pub struct SchemaSnap<T: Access> {
-    txn_trie: ProofMapIndex<T::Base, Hash, SignedTransaction>,
+    pub txn_trie: ProofMapIndex<T::Base, Hash, SignedTransaction>,
     block_list: ListIndex<T::Base, SignedBlock>,
     state_trie: ProofMapIndex<T::Base, String, State>,
     storage_trie: ProofMapIndex<T::Base, Hash, SignedTransaction>,

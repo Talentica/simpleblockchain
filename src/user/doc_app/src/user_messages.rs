@@ -1,5 +1,5 @@
 use exonum_crypto::Hash;
-//// Auto-generated using build.rs and proto files. Don't edit by hand. //// 
+//// Auto-generated using build.rs and proto files. Don't edit by hand. ////
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, BinaryValue, ObjectHash)]
 #[binary_value(codec = "bincode")]
 pub struct CryptoTransaction {
@@ -19,7 +19,7 @@ pub enum DataTypes {
     VecStringVal(Vec<String>),
 }
 
-//// Auto-generated using build.rs and proto files. Don't edit by hand. //// 
+//// Auto-generated using build.rs and proto files. Don't edit by hand. ////
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, BinaryValue, ObjectHash)]
 #[binary_value(codec = "bincode")]
 pub struct SignedTransaction {

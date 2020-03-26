@@ -41,6 +41,10 @@ impl TransactionTrait<CryptoTransaction> for CryptoTransaction {
             payload,
         }
     }
+
+    fn get_hash(&self) -> Hash {
+        self.object_hash()
+    }
 }
 
 impl TransactionTrait<SignedTransaction> for SignedTransaction {
@@ -90,6 +94,10 @@ impl TransactionTrait<SignedTransaction> for SignedTransaction {
             header,
         }
     }
+
+    fn get_hash(&self) -> Hash {
+        self.object_hash()
+    }
 }
 
 impl SignedTransaction {
@@ -119,33 +127,43 @@ impl SignedTransaction {
     }
 }
 
-impl<T: Access> StateTraits<T, State> for SignedTransaction
+impl<T: Access> StateTraits<T, State, SignedTransaction> for SignedTransaction
 where
     T::Base: RawAccessMut,
 {
-    fn execute(&self, state_trie: &mut ProofMapIndex<T::Base, String, State>) -> bool {
+    fn execute(
+        &self,
+        state_trie: &mut ProofMapIndex<T::Base, String, State>,
+        txn_trie: &mut ProofMapIndex<T::Base, Hash, SignedTransaction>,
+    ) -> bool {
+        let mut flag: bool = false;
         match &self.txn {
             Some(txn) => {
                 let crypto_txn = &txn.clone() as &dyn ModuleTraits<T>;
                 if txn.fxn_call == String::from("set_hash") {
-                    crypto_txn.set_hash(state_trie)
+                    flag = crypto_txn.set_hash(state_trie);
                 } else if txn.fxn_call == String::from("add_doc") {
-                    crypto_txn.add_doc(state_trie)
+                    flag = crypto_txn.add_doc(state_trie);
                 } else if txn.fxn_call == String::from("transfer_sc") {
-                    crypto_txn.transfer_sc(state_trie)
+                    flag = crypto_txn.transfer_sc(state_trie);
                 } else if txn.fxn_call == String::from("set_pkg_no") {
-                    crypto_txn.set_pkg_no(state_trie)
+                    flag = crypto_txn.set_pkg_no(state_trie);
                 } else if txn.fxn_call == String::from("transfer_for_review") {
-                    crypto_txn.transfer_for_review(state_trie)
+                    flag = crypto_txn.transfer_for_review(state_trie);
                 } else if txn.fxn_call == String::from("review_docs") {
-                    crypto_txn.review_docs(state_trie)
+                    flag = crypto_txn.review_docs(state_trie);
                 } else if txn.fxn_call == String::from("publish_docs") {
-                    crypto_txn.publish_docs(state_trie)
+                    flag = crypto_txn.publish_docs(state_trie);
                 } else {
-                    return false;
                 }
             }
-            None => return false,
+            None => {}
+        }
+        if flag {
+            txn_trie.put(&self.get_hash(), self.clone());
+            flag
+        } else {
+            false
         }
     }
 }

@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package user_messages;
+package user_messages1;
 
 message CryptoTransaction {
     uint64 nonce = 1;
