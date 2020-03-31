@@ -26,7 +26,7 @@ pub struct TomlReaderConfig {
     //db config
     dbpath: String,
     //client config
-    client_port: u64,
+    client_port: u32,
     client_host: String,
 }
 
@@ -61,6 +61,8 @@ impl Configuration {
             node_type,
             genesis_block: tomlreader.genesis_block,
             p2p_port: tomlreader.p2p_port,
+            client_host: tomlreader.client_host,
+            client_port: tomlreader.client_port,
         };
         let db_path: Database = Database {
             dbpath: "utils/rocksdb".to_string(),
@@ -105,6 +107,8 @@ pub struct Node {
     pub node_type: NODETYPE,
     pub genesis_block: bool,
     pub p2p_port: u16,
+    pub client_host: String,
+    pub client_port: u32,
 }
 
 #[derive(Debug)]

@@ -69,8 +69,8 @@ fn validator_process() {
     register_signals(Arc::clone(&terminate));
     //Starting the Transaction Service
     //TODO: host/port details need to come from config
-    let port_from_config = 8089;
-    let host_from_config = "127.0.0.1".to_string();
+    let port_from_config = config.node.client_port;
+    let host_from_config = config.node.client_host.clone();
     let mut api_service = ClientController::new(&host_from_config, port_from_config);
     println!("Starting api_service");
     api_service.start(txn_sender);
