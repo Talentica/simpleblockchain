@@ -9,6 +9,7 @@ edition = "2018"
 exonum-build = "1.0.0-rc.1"
 
 [dependencies]
+client = { path = "../client" }
 generic_traits = { path = "../generic_traits" }
 schema = { path = "../schema" }
 utils = { path = "../utils" }
@@ -23,6 +24,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_cbor = "^0.10"
 chrono = { version = "0.4", features = ["serde"] }
 failure = "0.1"
+futures = "0.3.1"
 bincode = "1.0"
 rocksdb = "0.13.0"
 lazy_static = "1.4.0"

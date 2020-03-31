@@ -1,12 +1,15 @@
 extern crate consensus;
 extern crate controllers;
 extern crate ctrlc;
+extern crate db_service;
 extern crate p2plib;
 extern crate schema;
 
 mod nodemsgprocessor;
 use consensus::consensus_interface;
 use controllers::client_controller::{ClientController, Controller};
+use db_service::db_fork_ref::SchemaFork;
+use db_service::db_layer::{fork_db, patch_db};
 use libp2p::{identity::PublicKey, PeerId};
 use nodemsgprocessor::*;
 use p2plib::messages::*;
@@ -116,9 +119,20 @@ fn register_signals(terminate: Arc<AtomicBool>) {
     .expect("Error setting Ctrl-C handler");
 }
 
-fn main() {
+#[actix_rt::main]
+async fn main() {
     let config: &Configuration = &configreader::GLOBAL_CONFIG;
     // let config: &Configuration = &configreader::GLOBAL_CONFIG;
+    if !config.node.genesis_block {
+        let fork = fork_db();
+        {
+            let mut schema = SchemaFork::new(&fork);
+            println!("before sync-up {:#?}", schema.blockchain_length());
+            schema.sync_state().await;
+            println!("after sync-up {:#?}", schema.blockchain_length());
+        }
+        patch_db(fork);
+    }
     match config.node.node_type {
         NODETYPE::Validator => {
             validator_process();

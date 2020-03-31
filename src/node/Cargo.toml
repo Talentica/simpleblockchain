@@ -20,6 +20,7 @@ exonum-merkledb = "1.0.0-rc.1"
 exonum-crypto = "1.0.0-rc.1"
 exonum-derive = "1.0.0-rc.1"
 
+actix-rt = "1.0.0"
 hex = "^0.4"
 serde = { version = "1.0", features = ["derive"] }
 serde_cbor = "^0.10"

@@ -1,6 +1,8 @@
+extern crate client;
 extern crate schema;
 extern crate utils;
 
+use client::client::ClientObj;
 use exonum_crypto::Hash;
 use exonum_derive::FromAccess;
 use exonum_merkledb::{
@@ -10,7 +12,8 @@ use exonum_merkledb::{
 use generic_traits::traits::PoolTrait;
 use schema::block::{Block, BlockTraits, SignedBlock, SignedBlockTraits};
 use schema::transaction::{SignedTransaction, State};
-use schema::transaction_pool::{TransactionPool, POOL};
+use schema::transaction_pool::{TransactionPool, TxnPool, TxnPoolKeyType, POOL};
+use std::collections::HashMap;
 use utils::keypair::{CryptoKeypair, Keypair, KeypairType, PublicKey, Verify};
 use utils::serializer::serialize;
 
@@ -42,6 +45,10 @@ where
 
     pub fn storage_trie_merkle_hash(&self) -> Hash {
         self.storage_trie.object_hash()
+    }
+
+    pub fn blockchain_length(&self) -> u64 {
+        self.block_list.len()
     }
 
     pub fn initialize_db(&mut self, kp: &KeypairType) -> (SignedBlock, Vec<SignedTransaction>) {
@@ -212,6 +219,61 @@ where
             }
             self.block_list.push(signed_block.clone());
             return true;
+        }
+    }
+
+    /// this function will sync blockchain state with other peers
+    pub async fn sync_state(&mut self) {
+        let mut block_pool: HashMap<u64, SignedBlock> = HashMap::new();
+        let client_instance = ClientObj::new();
+        let mut own_chain_length = self.block_list.len();
+        // let block_threads_vec = vec![];
+        let mut block_fetch_flag: bool = true;
+        let mut transaction_fetch_flag: bool = true;
+        println!("start");
+        while block_fetch_flag {
+            let block: Option<SignedBlock> = client_instance.fetch_block(&own_chain_length).await;
+            match block {
+                Some(signed_block) => {
+                    block_pool.insert(own_chain_length.clone(), signed_block);
+                    own_chain_length = own_chain_length + 1;
+                }
+                None => block_fetch_flag = false,
+            }
+        }
+        println!("{:#?}", block_pool.len());
+        while transaction_fetch_flag {
+            for (_key, value) in block_pool.iter() {
+                for each in value.block.txn_pool.iter() {
+                    let fetch_txn_output = client_instance.fetch_confirm_transaction(each).await;
+                    match fetch_txn_output {
+                        Some(txn) => {
+                            let timestamp = txn
+                                .header
+                                .get(&String::from("timestamp"))
+                                .unwrap()
+                                .parse::<TxnPoolKeyType>()
+                                .unwrap();
+                            POOL.insert_op(&timestamp, &txn);
+                        }
+                        None => transaction_fetch_flag = false,
+                    }
+                }
+            }
+        }
+        own_chain_length = self.block_list.len();
+        block_fetch_flag = true;
+        while block_fetch_flag {
+            match block_pool.get(&own_chain_length) {
+                Some(signed_block) => {
+                    if self.update_block(signed_block) {
+                        own_chain_length = own_chain_length + 1;
+                    } else {
+                        block_fetch_flag = false;
+                    }
+                }
+                None => block_fetch_flag = false,
+            }
         }
     }
 }

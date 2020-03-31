@@ -4,6 +4,8 @@ node_type = "validator"
 genesis_block = false
 dbpath = "./rockdb/db"
 p2p_port = 4444
+client_port = 8089
+client_host = "http://172.29.4.14:8089"
 
 # [consensus]
 public_keys = ["2039b89d46f8a630b68824a6f851e2a5855c1d21915ee4f35fb09d44f1e6e37f",

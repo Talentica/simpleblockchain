@@ -25,6 +25,9 @@ pub struct TomlReaderConfig {
     p2p_port: u16,
     //db config
     dbpath: String,
+    //client config
+    client_port: u64,
+    client_host: String,
 }
 
 #[derive(Debug)]

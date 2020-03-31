@@ -110,6 +110,8 @@ impl Controller for ClientController {
                     .service(fetch_state_controller)
                     .service(fetch_block_controller)
                     .service(fetch_latest_block_controller)
+                    .service(fetch_block_peer_controller)
+                    .service(fetch_latest_block_peer_controller)
             })
             .bind(self.srvr_addr)
             .unwrap()

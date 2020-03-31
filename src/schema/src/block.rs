@@ -1,8 +1,7 @@
 extern crate utils;
 use exonum_crypto::Hash;
-use exonum_merkledb::{impl_object_hash_for_binary_value, BinaryValue, ObjectHash};
-use failure::Error;
-use std::{borrow::Cow, convert::AsRef};
+use exonum_merkledb::ObjectHash;
+use std::convert::AsRef;
 use utils::keypair::{CryptoKeypair, Keypair, KeypairType, PublicKey, Verify};
 use utils::serializer::{serialize, Deserialize, Serialize};
 
@@ -22,9 +21,11 @@ pub trait BlockTraits<T> {
 pub trait SignedBlockTraits<T> {
     fn validate(&self, publickey: &String) -> bool;
     fn create_block(block: Block, sig: Vec<u8>) -> Self;
+    fn get_hash(&self) -> Hash;
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, BinaryValue, ObjectHash)]
+#[binary_value(codec = "bincode")]
 pub struct Block {
     pub id: u64,
     pub peer_id: String,
@@ -34,7 +35,8 @@ pub struct Block {
     pub header: [Hash; 3],
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, BinaryValue, ObjectHash)]
+#[binary_value(codec = "bincode")]
 pub struct SignedBlock {
     pub block: Block,
     pub signature: Vec<u8>,
@@ -123,19 +125,11 @@ impl SignedBlockTraits<KeypairType> for SignedBlock {
     fn create_block(block: Block, signature: Vec<u8>) -> SignedBlock {
         SignedBlock { block, signature }
     }
-}
 
-impl BinaryValue for SignedBlock {
-    fn to_bytes(&self) -> Vec<u8> {
-        bincode::serialize(self).unwrap()
-    }
-
-    fn from_bytes(bytes: Cow<'_, [u8]>) -> Result<Self, Error> {
-        bincode::deserialize(bytes.as_ref()).map_err(From::from)
+    fn get_hash(&self) -> Hash {
+        self.object_hash()
     }
 }
-
-impl_object_hash_for_binary_value! { SignedBlock}
 
 #[cfg(test)]
 mod tests_blocks {
@@ -149,7 +143,7 @@ mod tests_blocks {
         let sign = block.sign(&kp);
         let signed_block: SignedBlock = SignedBlock::create_block(block, sign);
         println!("{}", signed_block.validate(&public_key));
-        let prev_hash = signed_block.object_hash();
+        let prev_hash: Hash = signed_block.get_hash();
         let id = signed_block.block.id;
         let block: Block = Block {
             id: id + 1,
