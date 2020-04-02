@@ -119,16 +119,14 @@ fn register_signals(terminate: Arc<AtomicBool>) {
     .expect("Error setting Ctrl-C handler");
 }
 
-#[actix_rt::main]
-async fn main() {
+fn main() {
     let config: &Configuration = &configreader::GLOBAL_CONFIG;
-    // let config: &Configuration = &configreader::GLOBAL_CONFIG;
     if !config.node.genesis_block {
         let fork = fork_db();
         {
             let mut schema = SchemaFork::new(&fork);
             println!("before sync-up {:#?}", schema.blockchain_length());
-            schema.sync_state().await;
+            schema.sync_state();
             println!("after sync-up {:#?}", schema.blockchain_length());
         }
         patch_db(fork);

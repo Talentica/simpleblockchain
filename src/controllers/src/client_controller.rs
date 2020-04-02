@@ -62,6 +62,16 @@ async fn fetch_latest_block_controller() -> impl Responder {
     ClientServices::fetch_latest_block_service()
 }
 
+#[get("/peer/fetch_blockchain_length")]
+async fn fetch_blockchain_length_peer_controller() -> impl Responder {
+    ClientServices::fetch_blockchain_length_peer_service()
+}
+
+#[get("/client/fetch_blockchain_length")]
+async fn fetch_blockchain_length_controller() -> impl Responder {
+    ClientServices::fetch_blockchain_length_service()
+}
+
 //May be useful for storing forwarding/db_layer related info
 #[allow(dead_code)]
 struct AppState {
@@ -112,6 +122,8 @@ impl Controller for ClientController {
                     .service(fetch_latest_block_controller)
                     .service(fetch_block_peer_controller)
                     .service(fetch_latest_block_peer_controller)
+                    .service(fetch_blockchain_length_peer_controller)
+                    .service(fetch_blockchain_length_controller)
             })
             .bind(self.srvr_addr)
             .unwrap()

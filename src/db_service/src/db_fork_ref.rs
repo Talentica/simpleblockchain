@@ -2,7 +2,7 @@ extern crate client;
 extern crate schema;
 extern crate utils;
 
-use client::client::ClientObj;
+use client::client::{ClientObj, SyncState};
 use exonum_crypto::Hash;
 use exonum_derive::FromAccess;
 use exonum_merkledb::{
@@ -13,7 +13,6 @@ use generic_traits::traits::PoolTrait;
 use schema::block::{Block, BlockTraits, SignedBlock, SignedBlockTraits};
 use schema::transaction::{SignedTransaction, State};
 use schema::transaction_pool::{TransactionPool, TxnPool, TxnPoolKeyType, POOL};
-use std::collections::HashMap;
 use utils::keypair::{CryptoKeypair, Keypair, KeypairType, PublicKey, Verify};
 use utils::serializer::serialize;
 
@@ -223,58 +222,43 @@ where
     }
 
     /// this function will sync blockchain state with other peers
-    pub async fn sync_state(&mut self) {
-        let mut block_pool: HashMap<u64, SignedBlock> = HashMap::new();
+    pub fn sync_state(&mut self) -> bool {
         let client_instance = ClientObj::new();
         let mut own_chain_length = self.block_list.len();
         // let block_threads_vec = vec![];
+        #[allow(unused_assignments)]
         let mut block_fetch_flag: bool = true;
-        let mut transaction_fetch_flag: bool = true;
-        println!("start");
-        while block_fetch_flag {
-            let block: Option<SignedBlock> = client_instance.fetch_block(&own_chain_length).await;
-            match block {
-                Some(signed_block) => {
-                    block_pool.insert(own_chain_length.clone(), signed_block);
-                    own_chain_length = own_chain_length + 1;
-                }
-                None => block_fetch_flag = false,
-            }
+        let sync_data: SyncState = client_instance.fetch_sync_state(own_chain_length.clone());
+        if sync_data.index == 0 {
+            return false;
         }
-        println!("{:#?}", block_pool.len());
-        while transaction_fetch_flag {
-            for (_key, value) in block_pool.iter() {
-                for each in value.block.txn_pool.iter() {
-                    let fetch_txn_output = client_instance.fetch_confirm_transaction(each).await;
-                    match fetch_txn_output {
-                        Some(txn) => {
-                            let timestamp = txn
-                                .header
-                                .get(&String::from("timestamp"))
-                                .unwrap()
-                                .parse::<TxnPoolKeyType>()
-                                .unwrap();
-                            POOL.insert_op(&timestamp, &txn);
-                        }
-                        None => transaction_fetch_flag = false,
-                    }
-                }
-            }
-        }
-        own_chain_length = self.block_list.len();
         block_fetch_flag = true;
-        while block_fetch_flag {
-            match block_pool.get(&own_chain_length) {
+        for (_, txn) in sync_data.txn_map.iter() {
+            let timestamp = txn
+                .header
+                .get(&String::from("timestamp"))
+                .unwrap()
+                .parse::<TxnPoolKeyType>()
+                .unwrap();
+            POOL.insert_op(&timestamp, txn);
+        }
+        while own_chain_length < sync_data.index {
+            match sync_data.block_map.get(&own_chain_length) {
                 Some(signed_block) => {
                     if self.update_block(signed_block) {
                         own_chain_length = own_chain_length + 1;
                     } else {
+                        own_chain_length = sync_data.index;
                         block_fetch_flag = false;
                     }
                 }
-                None => block_fetch_flag = false,
+                None => {
+                    own_chain_length = sync_data.index;
+                    block_fetch_flag = false;
+                }
             }
         }
+        return block_fetch_flag;
     }
 }
 

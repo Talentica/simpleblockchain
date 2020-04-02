@@ -105,4 +105,16 @@ impl ClientServices {
             None => HttpResponse::BadRequest().body("BadRequest"),
         }
     }
+
+    pub fn fetch_blockchain_length_peer_service() -> impl Responder {
+        let snapshot = snapshot_db();
+        let schema = SchemaSnap::new(&snapshot);
+        HttpResponse::Ok().body(serialize(&schema.get_blockchain_length()))
+    }
+
+    pub fn fetch_blockchain_length_service() -> impl Responder {
+        let snapshot = snapshot_db();
+        let schema = SchemaSnap::new(&snapshot);
+        HttpResponse::Ok().body(serialize(&schema.get_blockchain_length()))
+    }
 }
