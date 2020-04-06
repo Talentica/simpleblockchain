@@ -75,6 +75,7 @@ impl Consensus {
     }
 
     fn select_leader(&self, meta_data: Arc<Mutex<MetaData>>) -> SignedLeaderElection {
+        thread::sleep(Duration::from_millis(1000));
         let meta_data_locked = meta_data.lock().unwrap();
         let mut iter_vec_pk: usize = 0;
         #[allow(unused_assignments)]
@@ -149,6 +150,7 @@ impl Consensus {
         let flag: bool = signed_new_leader.leader_payload.new_leader.clone()
             == signed_new_leader.leader_payload.old_leader.clone();
         MessageSender::send_leader_election_msg(sender, signed_new_leader);
+
         return flag;
     }
 
@@ -209,6 +211,11 @@ impl Consensus {
                                                         &mut meta_data_locked.sender,
                                                         election_pong,
                                                     );
+                                                    println!(
+                                                        "Ping message from  {} for height {} -> ",
+                                                        election_ping.payload.public_key,
+                                                        election_ping.payload.height,
+                                                    );
                                                 }
                                             }
                                         }
@@ -225,6 +232,11 @@ impl Consensus {
                                                 if election_pong.verify() {
                                                     meta_data_locked.active_node.push(
                                                         election_pong.payload.may_be_leader.clone(),
+                                                    );
+                                                    println!(
+                                                        "Pong message received from  {} for height {} -> ",
+                                                        election_pong.payload.may_be_leader,
+                                                        election_pong.payload.height,
                                                     );
                                                 }
                                             }

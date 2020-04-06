@@ -95,7 +95,8 @@ impl ClientObj {
                 if response.status() == 200 {
                     match resp_body.await {
                         Ok(state) => {
-                            let state: State = deserialize(&state);
+                            let ret_txn: Vec<u8> = deserialize(&state);
+                            let state: State = deserialize(ret_txn.as_slice());
                             println!("{:#?}", state);
                         }
                         Err(e) => println!("Error body: {:?}", e),
