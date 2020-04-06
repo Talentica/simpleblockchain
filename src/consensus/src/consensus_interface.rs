@@ -9,7 +9,10 @@ use db_service::db_snapshot_ref::SchemaSnap;
 use exonum_merkledb::ObjectHash;
 use futures::{channel::mpsc::*, executor::*, future, prelude::*, task::*};
 use p2plib::message_sender::MessageSender;
-use p2plib::messages::{ConsensusMessageTypes, LeaderElection, MessageTypes, SignedLeaderElection};
+use p2plib::messages::{
+    ConsensusMessageTypes, ElectionPing, ElectionPong, LeaderElection, MessageTypes,
+    SignedLeaderElection,
+};
 use schema::transaction_pool::{TxnPool, POOL};
 use std::collections::{hash_map::DefaultHasher, BTreeMap};
 use std::hash::{Hash, Hasher};
@@ -29,6 +32,13 @@ pub struct Consensus {
 
 pub struct LeaderMap {
     map: BTreeMap<u64, String>,
+}
+
+pub struct MetaData {
+    active_node: Vec<String>,
+    public_keys: Vec<String>,
+    kp: KeypairType,
+    sender: Sender<Option<MessageTypes>>,
 }
 
 impl Consensus {
@@ -64,31 +74,24 @@ impl Consensus {
         leader_map_locked.map.insert(1, self.pk.clone());
     }
 
-    fn select_leader(&self) -> SignedLeaderElection {
+    fn select_leader(&self, meta_data: Arc<Mutex<MetaData>>) -> SignedLeaderElection {
+        let meta_data_locked = meta_data.lock().unwrap();
         let mut iter_vec_pk: usize = 0;
         #[allow(unused_assignments)]
         let mut current_lowest_hash: u64 = 0;
-        if self.public_keys[iter_vec_pk].clone() != self.pk {
-            let may_be_leader: LeaderElection = LeaderElection {
+        if meta_data_locked.active_node.len() == 0 {
+            let leader_payload: LeaderElection = LeaderElection {
                 block_height: self.round_number + 1,
                 old_leader: self.pk.clone(),
-                new_leader: String::from(self.public_keys[iter_vec_pk].clone()),
+                new_leader: self.pk.clone(),
             };
-            let mut hasher = DefaultHasher::new();
-            may_be_leader.hash(&mut hasher);
-            current_lowest_hash = hasher.finish();
-        } else {
-            iter_vec_pk = 1;
-            let may_be_leader: LeaderElection = LeaderElection {
-                block_height: self.round_number + 1,
-                old_leader: self.pk.clone(),
-                new_leader: String::from(self.public_keys[iter_vec_pk].clone()),
+            let signature = Keypair::sign(&self.keypair, &serialize(&leader_payload));
+            return SignedLeaderElection {
+                leader_payload,
+                signature,
             };
-            let mut hasher = DefaultHasher::new();
-            may_be_leader.hash(&mut hasher);
-            current_lowest_hash = hasher.finish();
         }
-        for i in iter_vec_pk + 1..self.public_keys.len() {
+        for i in iter_vec_pk..meta_data_locked.active_node.len() {
             if self.pk != self.public_keys[i].clone() {
                 let may_be_leader: LeaderElection = LeaderElection {
                     block_height: self.round_number + 1,
@@ -115,11 +118,23 @@ impl Consensus {
         }
     }
 
-    fn validator(&mut self, sender: &mut Sender<Option<MessageTypes>>) {
+    fn validator(
+        &mut self,
+        sender: &mut Sender<Option<MessageTypes>>,
+        meta_data: Arc<Mutex<MetaData>>,
+    ) -> bool {
         // no polling machenism of txn_pool and create block need to implement or modified here
         // if one want to change the create_block and txn priority then change/ implment that part in
         // schema operations and p2p module
         let fork = fork_db();
+        {
+            let mut meta_data_locked = meta_data.lock().unwrap();
+            meta_data_locked.active_node.clear();
+            let msg: ElectionPing =
+                ElectionPing::create(&meta_data_locked.kp, self.round_number + 1);
+            MessageSender::send_election_ping_msg(sender, msg);
+            println!("pinging for block number {}", self.round_number + 1);
+        }
         {
             let mut schema = SchemaFork::new(&fork);
             let signed_block = schema.create_block(&self.keypair);
@@ -129,13 +144,17 @@ impl Consensus {
             MessageSender::send_block_msg(sender, signed_block);
         }
         patch_db(fork);
-        let signed_new_leader: SignedLeaderElection = self.select_leader();
+        let signed_new_leader: SignedLeaderElection = self.select_leader(meta_data);
         self.round_number = self.round_number + 1;
+        let flag: bool = signed_new_leader.leader_payload.new_leader.clone()
+            == signed_new_leader.leader_payload.old_leader.clone();
         MessageSender::send_leader_election_msg(sender, signed_new_leader);
+        return flag;
     }
 
     pub fn consensus_msg_receiver(
         leader_map: Arc<Mutex<LeaderMap>>,
+        meta_data: Arc<Mutex<MetaData>>,
         rx: Arc<Mutex<Receiver<Option<ConsensusMessageTypes>>>>,
     ) {
         thread::spawn(move || {
@@ -173,9 +192,42 @@ impl Consensus {
                                             }
                                             // update leader selection process here.
                                         }
-                                        ConsensusMessageTypes::BlockVote(_data) => {
-                                            // TODO: this enum this is not required
-                                            // -----
+                                        ConsensusMessageTypes::ConsensusPing(data) => {
+                                            let election_ping: ElectionPing = data;
+                                            let mut meta_data_locked = meta_data.lock().unwrap();
+                                            if meta_data_locked
+                                                .public_keys
+                                                .contains(&election_ping.payload.public_key)
+                                            {
+                                                if election_ping.verify() {
+                                                    let election_pong: ElectionPong =
+                                                        ElectionPong::create(
+                                                            &meta_data_locked.kp,
+                                                            &election_ping,
+                                                        );
+                                                    MessageSender::send_election_pong_msg(
+                                                        &mut meta_data_locked.sender,
+                                                        election_pong,
+                                                    );
+                                                }
+                                            }
+                                        }
+                                        ConsensusMessageTypes::ConsensusPong(data) => {
+                                            let election_pong: ElectionPong = data;
+                                            let mut meta_data_locked = meta_data.lock().unwrap();
+                                            if meta_data_locked
+                                                .public_keys
+                                                .contains(&election_pong.payload.may_be_leader)
+                                                && hex::encode(
+                                                    meta_data_locked.kp.public().encode(),
+                                                ) == election_pong.payload.current_leader
+                                            {
+                                                if election_pong.verify() {
+                                                    meta_data_locked.active_node.push(
+                                                        election_pong.payload.may_be_leader.clone(),
+                                                    );
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -196,6 +248,7 @@ impl Consensus {
     fn state_machine(
         &mut self,
         leader_map: Arc<Mutex<LeaderMap>>,
+        meta_data: Arc<Mutex<MetaData>>,
         sender: &mut Sender<Option<MessageTypes>>,
     ) {
         loop {
@@ -227,13 +280,17 @@ impl Consensus {
                             leader_map_locked.map.remove(&key);
                         } else {
                             // i am the leader.
-                            self.validator(sender);
+                            if self.validator(sender, meta_data.clone()) {
+                                leader_map_locked
+                                    .map
+                                    .insert(self.round_number, self.pk.clone());
+                            }
                         }
                     }
                 } else {
                 }
-                thread::sleep(Duration::from_millis(2000));
             }
+            thread::sleep(Duration::from_millis(2000));
         }
     }
 
@@ -255,8 +312,15 @@ impl Consensus {
             map: BTreeMap::new(),
         };
         let leader_map = Arc::new(Mutex::new(leader_map_obj));
-        let leader_map_clone = leader_map.clone();
-        Consensus::consensus_msg_receiver(leader_map_clone, msg_receiver);
+
+        let consensus_meta_data = MetaData {
+            active_node: vec![],
+            public_keys: vec![],
+            kp: config.node.keypair.clone(),
+            sender: sender.clone(),
+        };
+        let meta_data = Arc::new(Mutex::new(consensus_meta_data));
+        Consensus::consensus_msg_receiver(leader_map.clone(), meta_data.clone(), msg_receiver);
         thread::sleep(Duration::from_millis(5000));
         if config.node.genesis_block {
             {
@@ -266,6 +330,6 @@ impl Consensus {
             }
             consensus_obj.init_state(&config.db.dbpath, leader_map.clone(), &mut sender.clone());
         }
-        consensus_obj.state_machine(leader_map.clone(), &mut sender.clone());
+        consensus_obj.state_machine(leader_map.clone(), meta_data.clone(), &mut sender.clone());
     }
 }

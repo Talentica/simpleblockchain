@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use std::convert::AsRef;
 use std::time::SystemTime;
 use utils::keypair::{CryptoKeypair, Keypair, KeypairType, PublicKey, Verify};
-use utils::serializer::serialize;
+use utils::serializer::{deserialize, serialize};
 
 impl TransactionTrait<CryptoTransaction> for CryptoTransaction {
     fn validate(&self) -> bool {
@@ -95,13 +95,13 @@ impl TransactionTrait<SignedTransaction> for SignedTransaction {
     }
 }
 
-impl<T: Access> StateTraits<T, State, SignedTransaction> for SignedTransaction
+impl<T: Access> StateTraits<T, Vec<u8>, SignedTransaction> for SignedTransaction
 where
     T::Base: RawAccessMut,
 {
     fn execute(
         &self,
-        state_trie: &mut ProofMapIndex<T::Base, String, State>,
+        state_trie: &mut ProofMapIndex<T::Base, String, Vec<u8>>,
         txn_trie: &mut ProofMapIndex<T::Base, Hash, SignedTransaction>,
     ) -> bool {
         let mut flag: bool = false;
@@ -132,49 +132,50 @@ pub trait ModuleTraits<T: Access>
 where
     T::Base: RawAccessMut,
 {
-    fn transfer(&self, state_trie: &mut ProofMapIndex<T::Base, String, State>) -> bool;
-    fn mint(&self, state_trie: &mut ProofMapIndex<T::Base, String, State>) -> bool;
+    fn transfer(&self, state_trie: &mut ProofMapIndex<T::Base, String, Vec<u8>>) -> bool;
+    fn mint(&self, state_trie: &mut ProofMapIndex<T::Base, String, Vec<u8>>) -> bool;
 }
 
 impl<T: Access> ModuleTraits<T> for CryptoTransaction
 where
     T::Base: RawAccessMut,
 {
-    fn transfer(&self, state_trie: &mut ProofMapIndex<T::Base, String, State>) -> bool {
+    fn transfer(&self, state_trie: &mut ProofMapIndex<T::Base, String, Vec<u8>>) -> bool {
         if self.validate() {
-            if state_trie.contains(&self.from) {
-                let mut from_wallet: State = state_trie.get(&self.from).unwrap();
-                if from_wallet.get_balance() > self.amount {
-                    if state_trie.contains(&self.to) {
-                        let mut to_wallet: State = state_trie.get(&self.to).unwrap();
-                        to_wallet.add_balance(self.amount);
-                        state_trie.put(&self.to.clone(), to_wallet);
-                    } else {
-                        let mut to_wallet = State::new();
-                        to_wallet.add_balance(self.amount);
-                        state_trie.put(&self.to.clone(), to_wallet);
-                    }
-                    from_wallet.deduct_balance(self.amount);
-                    from_wallet.increase_nonce();
-                    state_trie.put(&self.from.clone(), from_wallet);
-                    return true;
-                }
+            let mut from_wallet: State = match state_trie.get(&self.from) {
+                Some(state) => deserialize(state.as_slice()),
+                None => State::new(),
+            };
+            if self.nonce == from_wallet.get_nonce() + 1 {
+                return false;
+            }
+            if from_wallet.get_balance() > self.amount {
+                let mut to_wallet: State = match state_trie.get(&self.to) {
+                    Some(state) => deserialize(state.as_slice()),
+                    None => State::new(),
+                };
+                to_wallet.add_balance(self.amount);
+                state_trie.put(&self.to.clone(), serialize(&to_wallet));
+                from_wallet.deduct_balance(self.amount);
+                from_wallet.increase_nonce();
+                state_trie.put(&self.from.clone(), serialize(&from_wallet));
+                return true;
             }
         }
         false
     }
 
-    fn mint(&self, state_trie: &mut ProofMapIndex<T::Base, String, State>) -> bool {
+    fn mint(&self, state_trie: &mut ProofMapIndex<T::Base, String, Vec<u8>>) -> bool {
         if self.validate() {
-            if state_trie.contains(&self.to) {
-                let mut to_wallet: State = state_trie.get(&self.to).unwrap();
-                to_wallet.add_balance(self.amount);
-                state_trie.put(&self.to.clone(), to_wallet);
-            } else {
-                let mut to_wallet = State::new();
-                to_wallet.add_balance(self.amount);
-                state_trie.put(&self.to.clone(), to_wallet);
+            let mut to_wallet: State = match state_trie.get(&self.to) {
+                Some(state) => deserialize(state.as_slice()),
+                None => State::new(),
+            };
+            if self.nonce == to_wallet.get_nonce() + 1 {
+                return false;
             }
+            to_wallet.add_balance(self.amount);
+            state_trie.put(&self.to.clone(), serialize(&to_wallet));
             return true;
         }
         false

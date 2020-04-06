@@ -1,5 +1,6 @@
 use crate::messages::{
-    BlockConsensus, ConsensusMessageTypes, MessageTypes, NodeMessageTypes, SignedLeaderElection,
+    ConsensusMessageTypes, ElectionPing, ElectionPong, MessageTypes, NodeMessageTypes,
+    SignedLeaderElection,
 };
 use futures::channel::mpsc::*;
 use schema::{block::SignedBlock, transaction::SignedTransaction};
@@ -7,12 +8,19 @@ use schema::{block::SignedBlock, transaction::SignedTransaction};
 pub struct MessageSender {}
 
 impl MessageSender {
-    pub fn send_block_consensus_msg(
-        sender: &mut Sender<Option<MessageTypes>>,
-        msg: BlockConsensus,
-    ) {
+    pub fn send_election_ping_msg(sender: &mut Sender<Option<MessageTypes>>, msg: ElectionPing) {
         let data = Some(MessageTypes::ConsensusMsg(
-            ConsensusMessageTypes::BlockVote(msg),
+            ConsensusMessageTypes::ConsensusPing(msg),
+        ));
+        let error: Result<(), TrySendError<Option<MessageTypes>>> = sender.try_send(data);
+        if error.is_err() {
+            eprintln!("{:?}", error);
+        }
+    }
+
+    pub fn send_election_pong_msg(sender: &mut Sender<Option<MessageTypes>>, msg: ElectionPong) {
+        let data = Some(MessageTypes::ConsensusMsg(
+            ConsensusMessageTypes::ConsensusPong(msg),
         ));
         let error: Result<(), TrySendError<Option<MessageTypes>>> = sender.try_send(data);
         if error.is_err() {

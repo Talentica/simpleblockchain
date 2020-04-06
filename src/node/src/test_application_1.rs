@@ -4,7 +4,7 @@ use db_service::db_fork_ref::SchemaFork;
 use db_service::db_layer::{fork_db, patch_db};
 use db_service::db_snapshot_ref::SchemaSnap;
 use doc_app::{
-    state::NFTToken,
+    state::{NFTToken, State},
     transaction::{SignedTransaction, STATE_KEY},
     user_messages::DataTypes,
 };
@@ -68,6 +68,7 @@ fn test_document_transfer_valid_scenario() {
         let schema = SchemaSnap::new(&snapshot);
         match schema.get_state(STATE_KEY.to_string()) {
             Some(state) => {
+                let state: State = utils::serializer::deserialize(state.as_slice());
                 for index in 0..vector.len() {
                     let each: Hash = vector.get(index).unwrap().clone();
                     println!("token details {:?}", state.get_nft_token(each));
@@ -106,6 +107,7 @@ fn test_document_transfer_valid_scenario() {
         let schema = SchemaSnap::new(&snapshot);
         match schema.get_state(STATE_KEY.to_string()) {
             Some(state) => {
+                let state: State = utils::serializer::deserialize(state.as_slice());
                 println!(
                     "waiting list of SC {:?}",
                     state.get_confirmation_waiting_list(&to_address)
@@ -148,6 +150,7 @@ fn test_document_transfer_valid_scenario() {
         let schema = SchemaSnap::new(&snapshot);
         match schema.get_state(STATE_KEY.to_string()) {
             Some(state) => {
+                let state: State = utils::serializer::deserialize(state.as_slice());
                 println!(
                     "waiting list of  SC {:?}",
                     state.get_confirmation_waiting_list(&to_address)
@@ -194,6 +197,7 @@ fn test_document_transfer_valid_scenario() {
         let schema = SchemaSnap::new(&snapshot);
         match schema.get_state(STATE_KEY.to_string()) {
             Some(state) => {
+                let state: State = utils::serializer::deserialize(state.as_slice());
                 println!(
                     "waiting list of  SC {:?}",
                     state.get_confirmation_waiting_list(&to_address)
@@ -245,6 +249,7 @@ fn test_document_transfer_valid_scenario() {
         let schema = SchemaSnap::new(&snapshot);
         match schema.get_state(STATE_KEY.to_string()) {
             Some(state) => {
+                let state: State = utils::serializer::deserialize(state.as_slice());
                 println!(
                     "waiting list of  SC {:?}",
                     state.get_confirmation_waiting_list(&to_address)
@@ -295,6 +300,7 @@ fn test_document_transfer_valid_scenario() {
         let schema = SchemaSnap::new(&snapshot);
         match schema.get_state(STATE_KEY.to_string()) {
             Some(state) => {
+                let state: State = utils::serializer::deserialize(state.as_slice());
                 println!(
                     "waiting list of  SC {:?}",
                     state.get_confirmation_waiting_list(&to_address)

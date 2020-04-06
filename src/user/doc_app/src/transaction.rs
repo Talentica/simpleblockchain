@@ -12,9 +12,9 @@ use std::collections::HashMap;
 use std::convert::AsRef;
 use std::time::SystemTime;
 use utils::keypair::{CryptoKeypair, Keypair, KeypairType, PublicKey, Verify};
-use utils::serializer::serialize;
+use utils::serializer::{deserialize, serialize};
 
-pub const STATE_KEY: &str = "kckdsvmskdcmskdvmldskvcmdlsc";
+pub const STATE_KEY: &str = "34132aec80149c4538bad4a15995ddf6a89d4ed5e39f0060e8466f6ba4dc9ceb";
 
 impl TransactionTrait<CryptoTransaction> for CryptoTransaction {
     fn validate(&self) -> bool {
@@ -127,13 +127,13 @@ impl SignedTransaction {
     }
 }
 
-impl<T: Access> StateTraits<T, State, SignedTransaction> for SignedTransaction
+impl<T: Access> StateTraits<T, Vec<u8>, SignedTransaction> for SignedTransaction
 where
     T::Base: RawAccessMut,
 {
     fn execute(
         &self,
-        state_trie: &mut ProofMapIndex<T::Base, String, State>,
+        state_trie: &mut ProofMapIndex<T::Base, String, Vec<u8>>,
         txn_trie: &mut ProofMapIndex<T::Base, Hash, SignedTransaction>,
     ) -> bool {
         let mut flag: bool = false;
@@ -172,20 +172,21 @@ pub trait ModuleTraits<T: Access>
 where
     T::Base: RawAccessMut,
 {
-    fn set_hash(&self, state_trie: &mut ProofMapIndex<T::Base, String, State>) -> bool;
-    fn add_doc(&self, state_trie: &mut ProofMapIndex<T::Base, String, State>) -> bool;
-    fn transfer_sc(&self, state_trie: &mut ProofMapIndex<T::Base, String, State>) -> bool;
-    fn set_pkg_no(&self, state_trie: &mut ProofMapIndex<T::Base, String, State>) -> bool;
-    fn transfer_for_review(&self, state_trie: &mut ProofMapIndex<T::Base, String, State>) -> bool;
-    fn review_docs(&self, state_trie: &mut ProofMapIndex<T::Base, String, State>) -> bool;
-    fn publish_docs(&self, state_trie: &mut ProofMapIndex<T::Base, String, State>) -> bool;
+    fn set_hash(&self, state_trie: &mut ProofMapIndex<T::Base, String, Vec<u8>>) -> bool;
+    fn add_doc(&self, state_trie: &mut ProofMapIndex<T::Base, String, Vec<u8>>) -> bool;
+    fn transfer_sc(&self, state_trie: &mut ProofMapIndex<T::Base, String, Vec<u8>>) -> bool;
+    fn set_pkg_no(&self, state_trie: &mut ProofMapIndex<T::Base, String, Vec<u8>>) -> bool;
+    fn transfer_for_review(&self, state_trie: &mut ProofMapIndex<T::Base, String, Vec<u8>>)
+        -> bool;
+    fn review_docs(&self, state_trie: &mut ProofMapIndex<T::Base, String, Vec<u8>>) -> bool;
+    fn publish_docs(&self, state_trie: &mut ProofMapIndex<T::Base, String, Vec<u8>>) -> bool;
 }
 
 impl<T: Access> ModuleTraits<T> for CryptoTransaction
 where
     T::Base: RawAccessMut,
 {
-    fn set_hash(&self, state_trie: &mut ProofMapIndex<T::Base, String, State>) -> bool {
+    fn set_hash(&self, state_trie: &mut ProofMapIndex<T::Base, String, Vec<u8>>) -> bool {
         let expected_payload_size: usize = 2;
         let mut expected_payload: Vec<DataTypes> = Vec::with_capacity(expected_payload_size);
         expected_payload.push(DataTypes::HashVal(Hash::zero()));
@@ -210,7 +211,7 @@ where
             _ => return false,
         };
         let mut state: State = match state_trie.get(&STATE_KEY.to_string()) {
-            Some(state) => state,
+            Some(state) => deserialize(state.as_slice()),
             None => State::new(),
         };
         let flag: bool = state.set_hash(token_id, file_hash);
@@ -218,12 +219,12 @@ where
             println!("operation failed");
             return false;
         }
-        state_trie.put(&STATE_KEY.to_string(), state);
+        state_trie.put(&STATE_KEY.to_string(), serialize(&state));
         println!("operation done");
         true
     }
 
-    fn add_doc(&self, state_trie: &mut ProofMapIndex<T::Base, String, State>) -> bool {
+    fn add_doc(&self, state_trie: &mut ProofMapIndex<T::Base, String, Vec<u8>>) -> bool {
         let expected_payload_size: usize = 1;
         let mut expected_payload: Vec<DataTypes> = Vec::with_capacity(expected_payload_size);
         expected_payload.push(DataTypes::VecHashVal(vec![]));
@@ -247,7 +248,7 @@ where
             _ => return false,
         };
         let mut state: State = match state_trie.get(&STATE_KEY.to_string()) {
-            Some(state) => state,
+            Some(state) => deserialize(state.as_slice()),
             None => State::new(),
         };
         for each in token_ids.iter() {
@@ -262,11 +263,11 @@ where
                 return false;
             }
         }
-        state_trie.put(&STATE_KEY.to_string(), state);
+        state_trie.put(&STATE_KEY.to_string(), serialize(&state));
         true
     }
 
-    fn transfer_sc(&self, state_trie: &mut ProofMapIndex<T::Base, String, State>) -> bool {
+    fn transfer_sc(&self, state_trie: &mut ProofMapIndex<T::Base, String, Vec<u8>>) -> bool {
         let expected_payload_size: usize = 2;
         let mut expected_payload: Vec<DataTypes> = Vec::with_capacity(expected_payload_size);
         expected_payload.push(DataTypes::VecHashVal(vec![]));
@@ -292,7 +293,7 @@ where
             _ => return false,
         };
         let mut state: State = match state_trie.get(&STATE_KEY.to_string()) {
-            Some(state) => state,
+            Some(state) => deserialize(state.as_slice()),
             None => State::new(),
         };
         for each in token_ids.iter() {
@@ -306,11 +307,11 @@ where
             }
         }
         state.add_into_confirmation_list(&to_address, &token_ids);
-        state_trie.put(&STATE_KEY.to_string(), state);
+        state_trie.put(&STATE_KEY.to_string(), serialize(&state));
         true
     }
 
-    fn set_pkg_no(&self, state_trie: &mut ProofMapIndex<T::Base, String, State>) -> bool {
+    fn set_pkg_no(&self, state_trie: &mut ProofMapIndex<T::Base, String, Vec<u8>>) -> bool {
         let expected_payload_size: usize = 2;
         let mut expected_payload: Vec<DataTypes> = Vec::with_capacity(expected_payload_size);
         expected_payload.push(DataTypes::VecHashVal(vec![]));
@@ -336,7 +337,7 @@ where
             _ => return false,
         };
         let mut state: State = match state_trie.get(&STATE_KEY.to_string()) {
-            Some(state) => state,
+            Some(state) => deserialize(state.as_slice()),
             None => State::new(),
         };
         let mut waiting_list: Vec<Hash> = match state.get_confirmation_waiting_list(&self.from) {
@@ -369,11 +370,14 @@ where
         }
         state.set_pkg_list(&pkg_no, &token_ids);
         state.update_confirmation_list(&self.from, &waiting_list);
-        state_trie.put(&STATE_KEY.to_string(), state);
+        state_trie.put(&STATE_KEY.to_string(), serialize(&state));
         true
     }
 
-    fn transfer_for_review(&self, state_trie: &mut ProofMapIndex<T::Base, String, State>) -> bool {
+    fn transfer_for_review(
+        &self,
+        state_trie: &mut ProofMapIndex<T::Base, String, Vec<u8>>,
+    ) -> bool {
         let expected_payload_size: usize = 2;
         let mut expected_payload: Vec<DataTypes> = Vec::with_capacity(expected_payload_size);
         expected_payload.push(DataTypes::StringVal(String::default()));
@@ -398,7 +402,7 @@ where
             _ => return false,
         };
         let mut state: State = match state_trie.get(&STATE_KEY.to_string()) {
-            Some(state) => state,
+            Some(state) => deserialize(state.as_slice()),
             None => State::new(),
         };
         let pkg_doc_list: Vec<Hash> = match state.get_pkg_list(&pkg_no) {
@@ -419,11 +423,11 @@ where
             };
         }
         state.add_pkg_no_for_review(&reviewer_address, &pkg_no);
-        state_trie.put(&STATE_KEY.to_string(), state);
+        state_trie.put(&STATE_KEY.to_string(), serialize(&state));
         true
     }
 
-    fn review_docs(&self, state_trie: &mut ProofMapIndex<T::Base, String, State>) -> bool {
+    fn review_docs(&self, state_trie: &mut ProofMapIndex<T::Base, String, Vec<u8>>) -> bool {
         let expected_payload_size: usize = 2;
         let mut expected_payload: Vec<DataTypes> = Vec::with_capacity(expected_payload_size);
         expected_payload.push(DataTypes::StringVal(String::default()));
@@ -449,7 +453,7 @@ where
             _ => return false,
         };
         let mut state: State = match state_trie.get(&STATE_KEY.to_string()) {
-            Some(state) => state,
+            Some(state) => deserialize(state.as_slice()),
             None => State::new(),
         };
         match state.get_pkg_review_pending_list(&self.from) {
@@ -488,11 +492,11 @@ where
             }
         }
         state.remove_pkg_no_from_review_list(&self.from, &pkg_no);
-        state_trie.put(&STATE_KEY.to_string(), state);
+        state_trie.put(&STATE_KEY.to_string(), serialize(&state));
         true
     }
 
-    fn publish_docs(&self, state_trie: &mut ProofMapIndex<T::Base, String, State>) -> bool {
+    fn publish_docs(&self, state_trie: &mut ProofMapIndex<T::Base, String, Vec<u8>>) -> bool {
         let expected_payload_size: usize = 1;
         let mut expected_payload: Vec<DataTypes> = Vec::with_capacity(expected_payload_size);
         expected_payload.push(DataTypes::StringVal(String::default()));
@@ -512,7 +516,7 @@ where
             _ => return false,
         };
         let mut state: State = match state_trie.get(&STATE_KEY.to_string()) {
-            Some(state) => state,
+            Some(state) => deserialize(state.as_slice()),
             None => State::new(),
         };
         let pkg_doc_list: Vec<Hash> = match state.get_pkg_list(&pkg_no) {
@@ -538,7 +542,7 @@ where
             state.replace_nft_token(each.clone(), token);
         }
         println!("5");
-        state_trie.put(&STATE_KEY.to_string(), state);
+        state_trie.put(&STATE_KEY.to_string(), serialize(&state));
         true
     }
 }

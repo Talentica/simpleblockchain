@@ -12,11 +12,8 @@ use db_service::db_fork_ref::SchemaFork;
 use db_service::db_layer::{fork_db, patch_db};
 use libp2p::{identity::PublicKey, PeerId};
 use nodemsgprocessor::*;
-use p2plib::messages::*;
-use p2plib::messages::{Message, SignedLeaderElection};
+use p2plib::messages::{CONSENSUS_MSG_TOPIC_STR, MSG_DISPATCHER, NODE_MSG_TOPIC_STR};
 use p2plib::simpleswarm::SimpleSwarm;
-use schema::block::SignedBlock;
-use schema::transaction::SignedTransaction;
 
 use std::sync::{
     atomic::{AtomicBool, Ordering},
@@ -32,15 +29,12 @@ fn validator_process() {
     let peer_id = PeerId::from_public_key(pk);
     println!("peer id = {:?}", peer_id);
     let mut swarm = SimpleSwarm::new();
-    swarm
-        .topic_list
-        .push(String::from(SignedLeaderElection::TOPIC));
-    swarm.topic_list.push(String::from(BlockConsensus::TOPIC));
-    swarm.topic_list.push(String::from(SignedBlock::TOPIC));
-    swarm
-        .topic_list
-        .push(String::from(SignedTransaction::TOPIC));
-
+    for each in NODE_MSG_TOPIC_STR {
+        swarm.topic_list.push(String::from(each.clone()));
+    }
+    for each in CONSENSUS_MSG_TOPIC_STR {
+        swarm.topic_list.push(String::from(each.clone()));
+    }
     let mut node_msg_processor = NodeMsgProcessor::new(MSG_DISPATCHER.node_msg_receiver.clone());
     let mut sender = swarm.tx.clone();
     let txn_sender = swarm.tx.clone();
@@ -92,15 +86,12 @@ fn fullnode_process() {
     let pk: PublicKey = PublicKey::Ed25519(config.node.public.clone());
     let peer_id = PeerId::from_public_key(pk);
     let mut swarm = SimpleSwarm::new();
-    swarm
-        .topic_list
-        .push(String::from(SignedLeaderElection::TOPIC));
-    swarm.topic_list.push(String::from(BlockConsensus::TOPIC));
-    swarm.topic_list.push(String::from(SignedBlock::TOPIC));
-    swarm
-        .topic_list
-        .push(String::from(SignedTransaction::TOPIC));
-
+    for each in NODE_MSG_TOPIC_STR {
+        swarm.topic_list.push(String::from(each.clone()));
+    }
+    for each in CONSENSUS_MSG_TOPIC_STR {
+        swarm.topic_list.push(String::from(each.clone()));
+    }
     let mut node_msg_processor = NodeMsgProcessor::new(MSG_DISPATCHER.node_msg_receiver.clone());
     {
         thread::spawn(move || {

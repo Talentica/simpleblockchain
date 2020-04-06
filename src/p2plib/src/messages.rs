@@ -5,7 +5,8 @@ use schema::block::SignedBlock;
 use schema::transaction::SignedTransaction;
 use std::hash::{Hash, Hasher};
 use std::sync::{Arc, Mutex};
-use utils::serializer::{deserialize, Deserialize, Serialize};
+use utils::keypair::{CryptoKeypair, Keypair, KeypairType, PublicKey, Verify};
+use utils::serializer::{deserialize, serialize, Deserialize, Serialize};
 
 pub trait Message {
     const TOPIC: &'static str;
@@ -29,8 +30,9 @@ pub trait Message {
     }
 }
 
-const NODE_MSG_TOPIC_STR: &'static [&'static str] = &["SignedTransaction", "SignedBlock"];
-const CONSENSUS_MSG_TOPIC_STR: &'static [&'static str] = &["LeaderElection", "BlockConsensus"];
+pub const NODE_MSG_TOPIC_STR: &'static [&'static str] = &["SignedTransaction", "SignedBlock"];
+pub const CONSENSUS_MSG_TOPIC_STR: &'static [&'static str] =
+    &["LeaderElection", "ElectionPing", "ElectionPong"];
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LeaderElection {
@@ -62,16 +64,104 @@ impl Message for SignedLeaderElection {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct BlockConsensus {
-    pub height: i64,
-    pub hash: String,
+pub struct ElectionPingPayload {
+    pub height: u64,
+    pub public_key: String,
 }
 
-impl Message for BlockConsensus {
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ElectionPing {
+    pub payload: ElectionPingPayload,
+    pub signature: Vec<u8>,
+}
+
+impl ElectionPing {
+    pub fn verify(&self) -> bool {
+        let ser_payload = serialize(&self.payload);
+        PublicKey::verify_from_encoded_pk(
+            &self.payload.public_key,
+            &ser_payload,
+            &self.signature.as_ref(),
+        )
+    }
+
+    fn sign(&mut self, kp: &KeypairType) {
+        let ser_txn = serialize(&self.payload);
+        let sign = Keypair::sign(&kp, &ser_txn);
+        self.signature = sign;
+    }
+
+    pub fn create(kp: &KeypairType, height: u64) -> ElectionPing {
+        let payload: ElectionPingPayload = ElectionPingPayload {
+            height,
+            public_key: hex::encode(kp.public().encode()),
+        };
+        let mut election_ping: ElectionPing = ElectionPing {
+            payload,
+            signature: vec![],
+        };
+        election_ping.sign(kp);
+        election_ping
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ElectionPongPayload {
+    pub height: u64,
+    pub current_leader: String,
+    pub may_be_leader: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ElectionPong {
+    pub payload: ElectionPongPayload,
+    pub signature: Vec<u8>,
+}
+
+impl ElectionPong {
+    pub fn verify(&self) -> bool {
+        let ser_payload = serialize(&self.payload);
+        PublicKey::verify_from_encoded_pk(
+            &self.payload.may_be_leader,
+            &ser_payload,
+            &self.signature.as_ref(),
+        )
+    }
+
+    fn sign(&mut self, kp: &KeypairType) {
+        let ser_txn = serialize(&self.payload);
+        let sign = Keypair::sign(&kp, &ser_txn);
+        self.signature = sign;
+    }
+
+    pub fn create(kp: &KeypairType, ping: &ElectionPing) -> ElectionPong {
+        let payload: ElectionPongPayload = ElectionPongPayload {
+            height: ping.payload.height.clone(),
+            current_leader: ping.payload.public_key.clone(),
+            may_be_leader: hex::encode(kp.public().encode()),
+        };
+        let mut election_pong: ElectionPong = ElectionPong {
+            payload,
+            signature: vec![],
+        };
+        election_pong.sign(kp);
+        election_pong
+    }
+}
+
+impl Message for ElectionPing {
     const TOPIC: &'static str = CONSENSUS_MSG_TOPIC_STR[1];
     const MODULE_TOPIC: &'static str = constants::CONSENSUS;
     fn handler(&self) {
-        println!("i am BlockConsensus handler");
+        println!("i am ElectionPing handler");
+    }
+}
+
+impl Message for ElectionPong {
+    const TOPIC: &'static str = CONSENSUS_MSG_TOPIC_STR[2];
+    const MODULE_TOPIC: &'static str = constants::CONSENSUS;
+    fn handler(&self) {
+        println!("i am ElectionPing handler");
     }
 }
 
@@ -100,7 +190,8 @@ pub enum NodeMessageTypes {
 #[derive(Debug, Serialize, Deserialize)]
 pub enum ConsensusMessageTypes {
     LeaderElect(SignedLeaderElection),
-    BlockVote(BlockConsensus),
+    ConsensusPing(ElectionPing),
+    ConsensusPong(ElectionPong),
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -126,7 +217,8 @@ impl From<ConsensusMessageTypes> for Topic {
     fn from(msg: ConsensusMessageTypes) -> Topic {
         match msg {
             ConsensusMessageTypes::LeaderElect(data) => TopicBuilder::new(data.topic()).build(),
-            ConsensusMessageTypes::BlockVote(data) => TopicBuilder::new(data.topic()).build(),
+            ConsensusMessageTypes::ConsensusPing(data) => TopicBuilder::new(data.topic()).build(),
+            ConsensusMessageTypes::ConsensusPong(data) => TopicBuilder::new(data.topic()).build(),
         }
     }
 }
