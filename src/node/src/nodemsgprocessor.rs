@@ -10,7 +10,7 @@ use schema::transaction_pool::{TxnPool, TxnPoolKeyType, POOL};
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::thread;
-use std::time::Duration;
+
 #[derive(Debug)]
 pub struct NodeMsgProcessor {
     pub _rx: Arc<Mutex<Receiver<Option<NodeMessageTypes>>>>,
@@ -39,27 +39,27 @@ impl NodeMsgProcessor {
             loop {
                 match self._rx.lock().unwrap().poll_next_unpin(cx) {
                     Poll::Ready(Some(msg)) => {
-                        // println!("msg received {:?}", msg);
+                        // debug!("msg received {:?}", msg);
                         match msg {
-                            None => println!("Empty msg received !"),
+                            None => debug!("Empty msg received !"),
                             Some(msgtype) => {
                                 match msgtype {
                                     NodeMessageTypes::SignedBlockEnum(data) => {
-                                        println!(
+                                        debug!(
                                             "Signed Block msg in NodeMsgProcessor with data {:?}",
                                             data.object_hash()
                                         );
                                         let signed_block: SignedBlock = data;
                                         let mut block_queue = pending_blocks.lock().unwrap();
                                         block_queue.pending_blocks.push_back(signed_block);
-                                        println!(
+                                        debug!(
                                             "block queue length {}",
                                             block_queue.pending_blocks.len()
                                         );
                                     }
                                     NodeMessageTypes::SignedTransactionEnum(data) => {
                                         let txn: SignedTransaction = data;
-                                        println!("Signed Transaction msg in NodeMsgProcessor with Hash {:?}", txn.object_hash());
+                                        debug!("Signed Transaction msg in NodeMsgProcessor with Hash {:?}", txn.object_hash());
                                         let timestamp = txn
                                             .header
                                             .get(&String::from("timestamp"))
@@ -73,7 +73,7 @@ impl NodeMsgProcessor {
                         }
                     }
                     Poll::Ready(None) => {
-                        println!("channel closed !");
+                        debug!("channel closed !");
                         return Poll::Ready(1);
                     }
                     Poll::Pending => break,
@@ -86,33 +86,39 @@ impl NodeMsgProcessor {
     fn pending_block_processing_thread(pending_blocks: Arc<Mutex<Blocks>>) {
         thread::spawn(move || {
             loop {
-                thread::sleep(Duration::from_millis(4000));
+                thread::sleep_ms(2000);
                 // no polling machenism of txn_pool and create block need to implement or modified here
                 // if one want to change the create_block and txn priority then change/ implment that part in
                 // schema operations and p2p module
                 let mut block_queue = pending_blocks.lock().unwrap();
                 if block_queue.pending_blocks.len() > 0 {
                     let fork = fork_db();
-                    let mut flag = true;
+                    let mut flag = false;
                     {
                         let mut schema = SchemaFork::new(&fork);
                         let block: &SignedBlock = block_queue.pending_blocks.get_mut(0).unwrap();
                         if schema.update_block(block) {
                             POOL.sync_pool(&block.block.txn_pool);
-                            println!(
+                            debug!(
                                 "block height {}, block hash {}",
                                 block.block.id,
                                 block.object_hash()
                             );
+                            flag = true;
                         } else {
-                            println!("block couldn't verified");
-                            flag = false;
+                            debug!("block couldn't verified");
+                            if schema.blockchain_length() > block.block.id {
+                                block_queue.pending_blocks.pop_front();
+                            } else {
+                                flag = true;
+                                schema.sync_state();
+                            }
                         }
                     }
                     if flag {
                         patch_db(fork);
                         block_queue.pending_blocks.pop_front();
-                        println!("block updated in db");
+                        debug!("block updated in db");
                     }
                 }
             }

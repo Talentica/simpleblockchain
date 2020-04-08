@@ -1,6 +1,5 @@
 extern crate utils;
 use exonum_crypto::Hash;
-use exonum_merkledb::ObjectHash;
 use std::collections::BTreeMap;
 use std::convert::AsRef;
 use utils::serializer::{Deserialize, Serialize};
@@ -110,7 +109,7 @@ impl State {
     ) -> bool {
         if let Some(list) = self.confirmation_list.get(to_address) {
             let mut mut_list: Vec<Hash> = list.clone();
-            println!("Matched {:?}!", list);
+            debug!("Matched {:?}!", list);
             for each in doc_list {
                 mut_list.push(each.clone());
             }
@@ -175,12 +174,12 @@ mod test_state {
         use super::*;
         let mut state = State::new();
         let default_token = NFTToken::default();
-        println!("{:?}", state);
+        debug!("{:?}", state);
         let token_hash = default_token.object_hash();
         state.tokens.insert(token_hash, default_token);
-        println!("{:?}", state);
-        println!("{:?}", state.set_hash(token_hash.clone(), Hash::zero()));
-        println!(
+        debug!("{:?}", state);
+        debug!("{:?}", state.set_hash(token_hash.clone(), Hash::zero()));
+        debug!(
             "{:?}",
             state.check_hash(token_hash.clone(), token_hash.clone())
         );

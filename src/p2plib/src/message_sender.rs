@@ -14,7 +14,7 @@ impl MessageSender {
         ));
         let error: Result<(), TrySendError<Option<MessageTypes>>> = sender.try_send(data);
         if error.is_err() {
-            eprintln!("{:?}", error);
+            error!("{:?}", error);
         }
     }
 
@@ -24,7 +24,7 @@ impl MessageSender {
         ));
         let error: Result<(), TrySendError<Option<MessageTypes>>> = sender.try_send(data);
         if error.is_err() {
-            eprintln!("{:?}", error);
+            error!("{:?}", error);
         }
     }
 
@@ -34,7 +34,7 @@ impl MessageSender {
         )));
         let error: Result<(), TrySendError<Option<MessageTypes>>> = sender.try_send(data);
         if error.is_err() {
-            eprintln!("{:?}", error);
+            error!("{:?}", error);
         }
     }
 
@@ -47,7 +47,7 @@ impl MessageSender {
         ));
         let error: Result<(), TrySendError<Option<MessageTypes>>> = sender.try_send(data);
         if error.is_err() {
-            eprintln!("{:?}", error);
+            error!("{:?}", error);
         }
     }
 
@@ -57,7 +57,7 @@ impl MessageSender {
         ));
         let error: Result<(), TrySendError<Option<MessageTypes>>> = sender.try_send(data);
         if error.is_err() {
-            eprintln!("{:?}", error);
+            error!("{:?}", error);
         }
     }
 }

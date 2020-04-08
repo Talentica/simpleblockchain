@@ -1,5 +1,9 @@
 extern crate db_service;
 extern crate doc_app;
+
+#[macro_use]
+extern crate log;
+
 use db_service::db_fork_ref::SchemaFork;
 use db_service::db_layer::{fork_db, patch_db};
 use db_service::db_snapshot_ref::SchemaSnap;
@@ -14,7 +18,7 @@ use schema::transaction_pool::{TxnPool, TxnPoolKeyType, POOL};
 use utils::keypair::{CryptoKeypair, Keypair};
 
 fn test_document_transfer_valid_scenario() {
-    println!("\n ***Document Transfer Demo***");
+    info!("\n ***Document Transfer Demo***");
     let mut secret =
         hex::decode("97ba6f71a5311c4986e01798d525d0da8ee5c54acbf6ef7c3fadd1e2f624442f")
             .expect("invalid secret");
@@ -57,12 +61,12 @@ fn test_document_transfer_valid_scenario() {
     {
         let mut schema = SchemaFork::new(&fork);
         let block = schema.create_block(&keypair);
-        println!("{:?}", block);
+        info!("{:?}", block);
     }
     patch_db(fork);
 
     // checking doc is present or not in the state
-    println!("\n *** state after adding 3 unique documents ***");
+    info!("\n *** state after adding 3 unique documents ***");
     let snapshot = fork_db();
     {
         let schema = SchemaSnap::new(&snapshot);
@@ -71,10 +75,10 @@ fn test_document_transfer_valid_scenario() {
                 let state: State = utils::serializer::deserialize(state.as_slice());
                 for index in 0..vector.len() {
                     let each: Hash = vector.get(index).unwrap().clone();
-                    println!("token details {:?}", state.get_nft_token(each));
+                    info!("token details {:?}", state.get_nft_token(each));
                 }
             }
-            None => println!("no state found"),
+            None => info!("no state found"),
         }
     }
 
@@ -96,28 +100,28 @@ fn test_document_transfer_valid_scenario() {
     {
         let mut schema = SchemaFork::new(&fork);
         let block = schema.create_block(&keypair);
-        println!("{:?}", block);
+        info!("{:?}", block);
     }
     patch_db(fork);
 
     // check review waiting list
-    println!("\n *** state after transferring previous documents to SC ***");
+    info!("\n *** state after transferring previous documents to SC ***");
     let snapshot = fork_db();
     {
         let schema = SchemaSnap::new(&snapshot);
         match schema.get_state(STATE_KEY.to_string()) {
             Some(state) => {
                 let state: State = utils::serializer::deserialize(state.as_slice());
-                println!(
+                info!(
                     "waiting list of SC {:?}",
                     state.get_confirmation_waiting_list(&to_address)
                 );
                 for index in 0..vector.len() {
                     let each: Hash = vector.get(index).unwrap().clone();
-                    println!("token details {:?}", state.get_nft_token(each));
+                    info!("token details {:?}", state.get_nft_token(each));
                 }
             }
-            None => println!("no state found"),
+            None => info!("no state found"),
         }
     }
 
@@ -139,33 +143,33 @@ fn test_document_transfer_valid_scenario() {
     {
         let mut schema = SchemaFork::new(&fork);
         let block = schema.create_block(&keypair);
-        println!("{:?}", block);
+        info!("{:?}", block);
     }
     patch_db(fork);
 
     // check review waiting list
-    println!("\n *** state after binding pkg_no with documents***");
+    info!("\n *** state after binding pkg_no with documents***");
     let snapshot = fork_db();
     {
         let schema = SchemaSnap::new(&snapshot);
         match schema.get_state(STATE_KEY.to_string()) {
             Some(state) => {
                 let state: State = utils::serializer::deserialize(state.as_slice());
-                println!(
+                info!(
                     "waiting list of  SC {:?}",
                     state.get_confirmation_waiting_list(&to_address)
                 );
-                println!(
+                info!(
                     "pkg_no \'{:?}\' contains doc {:?}",
                     pkg_no,
                     state.get_pkg_list(&pkg_no)
                 );
                 for index in 0..vector.len() {
                     let each: Hash = vector.get(index).unwrap().clone();
-                    println!("token details {:?}", state.get_nft_token(each));
+                    info!("token details {:?}", state.get_nft_token(each));
                 }
             }
-            None => println!("no state found"),
+            None => info!("no state found"),
         }
     }
 
@@ -186,38 +190,38 @@ fn test_document_transfer_valid_scenario() {
     {
         let mut schema = SchemaFork::new(&fork);
         let block = schema.create_block(&keypair);
-        println!("{:?}", block);
+        info!("{:?}", block);
     }
     patch_db(fork);
 
     // check review waiting list
-    println!("\n *** state after binding pkg_no with documents***");
+    info!("\n *** state after binding pkg_no with documents***");
     let snapshot = fork_db();
     {
         let schema = SchemaSnap::new(&snapshot);
         match schema.get_state(STATE_KEY.to_string()) {
             Some(state) => {
                 let state: State = utils::serializer::deserialize(state.as_slice());
-                println!(
+                info!(
                     "waiting list of  SC {:?}",
                     state.get_confirmation_waiting_list(&to_address)
                 );
-                println!(
+                info!(
                     "pkg_no \'{:?}\' contains doc {:?}",
                     pkg_no,
                     state.get_pkg_list(&pkg_no)
                 );
-                println!(
+                info!(
                     "pending review list of  \'{:?}\' -> {:?}",
                     self_address,
                     state.get_pkg_review_pending_list(&self_address)
                 );
                 for index in 0..vector.len() {
                     let each: Hash = vector.get(index).unwrap().clone();
-                    println!("token details {:?}", state.get_nft_token(each));
+                    info!("token details {:?}", state.get_nft_token(each));
                 }
             }
-            None => println!("no state found"),
+            None => info!("no state found"),
         }
     }
 
@@ -238,38 +242,38 @@ fn test_document_transfer_valid_scenario() {
     {
         let mut schema = SchemaFork::new(&fork);
         let block = schema.create_block(&keypair);
-        println!("{:?}", block);
+        info!("{:?}", block);
     }
     patch_db(fork);
 
     // check state review process
-    println!("\n *** state after review done by reviewer ***");
+    info!("\n *** state after review done by reviewer ***");
     let snapshot = fork_db();
     {
         let schema = SchemaSnap::new(&snapshot);
         match schema.get_state(STATE_KEY.to_string()) {
             Some(state) => {
                 let state: State = utils::serializer::deserialize(state.as_slice());
-                println!(
+                info!(
                     "waiting list of  SC {:?}",
                     state.get_confirmation_waiting_list(&to_address)
                 );
-                println!(
+                info!(
                     "pkg_no \'{:?}\' contains doc {:?}",
                     pkg_no,
                     state.get_pkg_list(&pkg_no)
                 );
-                println!(
+                info!(
                     "pending review list of  \'{:?}\' -> {:?}",
                     self_address,
                     state.get_pkg_review_pending_list(&self_address)
                 );
                 for index in 0..vector.len() {
                     let each: Hash = vector.get(index).unwrap().clone();
-                    println!("token details {:?}", state.get_nft_token(each));
+                    info!("token details {:?}", state.get_nft_token(each));
                 }
             }
-            None => println!("no state found"),
+            None => info!("no state found"),
         }
     }
 
@@ -289,38 +293,38 @@ fn test_document_transfer_valid_scenario() {
     {
         let mut schema = SchemaFork::new(&fork);
         let block = schema.create_block(&keypair);
-        println!("{:?}", block);
+        info!("{:?}", block);
     }
     patch_db(fork);
 
     // check review waiting list
-    println!("\n *** state after package publication done ***");
+    info!("\n *** state after package publication done ***");
     let snapshot = fork_db();
     {
         let schema = SchemaSnap::new(&snapshot);
         match schema.get_state(STATE_KEY.to_string()) {
             Some(state) => {
                 let state: State = utils::serializer::deserialize(state.as_slice());
-                println!(
+                info!(
                     "waiting list of  SC {:?}",
                     state.get_confirmation_waiting_list(&to_address)
                 );
-                println!(
+                info!(
                     "pkg_no \'{:?}\' contains doc {:?}",
                     pkg_no,
                     state.get_pkg_list(&pkg_no)
                 );
-                println!(
+                info!(
                     "pending review list of  \'{:?}\' -> {:?}",
                     self_address,
                     state.get_pkg_review_pending_list(&self_address)
                 );
                 for index in 0..vector.len() {
                     let each: Hash = vector.get(index).unwrap().clone();
-                    println!("token details {:?}", state.get_nft_token(each));
+                    info!("token details {:?}", state.get_nft_token(each));
                 }
             }
-            None => println!("no state found"),
+            None => info!("no state found"),
         }
     }
 }

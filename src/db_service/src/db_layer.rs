@@ -25,61 +25,27 @@ pub fn patch_db(fork: Fork) {
 #[cfg(test)]
 mod tests_db_layer {
     use super::*;
-    use exonum_crypto::Hash;
-    use exonum_merkledb::{
-        access::CopyAccessExt, impl_object_hash_for_binary_value, BinaryValue, ObjectHash,
-        ProofMapIndex,
-    };
-    use failure::Error;
-    use std::{borrow::Cow, convert::AsRef};
-    use utils::serializer::{Deserialize, Serialize};
-
-    #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
-    pub struct Txn {
-        nonce: u64,
-        from: String,
-    }
-
-    impl Txn {
-        fn new() -> Txn {
-            Txn {
-                nonce: 231,
-                from: String::from("ddd"),
-            }
-        }
-    }
-
-    impl_object_hash_for_binary_value! {Txn}
-
-    impl BinaryValue for Txn {
-        fn to_bytes(&self) -> Vec<u8> {
-            bincode::serialize(self).unwrap()
-        }
-
-        fn from_bytes(bytes: Cow<'_, [u8]>) -> Result<Self, Error> {
-            bincode::deserialize(bytes.as_ref()).map_err(From::from)
-        }
-    }
+    use exonum_merkledb::{access::CopyAccessExt, ProofMapIndex};
 
     #[test]
     pub fn test_db_operations() {
         let fork = fork_db();
         let name = "name";
         {
-            let mut mut_index: ProofMapIndex<_, Hash, Txn> = fork.get_proof_map(name);
-            let value = Txn::new();
-            let key = value.object_hash();
-            mut_index.put(&key, value);
-            println!("added in database {}", key);
+            let mut mut_index: ProofMapIndex<_, String, String> = fork.get_proof_map(name);
+            let value: String = String::from("value_string");
+            let key: String = String::from("key_string");
+            mut_index.put(&key, value.clone());
+            debug!("added in database {}", key);
             // mut_index.clear();
         }
         patch_db(fork);
         let snapshot = snapshot_db();
         {
-            let mut_index: ProofMapIndex<_, Hash, Txn> = snapshot.get_proof_map(name);
-            println!(" data from snapshot");
+            let mut_index: ProofMapIndex<_, String, String> = snapshot.get_proof_map(name);
+            debug!(" data from snapshot");
             for (_key, _value) in mut_index.iter() {
-                println!("{} {:?} ", _key, _value);
+                debug!("{} {:?} ", _key, _value);
             }
         }
     }

@@ -17,7 +17,7 @@ impl ClientServices {
         sender: &mut Sender<Option<MessageTypes>>,
     ) -> impl Responder {
         let txn: SignedTransaction = deserialize(&transaction);
-        // println!("submit_transaction {:?}", transaction);
+        debug!("submit_transaction {:?}", transaction);
         let timestamp = txn
             .header
             .get(&String::from("timestamp"))
@@ -31,7 +31,7 @@ impl ClientServices {
 
     pub fn fetch_pending_transaction_service(transaction_hash: web::Bytes) -> impl Responder {
         let txn_hash: Hash = deserialize(&transaction_hash);
-        println!("fetch_pending_transaction {:?}", transaction_hash);
+        debug!("fetch_pending_transaction {:?}", transaction_hash);
         match POOL.get(&txn_hash) {
             Some(transaction) => HttpResponse::Ok().body(serialize(&transaction)),
             None => HttpResponse::BadRequest().body("BadRequest"),
@@ -40,7 +40,7 @@ impl ClientServices {
 
     pub fn fetch_confirm_transaction_service(transaction_hash: web::Bytes) -> impl Responder {
         let txn_hash: Hash = deserialize(&transaction_hash);
-        println!("fetch_confirm_transaction {:?}", transaction_hash);
+        debug!("fetch_confirm_transaction {:?}", transaction_hash);
         let snapshot = snapshot_db();
         let schema = SchemaSnap::new(&snapshot);
         match schema.get_transaction(txn_hash) {
@@ -51,7 +51,7 @@ impl ClientServices {
 
     pub fn fetch_state_service(address: web::Bytes) -> impl Responder {
         let public_address: String = deserialize(&address);
-        println!("fetch_state {:?}", public_address);
+        debug!("fetch_state {:?}", public_address);
         let snapshot = snapshot_db();
         let schema = SchemaSnap::new(&snapshot);
         match schema.get_state(public_address) {
@@ -62,7 +62,7 @@ impl ClientServices {
 
     pub fn fetch_block_peer_service(address: web::Bytes) -> impl Responder {
         let block_index: u64 = deserialize(&address);
-        println!("fetch_block {:?}", block_index);
+        debug!("fetch_block {:?}", block_index);
         let snapshot = snapshot_db();
         let schema = SchemaSnap::new(&snapshot);
         match schema.get_block(block_index) {
@@ -82,7 +82,7 @@ impl ClientServices {
 
     pub fn fetch_block_service(address: web::Bytes) -> impl Responder {
         let block_index: u64 = deserialize(&address);
-        println!("fetch_block {:?}", block_index);
+        debug!("fetch_block {:?}", block_index);
         let snapshot = snapshot_db();
         let schema = SchemaSnap::new(&snapshot);
         match schema.get_block(block_index) {

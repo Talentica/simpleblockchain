@@ -1,12 +1,16 @@
 #[macro_use]
 extern crate lazy_static;
 
+#[macro_use]
+extern crate log;
+
 mod cli_config;
 mod client;
 
 use crate::client::{ClientObj, SyncState};
 use exonum_crypto::{Hash, PublicKey};
 use std::io;
+use utils::logger::*;
 use utils::serializer::serialize;
 
 pub fn remove_trailing_newline(input: &mut String) {
@@ -124,23 +128,25 @@ pub fn get_vec_input(input: &mut String) -> Option<Vec<u8>> {
 
 //this attribute allows main to not need to return anything and still use async calls.
 fn main() {
+    console_logger_init(&String::from("log.yml"));
+    info!("Peer Client Bootstrapping");
     let mut client: ClientObj = ClientObj::new();
     let mut end_flag: bool = false;
     let mut invalid_opt_count: u8 = 0;
     while !end_flag {
-        println!();
-        println!("Application CLI support following operations:");
-        println!("1:) reset client");
-        println!("2:) fetch pending transaction");
-        println!("3:) fetch confirmed transaction");
-        println!("4:) fetch state details");
-        println!("5:) fetch block");
-        println!("6:) fetch latest block");
-        println!("7:) fetch blockchain length");
-        println!("8:) fetch sync states");
-        println!("9:) exit");
+        info!("");
+        info!("Application CLI support following operations:");
+        info!("1:) reset client");
+        info!("2:) fetch pending transaction");
+        info!("3:) fetch confirmed transaction");
+        info!("4:) fetch state details");
+        info!("5:) fetch block");
+        info!("6:) fetch latest block");
+        info!("7:) fetch blockchain length");
+        info!("8:) fetch sync states");
+        info!("9:) exit");
         let mut input = String::new();
-        println!("Please select Option:");
+        info!("Please select Option:");
         let is_string: bool = get_string_input(&mut input);
         if is_string {
             if input == String::from("1") {
@@ -148,63 +154,63 @@ fn main() {
                 client = ClientObj::new();
             } else if input == String::from("2") {
                 invalid_opt_count = 0;
-                println!("Enter transaction Hash");
+                info!("Enter transaction Hash");
                 let is_hash: Option<Hash> = get_hash_input(&mut input);
                 match is_hash {
                     Some(txn_hash) => {
                         let output = client.fetch_pending_transaction(&txn_hash);
-                        println!("{:#?}", output);
+                        info!("{:#?}", output);
                     }
-                    None => println!("error: invalid input for transaction hash"),
+                    None => error!("error: invalid input for transaction hash"),
                 }
             } else if input == String::from("3") {
                 invalid_opt_count = 0;
-                println!("Enter transaction Hash");
+                info!("Enter transaction Hash");
                 let is_hash: Option<Hash> = get_hash_input(&mut input);
                 match is_hash {
                     Some(txn_hash) => {
                         let output = client.fetch_confirm_transaction(&txn_hash);
-                        println!("{:#?}", output);
+                        info!("{:#?}", output);
                     }
-                    None => println!("error: invalid input for transaction hash"),
+                    None => error!("error: invalid input for transaction hash"),
                 }
             } else if input == String::from("4") {
                 invalid_opt_count = 0;
-                println!("Enter public address");
+                info!("Enter public address");
                 let is_pk: bool = get_public_key_input(&mut input);
                 if is_pk {
                     let output = client.fetch_state(&input);
-                    println!("{:#?}", output);
+                    info!("{:#?}", output);
                 } else {
-                    println!("error: invalid public_address");
+                    error!("error: invalid public_address");
                 }
             } else if input == String::from("5") {
                 invalid_opt_count = 0;
-                println!("Enter block index");
+                info!("Enter block index");
                 let is_index: Option<u64> = get_integer_input(&mut input);
                 match is_index {
                     Some(index) => {
                         let output = client.fetch_block(&index);
-                        println!("{:#?}", output);
+                        info!("{:#?}", output);
                     }
-                    None => println!("error: invalid input for block index"),
+                    None => error!("error: invalid input for block index"),
                 }
             } else if input == String::from("6") {
                 let output = client.fetch_latest_block();
-                println!("{:#?}", output);
+                info!("{:#?}", output);
                 invalid_opt_count = 0;
             } else if input == String::from("7") {
                 let output = client.fetch_blockchain_length();
-                println!("{:#?}", output);
+                info!("{:#?}", output);
                 invalid_opt_count = 0;
             } else if input == String::from("8") {
                 let output: SyncState = client.fetch_sync_state(0);
-                println!("{:?}", output);
+                info!("{:?}", output);
                 invalid_opt_count = 0;
             } else if input == String::from("9") {
                 end_flag = true;
             } else {
-                println!("invalid option");
+                info!("invalid option");
                 invalid_opt_count = invalid_opt_count + 1;
             }
         } else {

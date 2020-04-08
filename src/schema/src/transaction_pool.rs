@@ -239,13 +239,13 @@ where
             if let Some(txn) = signed_txn {
                 let sign_txn = &txn as &dyn StateTraits<T, State, SignedTransaction>;
                 if !sign_txn.execute(state_trie, txn_trie) {
-                    eprintln!(
+                    error!(
                         "transaction execution error (either signature or business logic error)"
                     );
                     return false;
                 }
             } else {
-                eprintln!("transaction couldn't find for block execution");
+                error!("transaction couldn't find for block execution");
                 return false;
             }
         }

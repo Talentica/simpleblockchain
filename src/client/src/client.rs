@@ -3,6 +3,7 @@ use exonum_crypto::Hash;
 use reqwest::{Client, Error};
 use schema::block::SignedBlock;
 use schema::transaction::{SignedTransaction, State};
+use schema::transaction_pool::{TxnPool, TxnPoolKeyType, POOL};
 use std::collections::HashMap;
 use utils::serializer::{deserialize, serialize};
 
@@ -15,7 +16,7 @@ pub struct ClientObj {
 pub struct SyncState {
     pub index: u64,
     pub block_map: HashMap<u64, SignedBlock>,
-    pub txn_map: HashMap<Hash, SignedTransaction>,
+    // pub txn_map: HashMap<Hash, SignedTransaction>,
 }
 
 impl SyncState {
@@ -23,19 +24,19 @@ impl SyncState {
         SyncState {
             index: 0,
             block_map: HashMap::new(),
-            txn_map: HashMap::new(),
+            // txn_map: HashMap::new(),
         }
     }
 
     pub fn new_from(
         index: u64,
         block_map: HashMap<u64, SignedBlock>,
-        txn_map: HashMap<Hash, SignedTransaction>,
+        // txn_map: HashMap<Hash, SignedTransaction>,
     ) -> SyncState {
         SyncState {
             index,
             block_map,
-            txn_map,
+            // txn_map,
         }
     }
 }
@@ -155,11 +156,10 @@ impl ClientObj {
 
     /// this function will sync blockchain state with other peers
     pub fn fetch_sync_state(&self, current_length: u64) -> SyncState {
-        let mut txn_pool: HashMap<Hash, SignedTransaction> = HashMap::new();
         let mut block_pool: HashMap<u64, SignedBlock> = HashMap::new();
         let mut own_chain_length = current_length;
         // let block_threads_vec = vec![];
-        println!("start");
+        debug!("sync-state function called");
         let mut fetch_flag: bool = true;
         let is_blockchain_length: Result<u64, Error> = self.fetch_blockchain_length();
         let blockchain_length: u64 = match is_blockchain_length {
@@ -178,7 +178,7 @@ impl ClientObj {
                 Err(_) => own_chain_length = blockchain_length,
             }
         }
-        println!("fetched blocks count -> {:#?}", block_pool.len());
+        debug!("Block fetched -> {:#?}", block_pool.len());
         while fetch_flag {
             for (_key, value) in block_pool.iter() {
                 for each in value.block.txn_pool.iter() {
@@ -186,7 +186,14 @@ impl ClientObj {
                         self.fetch_confirm_transaction(each);
                     match fetch_txn_output {
                         Ok(txn) => {
-                            txn_pool.insert(each.clone(), txn);
+                            let timestamp = txn
+                                .header
+                                .get(&String::from("timestamp"))
+                                .unwrap()
+                                .parse::<TxnPoolKeyType>()
+                                .unwrap();
+                            POOL.insert_op(&timestamp, &txn);
+                            // txn_pool.insert(each.clone(), txn);
                         }
                         Err(_) => {
                             fetch_flag = false;
@@ -200,6 +207,7 @@ impl ClientObj {
             }
             fetch_flag = false;
         }
-        return SyncState::new_from(blockchain_length, block_pool, txn_pool);
+        debug!("Sync_State --All data fetched");
+        return SyncState::new_from(blockchain_length, block_pool);
     }
 }

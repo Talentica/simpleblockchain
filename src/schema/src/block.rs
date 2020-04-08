@@ -142,7 +142,7 @@ mod tests_blocks {
         let public_key = &hex::encode(kp.public().encode());
         let sign = block.sign(&kp);
         let signed_block: SignedBlock = SignedBlock::create_block(block, sign);
-        println!("{}", signed_block.validate(&public_key));
+        debug!("{}", signed_block.validate(&public_key));
         let prev_hash: Hash = signed_block.get_hash();
         let id = signed_block.block.id;
         let block: Block = Block {
@@ -154,6 +154,6 @@ mod tests_blocks {
         };
         let sign = block.sign(&kp);
         let validate = block.validate(&hex::encode(kp.public().encode()), &sign);
-        println!("{}", validate);
+        debug!("{}", validate);
     }
 }

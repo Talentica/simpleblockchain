@@ -42,8 +42,8 @@ impl ClientObj {
             .send_body(Bytes::from(serialize(&txn))) // <- Send http request
             .await;
         match response {
-            Ok(response) => println!("submit_transaction Status: {:?}", response.status()),
-            Err(e) => eprintln!("Error response: {:?}", e),
+            Ok(response) => info!("submit_transaction Status: {:?}", response.status()),
+            Err(e) => error!("Error response: {:?}", e),
         }
     }
 
@@ -61,18 +61,18 @@ impl ClientObj {
         match result {
             Ok(mut response) => {
                 let resp_body = response.body();
-                println!("fetch_pending_transaction Status: {:?}", response.status());
+                info!("fetch_pending_transaction Status: {:?}", response.status());
                 if response.status() == 200 {
                     match resp_body.await {
                         Ok(txnbody) => {
                             let signed_transaction: SignedTransaction = deserialize(&txnbody);
-                            println!("{:#?}", signed_transaction.txn);
+                            info!("{:#?}", signed_transaction.txn);
                         }
-                        Err(e) => println!("Error body: {:?}", e),
+                        Err(e) => error!("Error body: {:?}", e),
                     }
                 }
             }
-            Err(e) => println!("Error response: {:?}", e),
+            Err(e) => error!("Error response: {:?}", e),
         }
     }
 
@@ -91,19 +91,19 @@ impl ClientObj {
         match result {
             Ok(mut response) => {
                 let resp_body = response.body();
-                println!("fetch_state Status: {:?}", response.status());
+                info!("fetch_state Status: {:?}", response.status());
                 if response.status() == 200 {
                     match resp_body.await {
                         Ok(state) => {
                             let ret_txn: Vec<u8> = deserialize(&state);
                             let state: State = deserialize(ret_txn.as_slice());
-                            println!("{:#?}", state);
+                            info!("{:#?}", state);
                         }
-                        Err(e) => println!("Error body: {:?}", e),
+                        Err(e) => error!("Error body: {:?}", e),
                     }
                 }
             }
-            Err(e) => println!("Error response: {:?}", e),
+            Err(e) => error!("Error response: {:?}", e),
         }
     }
 
@@ -122,18 +122,18 @@ impl ClientObj {
         match result {
             Ok(mut response) => {
                 let resp_body = response.body();
-                println!("fetch_block Status: {:?}", response.status());
+                info!("fetch_block Status: {:?}", response.status());
                 if response.status() == 200 {
                     match resp_body.await {
                         Ok(state) => {
                             let fetched_block: String = deserialize(&state);
-                            println!("{:#?}", fetched_block);
+                            info!("{:#?}", fetched_block);
                         }
-                        Err(e) => println!("Error body: {:?}", e),
+                        Err(e) => error!("Error body: {:?}", e),
                     }
                 }
             }
-            Err(e) => println!("Error response: {:?}", e),
+            Err(e) => error!("Error response: {:?}", e),
         }
     }
 
@@ -152,18 +152,18 @@ impl ClientObj {
         match result {
             Ok(mut response) => {
                 let resp_body = response.body();
-                println!("fetch_confirm_transaction Status: {:?}", response.status());
+                info!("fetch_confirm_transaction Status: {:?}", response.status());
                 if response.status() == 200 {
                     match resp_body.await {
                         Ok(txnbody) => {
                             let signed_transaction: SignedTransaction = deserialize(&txnbody);
-                            println!("{:#?}", signed_transaction);
+                            info!("{:#?}", signed_transaction);
                         }
-                        Err(e) => eprintln!("Error body: {:?}", e),
+                        Err(e) => error!("Error body: {:?}", e),
                     }
                 }
             }
-            Err(e) => eprintln!("Error response: {:?}", e),
+            Err(e) => error!("Error response: {:?}", e),
         }
     }
 
@@ -182,18 +182,18 @@ impl ClientObj {
         match result {
             Ok(mut response) => {
                 let resp_body = response.body();
-                println!("fetch_block Status: {:?}", response.status());
+                info!("fetch_block Status: {:?}", response.status());
                 if response.status() == 200 {
                     match resp_body.await {
                         Ok(state) => {
                             let fetched_block: String = deserialize(&state);
-                            eprintln!("{:#?}", fetched_block);
+                            error!("{:#?}", fetched_block);
                         }
-                        Err(e) => eprintln!("Error body: {:?}", e),
+                        Err(e) => error!("Error body: {:?}", e),
                     }
                 }
             }
-            Err(e) => eprintln!("Error response: {:?}", e),
+            Err(e) => error!("Error response: {:?}", e),
         }
     }
 
@@ -212,7 +212,7 @@ impl ClientObj {
         match result {
             Ok(mut response) => {
                 let resp_body = response.body();
-                println!("fetch_state Status: {:?}", response.status());
+                info!("fetch_state Status: {:?}", response.status());
                 if response.status() == 200 {
                     match resp_body.await {
                         Ok(state) => {
@@ -229,7 +229,7 @@ impl ClientObj {
                 }
             }
             Err(e) => {
-                eprintln!("Error response: {:?}", e);
+                error!("Error response: {:?}", e);
                 return None;
             }
         }

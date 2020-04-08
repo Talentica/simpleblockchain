@@ -36,14 +36,14 @@ impl<TSubstream: AsyncRead + AsyncWrite> NetworkBehaviourEventProcess<MdnsEvent>
     fn inject_event(&mut self, mdns_event: MdnsEvent) {
         match mdns_event {
             MdnsEvent::Discovered(discovered_nodes) => {
-                // println!("Discovered address {:?}", discovered_nodes);
+                debug!("Discovered address {:?}", discovered_nodes);
                 for (peer_id, _) in discovered_nodes {
-                    //println!("peer discovered {}", peer_id);
+                    debug!("peer discovered {}", peer_id);
                     self.floodsub.add_node_to_partial_view(peer_id);
                 }
             }
             MdnsEvent::Expired(expired_nodes) => {
-                println!("Expired address {:?}", expired_nodes);
+                debug!("Expired address {:?}", expired_nodes);
                 for (peer_id, _) in expired_nodes {
                     self.floodsub.remove_node_from_partial_view(&peer_id);
                 }
@@ -58,23 +58,23 @@ impl<TSubstream: AsyncRead + AsyncWrite> NetworkBehaviourEventProcess<FloodsubEv
     fn inject_event(&mut self, pubsub_event: FloodsubEvent) {
         match pubsub_event {
             FloodsubEvent::Message(msg) => {
-                // println!(
-                //     "Message received from {:?}, msg topic {:?}",
-                //     msg.source, msg.topics
-                // );
+                debug!(
+                    "Message received from {:?}, msg topic {:?}",
+                    msg.source, msg.topics
+                );
                 msg.process(&msg.topics, &msg.data);
             }
             FloodsubEvent::Subscribed {
                 peer_id: _,
                 topic: _,
             } => {
-                //println!("subscribed by peer {:?} topic {:?}", peer_id, topic);
+                // debug!("subscribed by peer {:?} topic {:?}", peer_id, topic);
             }
             FloodsubEvent::Unsubscribed {
                 peer_id: _,
                 topic: _,
             } => {
-                //println!("unsubscribed by peer {:?} topic {:?}", peer_id, topic);
+                // debug!("unsubscribed by peer {:?} topic {:?}", peer_id, topic);
             }
         }
     }

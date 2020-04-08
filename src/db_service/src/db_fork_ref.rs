@@ -12,7 +12,7 @@ use exonum_merkledb::{
 use generic_traits::traits::PoolTrait;
 use schema::block::{Block, BlockTraits, SignedBlock, SignedBlockTraits};
 use schema::transaction::{SignedTransaction, State};
-use schema::transaction_pool::{TransactionPool, TxnPool, TxnPoolKeyType, POOL};
+use schema::transaction_pool::{TransactionPool, POOL};
 use utils::keypair::{CryptoKeypair, Keypair, KeypairType, PublicKey, Verify};
 use utils::serializer::serialize;
 
@@ -88,15 +88,9 @@ where
             let mut txn_pool = POOL.pool.lock().unwrap();
             executed_txns = self.execute_transactions(&mut txn_pool);
         }
-        // println!(
-        //     "length {:?} {:?}",
-        //     txn_pool.length_hash_pool(),
-        //     txn_pool.length_order_pool()
-        // );
-        println!("txn count in proposed block {}", executed_txns.len());
+        debug!("txn count in proposed block {}", executed_txns.len());
         let length = self.block_list.len();
         let last_block: SignedBlock = self.block_list.get(length - 1).unwrap();
-        // println!("{:?}", last_block);
         let prev_hash = last_block.object_hash();
         let header: [Hash; 3] = [
             self.state_trie_merkle_hash(),
@@ -127,7 +121,7 @@ where
         let length = self.block_list.len();
         // block height check
         if signed_block.block.id != length {
-            eprintln!(
+            error!(
                 "block length error block height {} blockchain height {}",
                 signed_block.block.id, length
             );
@@ -141,38 +135,27 @@ where
             &msg,
             &signed_block.signature,
         ) {
-            eprintln!("block signature couldn't verified");
+            error!("block signature couldn't verified");
             return false;
         }
 
         // genesis block check
         if signed_block.block.id == 0 {
-            // let executed_txns = &signed_block.block.txn_pool;
-            // for each in executed_txns.iter() {
-            //     let signed_txn = txn_pool.get(each);
-            //     if let Some(txn) = signed_txn {
-            //         self.txn_trie.put(each, txn.clone());
-            //         self.execute_genesis_transactions(&txn);
-            //     } else {
-            //         eprintln!("block transaction execution error");
-            //         return false;
-            //     }
-            // }
             let header: [Hash; 3] = [
                 self.state_trie_merkle_hash(),
                 self.storage_trie_merkle_hash(),
                 self.txn_trie_merkle_hash(),
             ];
             if header[0] != signed_block.block.header[0] {
-                eprintln!("block header state_trie merkle root error");
+                error!("block header state_trie merkle root error");
                 return false;
             }
             if header[1] != signed_block.block.header[1] {
-                eprintln!("block header storage_trie merkle root error");
+                error!("block header storage_trie merkle root error");
                 return false;
             }
             if header[2] != signed_block.block.header[2] {
-                eprintln!("block header transaction_trie merkle root error");
+                error!("block header transaction_trie merkle root error");
                 return false;
             }
             self.block_list.push(signed_block.clone());
@@ -182,7 +165,7 @@ where
             let last_block: SignedBlock = self.block_list.get(length - 1).unwrap();
             let prev_hash = last_block.object_hash();
             if signed_block.block.prev_hash != prev_hash {
-                eprintln!(
+                error!(
                     "block prev_hash error block prev_hash {}, blockchain root {}",
                     signed_block.block.prev_hash, prev_hash
                 );
@@ -193,7 +176,7 @@ where
             {
                 let txn_pool = POOL.pool.lock().unwrap();
                 if !self.update_transactions(&txn_pool, &signed_block.block.txn_pool) {
-                    eprintln!("block txn_pool couldn't updated, block declined");
+                    error!("block txn_pool couldn't updated, block declined");
                     return false;
                 }
             }
@@ -205,15 +188,15 @@ where
                 self.txn_trie_merkle_hash(),
             ];
             if header[0] != signed_block.block.header[0] {
-                eprintln!("block header state_trie merkle root error");
+                error!("block header state_trie merkle root error");
                 return false;
             }
             if header[1] != signed_block.block.header[1] {
-                eprintln!("block header storage_trie merkle root error");
+                error!("block header storage_trie merkle root error");
                 return false;
             }
             if header[2] != signed_block.block.header[2] {
-                eprintln!("block header transaction_trie merkle root error");
+                error!("block header transaction_trie merkle root error");
                 return false;
             }
             self.block_list.push(signed_block.clone());
@@ -233,15 +216,6 @@ where
             return false;
         }
         block_fetch_flag = true;
-        for (_, txn) in sync_data.txn_map.iter() {
-            let timestamp = txn
-                .header
-                .get(&String::from("timestamp"))
-                .unwrap()
-                .parse::<TxnPoolKeyType>()
-                .unwrap();
-            POOL.insert_op(&timestamp, txn);
-        }
         while own_chain_length < sync_data.index {
             match sync_data.block_map.get(&own_chain_length) {
                 Some(signed_block) => {
@@ -285,7 +259,7 @@ mod test_db_service {
             schema.initialize_db(&keypair);
         }
         patch_db(fork);
-        println!("block proposal testing");
+        debug!("block proposal testing");
         let fork = fork_db();
         {
             for _ in 1..10 {
@@ -297,7 +271,7 @@ mod test_db_service {
             }
             let mut schema = SchemaFork::new(&fork);
             let block = schema.create_block(&keypair);
-            println!("{:?}", block);
+            debug!("{:?}", block);
         }
     }
 }

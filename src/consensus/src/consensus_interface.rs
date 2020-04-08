@@ -134,12 +134,12 @@ impl Consensus {
             let msg: ElectionPing =
                 ElectionPing::create(&meta_data_locked.kp, self.round_number + 1);
             MessageSender::send_election_ping_msg(sender, msg);
-            println!("pinging for block number {}", self.round_number + 1);
+            info!("pinging for block number {}", self.round_number + 1);
         }
         {
             let mut schema = SchemaFork::new(&fork);
             let signed_block = schema.create_block(&self.keypair);
-            println!("new block created.. hash {}", signed_block.object_hash());
+            info!("new block created.. hash {}", signed_block.object_hash());
             POOL.sync_pool(&signed_block.block.txn_pool);
             self.round_number = signed_block.block.id;
             MessageSender::send_block_msg(sender, signed_block);
@@ -165,7 +165,7 @@ impl Consensus {
                     match rx.lock().unwrap().poll_next_unpin(cx) {
                         Poll::Ready(Some(msg)) => {
                             match msg {
-                                None => println!("Empty msg received !"),
+                                None => info!("Empty msg received !"),
                                 Some(msgtype) => {
                                     match msgtype {
                                         ConsensusMessageTypes::LeaderElect(data) => {
@@ -186,7 +186,7 @@ impl Consensus {
                                                         .new_leader
                                                         .clone(),
                                                 );
-                                                println!(
+                                                debug!(
                                                     "New Leader for block height {} {} -> ",
                                                     new_leader_obj.leader_payload.block_height,
                                                     new_leader_obj.leader_payload.new_leader,
@@ -211,12 +211,19 @@ impl Consensus {
                                                         &mut meta_data_locked.sender,
                                                         election_pong,
                                                     );
-                                                    println!(
+                                                    debug!(
                                                         "Ping message from  {} for height {} -> ",
                                                         election_ping.payload.public_key,
                                                         election_ping.payload.height,
                                                     );
+                                                } else {
+                                                    warn!(
+                                                        "Election Ping data tempered {}",
+                                                        election_ping.payload.height
+                                                    );
                                                 }
+                                            } else {
+                                                warn!("Election Ping data from malicious node");
                                             }
                                         }
                                         ConsensusMessageTypes::ConsensusPong(data) => {
@@ -233,12 +240,23 @@ impl Consensus {
                                                     meta_data_locked.active_node.push(
                                                         election_pong.payload.may_be_leader.clone(),
                                                     );
-                                                    println!(
+                                                    debug!(
                                                         "Pong message received from  {} for height {} -> ",
                                                         election_pong.payload.may_be_leader,
                                                         election_pong.payload.height,
                                                     );
+                                                } else {
+                                                    warn!(
+                                                        "Election Ping data tempered {}",
+                                                        election_pong.payload.may_be_leader
+                                                    );
                                                 }
+                                            } else {
+                                                warn!(
+                                                    "Election Pong data tempered {} {}",
+                                                    election_pong.payload.may_be_leader,
+                                                    election_pong.payload.current_leader
+                                                );
                                             }
                                         }
                                     }
@@ -246,7 +264,7 @@ impl Consensus {
                             }
                         }
                         Poll::Ready(None) => {
-                            println!("channel closed !");
+                            debug!("channel closed !");
                             return Poll::Ready(1);
                         }
                         Poll::Pending => break,

@@ -89,7 +89,6 @@ impl ClientController {
     pub fn new(host: &String, port: u32) -> Self {
         //to enable logging use below setting
         std::env::set_var("RUST_LOG", "actix_web=info,actix_server=trace");
-        env_logger::init();
         let addr = format!("{}:{}", host, port)
             .to_socket_addrs()
             .expect("Unable to resolve the address")
@@ -105,7 +104,7 @@ impl ClientController {
 impl Controller for ClientController {
     fn start(&mut self, sender: Sender<Option<MessageTypes>>) -> bool {
         let sys = System::new("TransactionService");
-        println!("Starting api_service at {:?}", self.srvr_addr);
+        debug!("Starting api_service at {:?}", self.srvr_addr);
         let app_data = web::Data::new(Mutex::new(AppState { txn_sender: sender }));
         self.srvr = Some(
             HttpServer::new(move || {

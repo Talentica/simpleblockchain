@@ -111,13 +111,13 @@ pub fn get_bool_input(input: &mut String) -> Option<bool> {
 fn validate_payload_for_set_hash() -> Option<Vec<DataTypes>> {
     let mut fxn_arguments: Vec<DataTypes> = Vec::new();
     let mut input = String::new();
-    println!("Please enter NFT hash:");
+    info!("Please enter NFT hash:");
     let option_txn_hash: Option<Hash> = get_hash_input(&mut input);
     match option_txn_hash {
         Some(txn_hash) => fxn_arguments.push(DataTypes::HashVal(txn_hash)),
         None => return None,
     }
-    println!("Please enter NFT doc hash:");
+    info!("Please enter NFT doc hash:");
     let option_txn_hash: Option<Hash> = get_hash_input(&mut input);
     match option_txn_hash {
         Some(txn_hash) => fxn_arguments.push(DataTypes::HashVal(txn_hash)),
@@ -129,13 +129,13 @@ fn validate_payload_for_set_hash() -> Option<Vec<DataTypes>> {
 fn validate_payload_for_add_doc() -> Option<Vec<DataTypes>> {
     let mut fxn_arguments: Vec<DataTypes> = Vec::new();
     let mut input = String::new();
-    println!("Please enter Doc hash count:");
+    info!("Please enter Doc hash count:");
     let is_count = get_integer_input(&mut input);
     match is_count {
         Some(count) => {
             let mut hash_vec: Vec<Hash> = Vec::new();
             for _ in 0..count {
-                println!("Please enter NFT hash:");
+                info!("Please enter NFT hash:");
                 let option_txn_hash: Option<Hash> = get_hash_input(&mut input);
                 match option_txn_hash {
                     Some(txn_hash) => hash_vec.push(txn_hash),
@@ -152,13 +152,13 @@ fn validate_payload_for_add_doc() -> Option<Vec<DataTypes>> {
 fn validate_payload_for_transfer_sc() -> Option<Vec<DataTypes>> {
     let mut fxn_arguments: Vec<DataTypes> = Vec::new();
     let mut input = String::new();
-    println!("Please enter Doc hash count:");
+    info!("Please enter Doc hash count:");
     let is_count = get_integer_input(&mut input);
     match is_count {
         Some(count) => {
             let mut hash_vec: Vec<Hash> = Vec::new();
             for _ in 0..count {
-                println!("Please enter NFT hash:");
+                info!("Please enter NFT hash:");
                 let option_txn_hash: Option<Hash> = get_hash_input(&mut input);
                 match option_txn_hash {
                     Some(txn_hash) => hash_vec.push(txn_hash),
@@ -169,7 +169,7 @@ fn validate_payload_for_transfer_sc() -> Option<Vec<DataTypes>> {
         }
         None => return None,
     }
-    println!("Please enter SC public_key:");
+    info!("Please enter SC public_key:");
     let is_pk: bool = get_public_key_input(&mut input);
     if is_pk {
         fxn_arguments.push(DataTypes::StringVal(input));
@@ -182,13 +182,13 @@ fn validate_payload_for_transfer_sc() -> Option<Vec<DataTypes>> {
 fn validate_payload_for_set_pkg_no() -> Option<Vec<DataTypes>> {
     let mut fxn_arguments: Vec<DataTypes> = Vec::new();
     let mut input = String::new();
-    println!("Please enter Doc hash count:");
+    info!("Please enter Doc hash count:");
     let is_count = get_integer_input(&mut input);
     match is_count {
         Some(count) => {
             let mut hash_vec: Vec<Hash> = Vec::new();
             for _ in 0..count {
-                println!("Please enter NFT hash:");
+                info!("Please enter NFT hash:");
                 let option_txn_hash: Option<Hash> = get_hash_input(&mut input);
                 match option_txn_hash {
                     Some(txn_hash) => hash_vec.push(txn_hash),
@@ -199,7 +199,7 @@ fn validate_payload_for_set_pkg_no() -> Option<Vec<DataTypes>> {
         }
         None => return None,
     }
-    println!("Please enter package_no for given docs:");
+    info!("Please enter package_no for given docs:");
     let is_pkg_no: bool = get_string_input(&mut input);
     if is_pkg_no {
         fxn_arguments.push(DataTypes::StringVal(input));
@@ -213,7 +213,7 @@ fn validate_payload_for_transfer_for_review() -> Option<Vec<DataTypes>> {
     let mut fxn_arguments: Vec<DataTypes> = Vec::new();
     let mut input = String::new();
 
-    println!("Please enter pkg_no:");
+    info!("Please enter pkg_no:");
     let is_pk: bool = get_string_input(&mut input);
     if is_pk {
         fxn_arguments.push(DataTypes::StringVal(input.clone()));
@@ -221,7 +221,7 @@ fn validate_payload_for_transfer_for_review() -> Option<Vec<DataTypes>> {
         return None;
     }
 
-    println!("Please enter SC public_key:");
+    info!("Please enter SC public_key:");
     let is_pk: bool = get_public_key_input(&mut input);
     if is_pk {
         fxn_arguments.push(DataTypes::StringVal(input));
@@ -235,7 +235,7 @@ fn validate_payload_for_review_docs() -> Option<Vec<DataTypes>> {
     let mut fxn_arguments: Vec<DataTypes> = Vec::new();
     let mut input = String::new();
 
-    println!("Please enter pkg_no:");
+    info!("Please enter pkg_no:");
     let is_pk: bool = get_string_input(&mut input);
     if is_pk {
         fxn_arguments.push(DataTypes::StringVal(input.clone()));
@@ -243,7 +243,7 @@ fn validate_payload_for_review_docs() -> Option<Vec<DataTypes>> {
         return None;
     }
 
-    println!("Please enter reviewed value (yes or no)(true or false) :");
+    info!("Please enter reviewed value (yes or no)(true or false) :");
     let is_bool: Option<bool> = get_bool_input(&mut input);
     match is_bool {
         Some(bool_val) => fxn_arguments.push(DataTypes::BoolVal(bool_val)),
@@ -255,7 +255,7 @@ fn validate_payload_for_review_docs() -> Option<Vec<DataTypes>> {
 fn validate_payload_for_publish_docs() -> Option<Vec<DataTypes>> {
     let mut fxn_arguments: Vec<DataTypes> = Vec::new();
     let mut input = String::new();
-    println!("Please enter pkg_no:");
+    info!("Please enter pkg_no:");
     let is_string: bool = get_string_input(&mut input);
     if is_string {
         fxn_arguments.push(DataTypes::StringVal(input.clone()));
@@ -269,14 +269,14 @@ pub fn create_transaction(kp: &KeypairType) -> Option<SignedTransaction> {
     let mut crypto_transaction: CryptoTransaction = CryptoTransaction::generate(kp);
     crypto_transaction.payload.clear();
     let mut input = String::new();
-    println!("1): Set_Hash transaction");
-    println!("2): Add_Doc transaction");
-    println!("3): Transfer_SC transaction");
-    println!("4): Set_Pkg_No transaction");
-    println!("5): Transfer_For_Review transaction");
-    println!("6): Review_Docs transaction");
-    println!("7): Publish_Docs transaction");
-    println!("Please select transaction_type:");
+    info!("1): Set_Hash transaction");
+    info!("2): Add_Doc transaction");
+    info!("3): Transfer_SC transaction");
+    info!("4): Set_Pkg_No transaction");
+    info!("5): Transfer_For_Review transaction");
+    info!("6): Review_Docs transaction");
+    info!("7): Publish_Docs transaction");
+    info!("Please select transaction_type:");
     match io::stdin().read_line(&mut input) {
         Ok(_) => {
             remove_trailing_newline(&mut input);
@@ -337,12 +337,12 @@ pub fn create_transaction(kp: &KeypairType) -> Option<SignedTransaction> {
                     None => return None,
                 }
             } else {
-                println!("invalid option");
+                info!("invalid option");
                 return None;
             }
         }
         Err(error) => {
-            eprintln!("error: {}", error);
+            error!("error: {}", error);
             return None;
         }
     }

@@ -54,7 +54,6 @@ impl Verify<PublicKeyType> for PublicKey {
     }
 
     fn verify_from_encoded_pk(public: &String, msg: &[u8], signature: &[u8]) -> bool {
-        // println!("decoding");
         let decode_public_key = match hex::decode(public) {
             Ok(decode_public_key) => decode_public_key,
             Err(_e) => return false,
@@ -64,7 +63,6 @@ impl Verify<PublicKeyType> for PublicKey {
             Ok(public_key) => public_key,
             Err(_e) => return false,
         };
-        // println!("decoded");
         public_key.verify(msg, signature)
     }
 }
@@ -88,8 +86,8 @@ mod tests {
         let s = "5f7c3fadd1e2f6225d0da8ee5c5a4435acbf6ef7c3fa543dd16e2544f624442f";
         let mut secret_bytes = hex::decode(s).expect("invalid secret");
         let kp = Keypair::generate_from(secret_bytes.as_mut_slice());
-        println!("pub : {:?}", hex::encode(Keypair::public(&kp).encode()));
-        // println!("secrete {:?}", hex::encode(kp.secret().as_ref()));
+        debug!("pub : {:?}", hex::encode(Keypair::public(&kp).encode()));
+        // debug!("secrete {:?}", hex::encode(kp.secret().as_ref()));
         let sign = Keypair::sign(&kp, b"Hello World");
         assert_eq!(
             true,
