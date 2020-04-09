@@ -8,7 +8,7 @@ appenders:
       pattern: "{d(%+)(local)} [{t}] {h({l})} {M}:{m}{n}"
     filters:
     - kind: threshold
-      level: debug
+      level: info
 
   rolling_file_appender:
     kind: rolling_file
@@ -18,7 +18,7 @@ appenders:
       pattern: "{d} {l} {m}{n}"
     filters:
     - kind: threshold
-      level: debug
+      level: info
     policy:
       # Identifies which policy is to be used. If no kind is specified, it will
       # default to "compound".
@@ -36,7 +36,7 @@ appenders:
         count: 5
         
 root:
-  level: debug
+  level: info
   appenders:
   - console_appender
   - rolling_file_appender

@@ -186,7 +186,7 @@ impl Consensus {
                                                         .new_leader
                                                         .clone(),
                                                 );
-                                                debug!(
+                                                info!(
                                                     "New Leader for block height {} {} -> ",
                                                     new_leader_obj.leader_payload.block_height,
                                                     new_leader_obj.leader_payload.new_leader,
@@ -211,7 +211,7 @@ impl Consensus {
                                                         &mut meta_data_locked.sender,
                                                         election_pong,
                                                     );
-                                                    debug!(
+                                                    info!(
                                                         "Ping message from  {} for height {} -> ",
                                                         election_ping.payload.public_key,
                                                         election_ping.payload.height,
@@ -223,6 +223,11 @@ impl Consensus {
                                                     );
                                                 }
                                             } else {
+                                                info!(
+                                                    "public_keys {:?} key {:?}",
+                                                    meta_data_locked.public_keys,
+                                                    election_ping.payload.public_key
+                                                );
                                                 warn!("Election Ping data from malicious node");
                                             }
                                         }
@@ -240,7 +245,7 @@ impl Consensus {
                                                     meta_data_locked.active_node.push(
                                                         election_pong.payload.may_be_leader.clone(),
                                                     );
-                                                    debug!(
+                                                    info!(
                                                         "Pong message received from  {} for height {} -> ",
                                                         election_pong.payload.may_be_leader,
                                                         election_pong.payload.height,
@@ -252,6 +257,12 @@ impl Consensus {
                                                     );
                                                 }
                                             } else {
+                                                info!(
+                                                    "public_keys {:?} current_leader {:?} may_be_leader {:?}",
+                                                    meta_data_locked.public_keys,
+                                                    election_pong.payload.current_leader,
+                                                    election_pong.payload.may_be_leader,
+                                                );
                                                 warn!(
                                                     "Election Pong data tempered {} {}",
                                                     election_pong.payload.may_be_leader,
@@ -264,7 +275,7 @@ impl Consensus {
                             }
                         }
                         Poll::Ready(None) => {
-                            debug!("channel closed !");
+                            info!("channel closed !");
                             return Poll::Ready(1);
                         }
                         Poll::Pending => break,
@@ -345,7 +356,7 @@ impl Consensus {
 
         let consensus_meta_data = MetaData {
             active_node: vec![],
-            public_keys: vec![],
+            public_keys: consensus_obj.public_keys.clone(),
             kp: config.node.keypair.clone(),
             sender: sender.clone(),
         };

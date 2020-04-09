@@ -59,7 +59,7 @@ impl Message for SignedLeaderElection {
     const TOPIC: &'static str = CONSENSUS_MSG_TOPIC_STR[0];
     const MODULE_TOPIC: &'static str = constants::CONSENSUS;
     fn handler(&self) {
-        debug!("i am LeaderElection handler");
+        info!("i am LeaderElection handler");
     }
 }
 
@@ -153,7 +153,7 @@ impl Message for ElectionPing {
     const TOPIC: &'static str = CONSENSUS_MSG_TOPIC_STR[1];
     const MODULE_TOPIC: &'static str = constants::CONSENSUS;
     fn handler(&self) {
-        debug!("i am ElectionPing handler");
+        info!("i am ElectionPing handler");
     }
 }
 
@@ -161,7 +161,7 @@ impl Message for ElectionPong {
     const TOPIC: &'static str = CONSENSUS_MSG_TOPIC_STR[2];
     const MODULE_TOPIC: &'static str = constants::CONSENSUS;
     fn handler(&self) {
-        debug!("i am ElectionPing handler");
+        info!("i am ElectionPing handler");
     }
 }
 
@@ -169,7 +169,7 @@ impl Message for SignedTransaction {
     const TOPIC: &'static str = NODE_MSG_TOPIC_STR[0];
     const MODULE_TOPIC: &'static str = constants::NODE;
     fn handler(&self) {
-        debug!("i am SignedTransaction handler");
+        info!("i am SignedTransaction handler");
     }
 }
 
@@ -177,7 +177,7 @@ impl Message for SignedBlock {
     const TOPIC: &'static str = NODE_MSG_TOPIC_STR[1];
     const MODULE_TOPIC: &'static str = constants::NODE;
     fn handler(&self) {
-        debug!("i am SignedBlock handler");
+        info!("i am SignedBlock handler");
     }
 }
 
@@ -254,7 +254,7 @@ pub trait NodeMsgProcess {
 impl MsgProcess for protocol::FloodsubMessage {
     fn process(&self, topics: &Vec<TopicHash>, data: &Vec<u8>) {
         if topics[0] == TopicBuilder::new(constants::NODE).build().hash().clone() {
-            debug!("NodeMessageTypes data received");
+            info!("NodeMessageTypes data received");
             let deserialize_msg = deserialize::<NodeMessageTypes>(data);
             let result = MSG_DISPATCHER
                 .node_msg_dispatcher
@@ -269,7 +269,7 @@ impl MsgProcess for protocol::FloodsubMessage {
                 .hash()
                 .clone()
         {
-            debug!("ConsensusMessageTypes data received");
+            info!("ConsensusMessageTypes data received");
             let deserialize_msg = deserialize::<ConsensusMessageTypes>(data);
             let result = MSG_DISPATCHER
                 .consensus_msg_dispatcher
@@ -335,12 +335,12 @@ mod test_messages {
         };
         leader_1.hash(&mut hasher);
         leader_2.hash(&mut hasher_1);
-        debug!("Hash is {:x}!", hasher_1.finish());
-        debug!("Hash is {:x}!", hasher.finish());
+        info!("Hash is {:x}!", hasher_1.finish());
+        info!("Hash is {:x}!", hasher.finish());
         if hasher.finish() > hasher_1.finish() {
-            debug!("leader_1");
+            info!("leader_1");
         } else {
-            debug!("leader_2");
+            info!("leader_2");
         }
     }
 }

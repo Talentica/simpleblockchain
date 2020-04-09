@@ -8,10 +8,10 @@ appenders:
       pattern: "{d(%+)(local)} [{t}] {h({l})} {M}:{m}{n}"
     filters:
     - kind: threshold
-      level: debug
+      level: info
 
         
 root:
-  level: debug
+  level: info
   appenders:
   - console_appender

@@ -59,17 +59,17 @@ impl SimpleSwarm {
                 match self.rx.poll_next_unpin(cx) {
                     Poll::Ready(Some(msg)) => {
                         match msg {
-                            None => debug!("empty message !"),
+                            None => info!("empty message !"),
                             Some(msgtype) => match msgtype {
                                 MessageTypes::NodeMsg(data) => {
-                                    debug!("NodeMsg received {:?}", data);
+                                    info!("NodeMsg received {:?}", data);
                                     let msgdata: Vec<u8> = serialize(&data);
                                     let topics: Vec<Topic> =
                                         Vec::<Topic>::from(MessageTypes::NodeMsg(data)); //TODO Find way to get rid of clone
                                     swarm.floodsub.publish_many(topics, msgdata)
                                 }
                                 MessageTypes::ConsensusMsg(data) => {
-                                    debug!("ConsensusMsg received {:?}", data);
+                                    info!("ConsensusMsg received {:?}", data);
                                     let msgdata: Vec<u8> = serialize(&data);
                                     let topics: Vec<Topic> =
                                         Vec::<Topic>::from(MessageTypes::ConsensusMsg(data));
@@ -79,7 +79,7 @@ impl SimpleSwarm {
                         }
                     }
                     Poll::Ready(None) => {
-                        debug!("channel closed !");
+                        info!("channel closed !");
                         return Poll::Ready(Ok(()));
                         // Poll::Ready(());
                     }
@@ -89,12 +89,12 @@ impl SimpleSwarm {
 
             loop {
                 match swarm.poll_next_unpin(cx) {
-                    Poll::Ready(Some(event)) => debug!("{:?}", event),
+                    Poll::Ready(Some(event)) => info!("{:?}", event),
                     Poll::Ready(None) => return Poll::Ready(Ok(())),
                     Poll::Pending => {
                         if !listening {
                             if let Some(a) = Swarm::listeners(&swarm).next() {
-                                debug!("Listening on {:?}", a);
+                                info!("Listening on {:?}", a);
                                 listening = true;
                             }
                         }

@@ -73,8 +73,8 @@ mod test_state {
     pub fn test_states() {
         use super::*;
         let mut state = State::new();
-        debug!("{:?}", state);
+        info!("{:?}", state);
         state.balance = 10;
-        debug!("{:?}", state);
+        info!("{:?}", state);
     }
 }

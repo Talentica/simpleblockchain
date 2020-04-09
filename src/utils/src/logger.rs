@@ -1,8 +1,6 @@
 extern crate chrono;
 extern crate env_logger;
 
-use chrono::Local;
-use env_logger::Builder;
 use log::LevelFilter;
 use log4rs::append::rolling_file::policy::compound::roll::fixed_window::FixedWindowRoller;
 use log4rs::append::rolling_file::policy::compound::{trigger::size::SizeTrigger, CompoundPolicy};
@@ -10,8 +8,6 @@ use log4rs::append::rolling_file::RollingFileAppender;
 use log4rs::config::{Appender, Config, Root};
 use log4rs::encode::pattern::PatternEncoder;
 use log4rs::init_file;
-
-use std::io::Write;
 
 pub fn file_logger_init_from_yml(file_path: &String) {
     init_file(file_path, Default::default()).unwrap();
@@ -47,7 +43,7 @@ pub fn file_logger_init() {
 
     let is_init_config = log4rs::init_config(config);
     if is_init_config.is_ok() {
-        debug!("Logger configuration initialized");
+        info!("Logger configuration initialized");
     } else {
         panic!("Error in log init_config function");
     }

@@ -104,7 +104,7 @@ impl ClientController {
 impl Controller for ClientController {
     fn start(&mut self, sender: Sender<Option<MessageTypes>>) -> bool {
         let sys = System::new("TransactionService");
-        debug!("Starting api_service at {:?}", self.srvr_addr);
+        info!("Starting api_service at {:?}", self.srvr_addr);
         let app_data = web::Data::new(Mutex::new(AppState { txn_sender: sender }));
         self.srvr = Some(
             HttpServer::new(move || {

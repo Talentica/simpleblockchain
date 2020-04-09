@@ -29,7 +29,7 @@ fn validator_process() {
     let config: &Configuration = &configreader::GLOBAL_CONFIG;
     let pk: PublicKey = PublicKey::Ed25519(config.node.public.clone());
     let peer_id = PeerId::from_public_key(pk);
-    debug!("peer id = {:?}", peer_id);
+    info!("peer id = {:?}", peer_id);
     let mut swarm = SimpleSwarm::new();
     for each in NODE_MSG_TOPIC_STR {
         swarm.topic_list.push(String::from(each.clone()));
@@ -68,9 +68,9 @@ fn validator_process() {
     let port_from_config = config.node.client_port;
     let host_from_config = config.node.client_host.clone();
     let mut api_service = ClientController::new(&host_from_config, port_from_config);
-    debug!("Starting api_service");
+    info!("Starting api_service");
     api_service.start(txn_sender);
-    debug!("Started api_service");
+    info!("Started api_service");
 
     //On pressing ctrl-C, the boolean variable terminate will be set to 'true' in ctrlc handler and
     //the thread execution counter will come out of the loop. If we need to join on any thread,
@@ -79,7 +79,7 @@ fn validator_process() {
     while !terminate.load(Ordering::SeqCst) {
         std::thread::park();
     }
-    debug!("Stopping REST End Point");
+    info!("Stopping REST End Point");
     api_service.stop(); //blocking call
 }
 
@@ -114,7 +114,7 @@ fn register_signals(terminate: Arc<AtomicBool>) {
 
 fn main() {
     file_logger_init_from_yml(&String::from("log.yml"));
-    debug!("Node Bootstrapping");
+    info!("Node Bootstrapping");
     let config: &Configuration = &configreader::GLOBAL_CONFIG;
     match config.node.node_type {
         NODETYPE::Validator => {

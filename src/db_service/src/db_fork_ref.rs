@@ -88,7 +88,7 @@ where
             let mut txn_pool = POOL.pool.lock().unwrap();
             executed_txns = self.execute_transactions(&mut txn_pool);
         }
-        debug!("txn count in proposed block {}", executed_txns.len());
+        info!("txn count in proposed block {}", executed_txns.len());
         let length = self.block_list.len();
         let last_block: SignedBlock = self.block_list.get(length - 1).unwrap();
         let prev_hash = last_block.object_hash();
@@ -259,7 +259,7 @@ mod test_db_service {
             schema.initialize_db(&keypair);
         }
         patch_db(fork);
-        debug!("block proposal testing");
+        info!("block proposal testing");
         let fork = fork_db();
         {
             for _ in 1..10 {
@@ -271,7 +271,7 @@ mod test_db_service {
             }
             let mut schema = SchemaFork::new(&fork);
             let block = schema.create_block(&keypair);
-            debug!("{:?}", block);
+            info!("{:?}", block);
         }
     }
 }

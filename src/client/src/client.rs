@@ -159,7 +159,7 @@ impl ClientObj {
         let mut block_pool: HashMap<u64, SignedBlock> = HashMap::new();
         let mut own_chain_length = current_length;
         // let block_threads_vec = vec![];
-        debug!("sync-state function called");
+        info!("sync-state function called");
         let mut fetch_flag: bool = true;
         let is_blockchain_length: Result<u64, Error> = self.fetch_blockchain_length();
         let blockchain_length: u64 = match is_blockchain_length {
@@ -178,7 +178,7 @@ impl ClientObj {
                 Err(_) => own_chain_length = blockchain_length,
             }
         }
-        debug!("Block fetched -> {:#?}", block_pool.len());
+        info!("Block fetched -> {:#?}", block_pool.len());
         while fetch_flag {
             for (_key, value) in block_pool.iter() {
                 for each in value.block.txn_pool.iter() {
@@ -207,7 +207,7 @@ impl ClientObj {
             }
             fetch_flag = false;
         }
-        debug!("Sync_State --All data fetched");
+        info!("Sync_State --All data fetched");
         return SyncState::new_from(blockchain_length, block_pool);
     }
 }

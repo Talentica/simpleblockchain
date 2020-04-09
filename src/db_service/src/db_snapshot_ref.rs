@@ -117,19 +117,19 @@ mod test_db_service {
         let snapshot = snapshot_db();
         {
             let schema = SchemaSnap::new(&snapshot);
-            debug!("----printing details----");
-            debug!("block chain length {}", schema.get_blockchain_length());
-            debug!(
+            info!("----printing details----");
+            info!("block chain length {}", schema.get_blockchain_length());
+            info!(
                 "block chain root block hash {}",
                 schema.get_root_block_hash()
             );
-            debug!(
+            info!(
                 "transaction_trie_hash {}",
                 schema.get_transaction_trie_hash()
             );
-            debug!("state_trie_hash {}", schema.get_state_trie_hash());
-            debug!("storage_trie_hash {}", schema.get_storage_trie_hash());
-            debug!("user state {:?}", schema.get_state(public_key));
+            info!("state_trie_hash {}", schema.get_state_trie_hash());
+            info!("storage_trie_hash {}", schema.get_storage_trie_hash());
+            info!("user state {:?}", schema.get_state(public_key));
         }
     }
 }

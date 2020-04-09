@@ -36,16 +36,16 @@ mod tests_db_layer {
             let value: String = String::from("value_string");
             let key: String = String::from("key_string");
             mut_index.put(&key, value.clone());
-            debug!("added in database {}", key);
+            info!("added in database {}", key);
             // mut_index.clear();
         }
         patch_db(fork);
         let snapshot = snapshot_db();
         {
             let mut_index: ProofMapIndex<_, String, String> = snapshot.get_proof_map(name);
-            debug!(" data from snapshot");
+            info!(" data from snapshot");
             for (_key, _value) in mut_index.iter() {
-                debug!("{} {:?} ", _key, _value);
+                info!("{} {:?} ", _key, _value);
             }
         }
     }

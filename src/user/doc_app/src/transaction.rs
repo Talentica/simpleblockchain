@@ -216,11 +216,11 @@ where
         };
         let flag: bool = state.set_hash(token_id, file_hash);
         if !flag {
-            debug!("operation set_hash failed");
+            info!("operation set_hash failed");
             return false;
         }
         state_trie.put(&STATE_KEY.to_string(), serialize(&state));
-        debug!("operation set_hash done");
+        info!("operation set_hash done");
         true
     }
 
@@ -541,7 +541,7 @@ where
             token.status = DocStatus::Publish;
             state.replace_nft_token(each.clone(), token);
         }
-        debug!("5");
+        info!("5");
         state_trie.put(&STATE_KEY.to_string(), serialize(&state));
         true
     }
@@ -557,7 +557,7 @@ mod test_state {
         let _to: String = hex::encode(to_add_kp.public().encode());
 
         let signed_transaction: SignedTransaction = SignedTransaction::generate(&to_add_kp);
-        debug!("{:?}", signed_transaction);
-        debug!("{:?}", signed_transaction.validate());
+        info!("{:?}", signed_transaction);
+        info!("{:?}", signed_transaction.validate());
     }
 }

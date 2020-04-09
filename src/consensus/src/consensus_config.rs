@@ -25,9 +25,9 @@ impl Configuration {
                 e
             ),
         };
-        debug!(">> Current Working Directory: {}", cwd);
+        info!(">> Current Working Directory: {}", cwd);
         let config_file_path: String = cwd + &String::from("/config.toml");
-        debug!("path = {}", config_file_path);
+        info!("path = {}", config_file_path);
         let mut config_file = match File::open(config_file_path) {
             Ok(f) => f,
             Err(e) => panic!("Error occurred opening config file:  Err: {}", e),
@@ -50,7 +50,7 @@ mod tests {
     #[test]
     fn test_config() {
         use super::*;
-        debug!(
+        info!(
             "conf data = {:?}",
             consensus_config::GLOBAL_CONFIG.public_keys
         );
