@@ -28,6 +28,7 @@ pub struct TomlReaderConfig {
     //client config
     client_port: u32,
     client_host: String,
+    client_apps: Vec<String>,
 }
 
 #[derive(Debug)]
@@ -63,6 +64,7 @@ impl Configuration {
             p2p_port: tomlreader.p2p_port,
             client_host: tomlreader.client_host,
             client_port: tomlreader.client_port,
+            client_apps: tomlreader.client_apps.to_vec(),
         };
         let db_path: Database = Database {
             dbpath: "utils/rocksdb".to_string(),
@@ -109,6 +111,7 @@ pub struct Node {
     pub p2p_port: u16,
     pub client_host: String,
     pub client_port: u32,
+    pub client_apps: Vec<String>,
 }
 
 #[derive(Debug)]

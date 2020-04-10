@@ -5,7 +5,7 @@ use exonum_crypto::Hash;
 use futures::channel::mpsc::*;
 use p2plib::message_sender::MessageSender;
 use p2plib::messages::MessageTypes;
-use schema::transaction::SignedTransaction;
+use schema::signed_transaction::SignedTransaction;
 use schema::transaction_pool::{TxnPool, TxnPoolKeyType, POOL};
 use utils::serializer::{deserialize, serialize};
 

@@ -6,7 +6,7 @@ edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [build-dependencies]
-exonum-build = "1.0.0-rc.1"
+exonum-build = "^1.0.0-rc.3"
 
 [dependencies]
 client = { path = "../client" }
@@ -14,10 +14,10 @@ generic_traits = { path = "../generic_traits" }
 schema = { path = "../schema" }
 utils = { path = "../utils" }
 
-exonum-merkledb = "1.0.0-rc.1"
-exonum-crypto = "1.0.0-rc.1"
-exonum-derive = "1.0.0-rc.1"
-exonum-proto = "1.0.0-rc.1"
+exonum-merkledb = "^1.0.0-rc.3"
+exonum-crypto = "^1.0.0-rc.3"
+exonum-derive = "^1.0.0-rc.3"
+exonum-proto = "^1.0.0-rc.3"
 
 hex = "^0.4"
 serde = { version = "1.0", features = ["derive"] }
@@ -29,3 +29,4 @@ bincode = "1.0"
 rocksdb = "0.13.0"
 lazy_static = "1.4.0"
 protobuf = "2.8.0"
+anyhow = "^1.0.28"

@@ -9,9 +9,10 @@ use exonum_merkledb::{
     access::{Access, FromAccess, RawAccessMut},
     ListIndex, ObjectHash, ProofMapIndex,
 };
-use generic_traits::traits::PoolTrait;
-use schema::block::{Block, BlockTraits, SignedBlock, SignedBlockTraits};
-use schema::transaction::{SignedTransaction, State};
+use generic_traits::traits::{PoolTrait, StateContext};
+use schema::block::{Block, BlockTraits, SignedBlock};
+use schema::signed_transaction::SignedTransaction;
+use schema::state::State;
 use schema::transaction_pool::{TransactionPool, TxnPool, TxnPoolKeyType, POOL};
 use utils::keypair::{CryptoKeypair, Keypair, KeypairType, PublicKey, Verify};
 use utils::serializer::serialize;
@@ -27,6 +28,30 @@ pub struct SchemaFork<T: Access> {
 impl<T: Access> SchemaFork<T> {
     pub fn new(access: T) -> Self {
         Self::from_root(access).unwrap()
+    }
+}
+
+impl<T: Access> StateContext for SchemaFork<T>
+where
+    T::Base: RawAccessMut,
+{
+    fn put(&mut self, key: &String, state: State) {
+        self.state_trie.put(key, state);
+    }
+    fn get(&self, key: &String) -> Option<State> {
+        self.state_trie.get(key)
+    }
+    fn contains(&self, key: &String) -> bool {
+        self.state_trie.contains(key)
+    }
+    fn put_txn(&mut self, key: &Hash, txn: SignedTransaction) {
+        self.txn_trie.put(key, txn);
+    }
+    fn get_txn(&self, key: &Hash) -> Option<SignedTransaction> {
+        self.txn_trie.get(key)
+    }
+    fn contains_txn(&self, key: &Hash) -> bool {
+        self.txn_trie.contains(key)
     }
 }
 
@@ -76,7 +101,8 @@ where
      */
     pub fn execute_transactions(&mut self, txn_pool: &TransactionPool) -> Vec<Hash> {
         let txn_pool_as_trait = txn_pool as &dyn PoolTrait<T, State, SignedTransaction>;
-        txn_pool_as_trait.execute_transactions(&mut self.state_trie, &mut self.txn_trie)
+        let state_context = self as &mut dyn StateContext;
+        txn_pool_as_trait.execute_transactions(state_context)
     }
 
     /// this function only will called when the node willing to propose block and for that agree to compute block
@@ -119,7 +145,8 @@ where
         hash_vec: &Vec<Hash>,
     ) -> bool {
         let txn_pool_as_trait = txn_pool as &dyn PoolTrait<T, State, SignedTransaction>;
-        txn_pool_as_trait.update_transactions(&mut self.state_trie, &mut self.txn_trie, hash_vec)
+        let state_context = self as &mut dyn StateContext;
+        txn_pool_as_trait.update_transactions(state_context, hash_vec)
     }
 
     /// this function will update fork for given block
@@ -262,42 +289,42 @@ where
     }
 }
 
-#[cfg(test)]
-mod test_db_service {
+// #[cfg(test)]
+// mod test_db_service {
 
-    #[test]
-    pub fn test_schema() {
-        use super::*;
-        use crate::db_layer::{fork_db, patch_db};
-        use generic_traits::traits::TransactionTrait;
-        use schema::transaction_pool::TxnPool;
-        use std::time::SystemTime;
-        let mut secret =
-            hex::decode("97ba6f71a5311c4986e01798d525d0da8ee5c54acbf6ef7c3fadd1e2f624442f")
-                .expect("invalid secret");
-        let keypair = Keypair::generate_from(secret.as_mut_slice());
-        let _public_key =
-            String::from("2c8a35450e1d198e3834d933a35962600c33d1d0f8f6481d6e08f140791374d0");
-        let fork = fork_db();
-        // put genesis blockin database
-        {
-            let mut schema = SchemaFork::new(&fork);
-            schema.initialize_db(&keypair);
-        }
-        patch_db(fork);
-        println!("block proposal testing");
-        let fork = fork_db();
-        {
-            for _ in 1..10 {
-                let time_instant = SystemTime::now()
-                    .duration_since(SystemTime::UNIX_EPOCH)
-                    .unwrap()
-                    .as_micros();
-                POOL.insert_op(&time_instant, &SignedTransaction::generate(&keypair));
-            }
-            let mut schema = SchemaFork::new(&fork);
-            let block = schema.create_block(&keypair);
-            println!("{:?}", block);
-        }
-    }
-}
+//     #[test]
+//     pub fn test_schema() {
+//         use super::*;
+//         use crate::db_layer::{fork_db, patch_db};
+//         use generic_traits::traits::TransactionTrait;
+//         use schema::transaction_pool::TxnPool;
+//         use std::time::SystemTime;
+//         let mut secret =
+//             hex::decode("97ba6f71a5311c4986e01798d525d0da8ee5c54acbf6ef7c3fadd1e2f624442f")
+//                 .expect("invalid secret");
+//         let keypair = Keypair::generate_from(secret.as_mut_slice());
+//         let _public_key =
+//             String::from("2c8a35450e1d198e3834d933a35962600c33d1d0f8f6481d6e08f140791374d0");
+//         let fork = fork_db();
+//         // put genesis blockin database
+//         {
+//             let mut schema = SchemaFork::new(&fork);
+//             schema.initialize_db(&keypair);
+//         }
+//         patch_db(fork);
+//         println!("block proposal testing");
+//         let fork = fork_db();
+//         {
+//             for _ in 1..10 {
+//                 let time_instant = SystemTime::now()
+//                     .duration_since(SystemTime::UNIX_EPOCH)
+//                     .unwrap()
+//                     .as_micros();
+//                 POOL.insert_op(&time_instant, &SignedTransaction::generate(&keypair));
+//             }
+//             let mut schema = SchemaFork::new(&fork);
+//             let block = schema.create_block(&keypair);
+//             println!("{:?}", block);
+//         }
+//     }
+// }

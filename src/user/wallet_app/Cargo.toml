@@ -4,19 +4,21 @@ version = "0.1.0"
 authors = ["GauravA"]
 edition = "2018"
 
+[lib]
+crate-type = ["dylib"]
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [build-dependencies]
-exonum-build = "1.0.0-rc.1"
+exonum-build = "^1.0.0-rc.3"
 prost-build = { version = "0.6.1" }
 
 [dependencies]
 generic_traits = { path = "../../generic_traits" }
 utils = { path = "../../utils" }
 
-exonum-merkledb = "1.0.0-rc.1"
-exonum-crypto = "1.0.0-rc.1"
-exonum-derive = "1.0.0-rc.1"
-exonum-proto = "1.0.0-rc.1"
+exonum-merkledb = "^1.0.0-rc.3"
+exonum-crypto = "^1.0.0-rc.3"
+exonum-derive = "^1.0.0-rc.3"
 
 futures = "^0.3"
 env_logger = "0.7.1"
@@ -26,4 +28,3 @@ hex = "^0.4"
 failure = "0.1"
 bincode = "1.0"
 prost = "0.6.1"
-protobuf = "2.8.0"

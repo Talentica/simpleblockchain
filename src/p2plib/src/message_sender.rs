@@ -2,7 +2,7 @@ use crate::messages::{
     BlockConsensus, ConsensusMessageTypes, MessageTypes, NodeMessageTypes, SignedLeaderElection,
 };
 use futures::channel::mpsc::*;
-use schema::{block::SignedBlock, transaction::SignedTransaction};
+use schema::{block::SignedBlock, signed_transaction::SignedTransaction};
 
 pub struct MessageSender {}
 

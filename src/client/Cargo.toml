@@ -9,8 +9,7 @@ edition = "2018"
 [dependencies]
 schema = { path = "../schema" }
 utils = { path = "../utils" }
-
-exonum-crypto = "1.0.0-rc.1"
+exonum-crypto = "^1.0.0-rc.3"
 reqwest = "0.9.14"
 hex = "0.4.2"
 toml = "0.5.5"

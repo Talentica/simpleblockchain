@@ -8,7 +8,8 @@ use exonum_merkledb::{
     ListIndex, ObjectHash, ProofMapIndex,
 };
 use schema::block::SignedBlock;
-use schema::transaction::{SignedTransaction, State};
+use schema::signed_transaction::SignedTransaction;
+use schema::state::State;
 
 #[derive(FromAccess)]
 pub struct SchemaSnap<T: Access> {

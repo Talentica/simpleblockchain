@@ -1,3 +1,4 @@
+use anyhow::{self, ensure, format_err};
 use exonum_merkledb::{Database, DbOptions, Fork, RocksDB, Snapshot};
 
 fn create_db_instance() -> RocksDB {
@@ -56,7 +57,7 @@ mod tests_db_layer {
             bincode::serialize(self).unwrap()
         }
 
-        fn from_bytes(bytes: Cow<'_, [u8]>) -> Result<Self, Error> {
+        fn from_bytes(bytes: Cow<'_, [u8]>) -> anyhow::Result<Self> {
             bincode::deserialize(bytes.as_ref()).map_err(From::from)
         }
     }

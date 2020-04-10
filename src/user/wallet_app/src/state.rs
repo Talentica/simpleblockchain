@@ -8,16 +8,16 @@ use utils::serializer::{Deserialize, Serialize};
     Clone, Copy, Debug, PartialEq, Serialize, Deserialize, Default, BinaryValue, ObjectHash,
 )]
 #[binary_value(codec = "bincode")]
-pub struct State {
+pub struct CryptoState {
     nonce: u64,
     balance: u64,
     storage_root: Hash,
     code_hash: Hash,
 }
 
-impl State {
-    pub fn new() -> State {
-        State {
+impl CryptoState {
+    pub fn new() -> CryptoState {
+        CryptoState {
             nonce: 0,
             balance: 0,
             storage_root: Hash::zero(),
@@ -72,7 +72,7 @@ mod test_state {
     #[test]
     pub fn test_states() {
         use super::*;
-        let mut state = State::new();
+        let mut state = CryptoState::new();
         println!("{:?}", state);
         state.balance = 10;
         println!("{:?}", state);

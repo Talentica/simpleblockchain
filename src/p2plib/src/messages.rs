@@ -2,7 +2,7 @@ use super::constants;
 use futures::{channel::mpsc::channel, channel::mpsc::Receiver, channel::mpsc::Sender};
 use libp2p::floodsub::{protocol, Topic, TopicBuilder, TopicHash};
 use schema::block::SignedBlock;
-use schema::transaction::SignedTransaction;
+use schema::signed_transaction::SignedTransaction;
 use std::hash::{Hash, Hasher};
 use std::sync::{Arc, Mutex};
 use utils::serializer::{deserialize, Deserialize, Serialize};

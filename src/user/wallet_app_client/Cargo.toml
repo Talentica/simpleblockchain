@@ -10,7 +10,7 @@ edition = "2018"
 utils = { path = "../../utils" }
 wallet_app = { path = "../wallet_app" }
 
-exonum-crypto = "1.0.0-rc.1"
+exonum-crypto = "^1.0.0-rc.3"
 
 bytes = "0.5.4"
 actix-web = "2.0.0"

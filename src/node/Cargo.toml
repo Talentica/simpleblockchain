@@ -7,18 +7,17 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-doc_app = { path = "../user/doc_app" }
-wallet_app = { path = "../user/wallet_app" }
 consensus = { path = "../consensus" }
 controllers = { path = "../controllers" }
 db_service = { path = "../db_service"}
 p2plib = { path = "../p2plib" }
 schema = { path = "../schema" }
 utils = { path = "../utils" }
+generic_traits = { path = "../generic_traits"}
 
-exonum-merkledb = "1.0.0-rc.1"
-exonum-crypto = "1.0.0-rc.1"
-exonum-derive = "1.0.0-rc.1"
+exonum-merkledb = "^1.0.0-rc.3"
+exonum-crypto = "^1.0.0-rc.3"
+exonum-derive = "^1.0.0-rc.3"
 
 actix-rt = "1.0.0"
 hex = "^0.4"
@@ -30,6 +29,7 @@ async-std = "^1.4"
 env_logger = "0.7.1"
 lazy_static = "^1.4"
 ctrlc = "3.1.4"
+libloading = "^0.6"
 
 [profile.release]
 panic = 'abort'
