@@ -5,7 +5,7 @@ authors = ["GauravA"]
 edition = "2018"
 
 [lib]
-crate-type = ["dylib"]
+crate-type = ["cdylib"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [build-dependencies]
