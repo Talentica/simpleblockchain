@@ -6,12 +6,12 @@ edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [build-dependencies]
-exonum-build = "1.0.0-rc.1"
+exonum-build = "1.0.0-rc.3"
 
 [dependencies]
 utils = { path = "../utils" }
-exonum-merkledb = "1.0.0-rc.1"
-exonum-crypto = "1.0.0-rc.1"
-exonum-derive = "1.0.0-rc.1"
-exonum-proto = "1.0.0-rc.1"
+exonum-merkledb = "1.0.0-rc.3"
+exonum-crypto = "1.0.0-rc.3"
+exonum-derive = "1.0.0-rc.3"
+exonum-proto = "1.0.0-rc.3"
 protobuf = "2.8.0"

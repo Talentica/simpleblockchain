@@ -81,6 +81,7 @@ impl Consensus {
         #[allow(unused_assignments)]
         let mut current_lowest_hash: u64 = 0;
         if meta_data_locked.active_node.len() == 0 {
+            warn!("no other node active");
             let leader_payload: LeaderElection = LeaderElection {
                 block_height: self.round_number + 1,
                 old_leader: self.pk.clone(),
@@ -93,11 +94,11 @@ impl Consensus {
             };
         }
         for i in iter_vec_pk..meta_data_locked.active_node.len() {
-            if self.pk != self.public_keys[i].clone() {
+            if self.pk != meta_data_locked.active_node[i].clone() {
                 let may_be_leader: LeaderElection = LeaderElection {
                     block_height: self.round_number + 1,
                     old_leader: self.pk.clone(),
-                    new_leader: String::from(self.public_keys[i].clone()),
+                    new_leader: String::from(meta_data_locked.active_node[i].clone()),
                 };
                 let mut hasher = DefaultHasher::new();
                 may_be_leader.hash(&mut hasher);
@@ -110,7 +111,7 @@ impl Consensus {
         let leader_payload: LeaderElection = LeaderElection {
             block_height: self.round_number + 1,
             old_leader: self.pk.clone(),
-            new_leader: String::from(self.public_keys[iter_vec_pk].clone()),
+            new_leader: String::from(meta_data_locked.active_node[iter_vec_pk].clone()),
         };
         let signature = Keypair::sign(&self.keypair, &serialize(&leader_payload));
         SignedLeaderElection {
@@ -234,40 +235,44 @@ impl Consensus {
                                         ConsensusMessageTypes::ConsensusPong(data) => {
                                             let election_pong: ElectionPong = data;
                                             let mut meta_data_locked = meta_data.lock().unwrap();
-                                            if meta_data_locked
-                                                .public_keys
-                                                .contains(&election_pong.payload.may_be_leader)
-                                                && hex::encode(
-                                                    meta_data_locked.kp.public().encode(),
-                                                ) == election_pong.payload.current_leader
+                                            if hex::encode(meta_data_locked.kp.public().encode())
+                                                == election_pong.payload.current_leader
                                             {
-                                                if election_pong.verify() {
-                                                    meta_data_locked.active_node.push(
-                                                        election_pong.payload.may_be_leader.clone(),
-                                                    );
-                                                    info!(
+                                                if meta_data_locked
+                                                    .public_keys
+                                                    .contains(&election_pong.payload.may_be_leader)
+                                                {
+                                                    if election_pong.verify() {
+                                                        meta_data_locked.active_node.push(
+                                                            election_pong
+                                                                .payload
+                                                                .may_be_leader
+                                                                .clone(),
+                                                        );
+                                                        info!(
                                                         "Pong message received from  {} for height {} -> ",
                                                         election_pong.payload.may_be_leader,
                                                         election_pong.payload.height,
                                                     );
+                                                    } else {
+                                                        warn!(
+                                                            "Election Ping data tempered {}",
+                                                            election_pong.payload.may_be_leader
+                                                        );
+                                                    }
                                                 } else {
-                                                    warn!(
-                                                        "Election Ping data tempered {}",
-                                                        election_pong.payload.may_be_leader
-                                                    );
-                                                }
-                                            } else {
-                                                info!(
+                                                    info!(
                                                     "public_keys {:?} current_leader {:?} may_be_leader {:?}",
                                                     meta_data_locked.public_keys,
                                                     election_pong.payload.current_leader,
                                                     election_pong.payload.may_be_leader,
                                                 );
-                                                warn!(
-                                                    "Election Pong data tempered {} {}",
-                                                    election_pong.payload.may_be_leader,
-                                                    election_pong.payload.current_leader
-                                                );
+                                                    warn!(
+                                                        "Election Pong data tempered {} {}",
+                                                        election_pong.payload.may_be_leader,
+                                                        election_pong.payload.current_leader
+                                                    );
+                                                }
                                             }
                                         }
                                     }
@@ -321,6 +326,7 @@ impl Consensus {
                             leader_map_locked.map.remove(&key);
                         } else {
                             // i am the leader.
+                            info!("I AM THE LEADER NOW!!!");
                             if self.validator(sender, meta_data.clone()) {
                                 leader_map_locked
                                     .map
