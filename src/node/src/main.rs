@@ -7,10 +7,17 @@ extern crate schema;
 
 #[macro_use]
 extern crate log;
-
-mod nodemsgprocessor;
-use consensus::consensus_interface;
+use libloading::{Library, Symbol};
+use std::collections::HashMap;
+use std::path::Path;
 use controllers::client_controller::{ClientController, Controller};
+use db_service::db_fork_ref::SchemaFork;
+use db_service::db_layer::{fork_db, patch_db};
+use generic_traits::traits::AppHandler;
+use schema::appdata::{AppData, APPDATA};
+use schema::block::SignedBlock;
+use schema::signed_transaction::SignedTransaction;
+
 use libp2p::{identity::PublicKey, PeerId};
 use nodemsgprocessor::*;
 use p2plib::messages::{CONSENSUS_MSG_TOPIC_STR, MSG_DISPATCHER, NODE_MSG_TOPIC_STR};
@@ -18,7 +25,7 @@ use p2plib::simpleswarm::SimpleSwarm;
 
 use std::sync::{
     atomic::{AtomicBool, Ordering},
-    Arc,
+    Arc, Mutex,
 };
 use std::thread;
 use utils::configreader;
@@ -112,10 +119,40 @@ fn register_signals(terminate: Arc<AtomicBool>) {
     .expect("Error setting Ctrl-C handler");
 }
 
+fn load_apps() {
+    let config: &Configuration = &configreader::GLOBAL_CONFIG;
+    println!("config = {:?}", config.node);
+    let mut app_iter = IntoIterator::into_iter(&config.node.client_apps);
+    while let Some(app) = app_iter.next() {
+        println!("loading library {:?}", app);
+        let app_path = Path::new(app);
+        println!("is file = {:?}", app_path.is_file());
+        let applib = Library::new(app)
+            .expect(format!("Loading App library {:?} failed", app.clone()).as_str());
+        let app_register: Symbol<fn() -> Box<dyn AppHandler + Send>> =
+            unsafe { applib.get(b"register_app") }.expect(
+                format!(
+                    "register_app symbol is not found in library {:?}",
+                    app.clone()
+                )
+                .as_str(),
+            );
+        let app_handle = Arc::new(Mutex::new(app_register()));
+        let app_name = app_handle.lock().unwrap().name();
+        println!("Loaded app {:?}", app_name);
+        APPDATA
+            .lock()
+            .unwrap()
+            .appdata
+            .insert(app_name.clone(), app_handle);
+    }
+}
+
 fn main() {
     file_logger_init_from_yml(&String::from("log.yml"));
     info!("Node Bootstrapping");
     let config: &Configuration = &configreader::GLOBAL_CONFIG;
+    load_apps();
     match config.node.node_type {
         NODETYPE::Validator => {
             validator_process();

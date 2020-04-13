@@ -2,8 +2,9 @@ use crate::cli_config;
 use exonum_crypto::Hash;
 use reqwest::{Client, Error};
 use schema::block::SignedBlock;
-use schema::transaction::{SignedTransaction, State};
 use schema::transaction_pool::{TxnPool, TxnPoolKeyType, POOL};
+use schema::signed_transaction::SignedTransaction;
+use schema::state::State;
 use std::collections::HashMap;
 use utils::serializer::{deserialize, serialize};
 

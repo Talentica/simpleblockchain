@@ -3,15 +3,15 @@ syntax = "proto3";
 package user_messages;
 
 message CryptoTransaction {
-    uint64 nonce = 1;
-    string from = 2;
-    string to = 3;
-    string fxn_call = 4;
-    uint64 amount = 5;
+  uint64 nonce = 1;
+  string from = 2;
+  string to = 3;
+  string fxn_call = 4;
+  uint64 amount = 5;
 }
 
-message SignedTransaction {
-    CryptoTransaction txn = 1;
-    map<string, string> header = 2;
-    bytes signature = 3;
+message SignedTransaction1 {
+  CryptoTransaction txn = 1;
+  map<string, string> header = 2;
+  bytes signature = 3;
 }

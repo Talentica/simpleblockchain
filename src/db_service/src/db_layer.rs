@@ -1,3 +1,4 @@
+use anyhow::{self, ensure, format_err};
 use exonum_merkledb::{Database, DbOptions, Fork, RocksDB, Snapshot};
 
 fn create_db_instance() -> RocksDB {

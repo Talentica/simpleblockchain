@@ -3,7 +3,7 @@ use crate::messages::{
     SignedLeaderElection,
 };
 use futures::channel::mpsc::*;
-use schema::{block::SignedBlock, transaction::SignedTransaction};
+use schema::{block::SignedBlock, signed_transaction::SignedTransaction};
 
 pub struct MessageSender {}
 

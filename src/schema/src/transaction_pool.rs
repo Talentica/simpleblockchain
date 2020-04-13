@@ -1,12 +1,14 @@
 extern crate utils;
-
-use crate::transaction::{SignedTransaction, State};
+use super::appdata::{AppData, APPDATA};
+use super::signed_transaction::SignedTransaction;
+use super::state::State;
+use super::types::GETHASH;
 use exonum_crypto::Hash;
 use exonum_merkledb::{
     access::{Access, RawAccessMut},
     ObjectHash, ProofMapIndex,
 };
-use generic_traits::traits::{PoolTrait, StateTraits, TransactionTrait};
+use generic_traits::traits::{PoolTrait, StateContext};
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 pub type TxnPoolKeyType = u128;
@@ -205,19 +207,26 @@ impl<T: Access> PoolTrait<T, State, SignedTransaction> for TransactionPool
 where
     T::Base: RawAccessMut,
 {
-    fn execute_transactions(
-        &self,
-        state_trie: &mut ProofMapIndex<T::Base, String, State>,
-        txn_trie: &mut ProofMapIndex<T::Base, Hash, SignedTransaction>,
-    ) -> Vec<Hash> {
+    fn execute_transactions(&self, state_context: &mut dyn StateContext) -> Vec<Hash> {
         let mut temp_vec: Vec<Hash> = Vec::with_capacity(15);
         // compute until order_pool exhusted or transaction limit crossed
         // let txn_pool = self.pool.lock().unwrap();
-        for (_key, value) in self.order_pool.iter() {
+        for (_key, sign_txn) in self.order_pool.iter() {
             if temp_vec.len() < 15 {
-                let sign_txn = value as &dyn StateTraits<T, State, SignedTransaction>;
-                if sign_txn.execute(state_trie, txn_trie) {
-                    temp_vec.push(value.get_hash());
+                let ret = APPDATA
+                    .lock()
+                    .unwrap()
+                    .appdata
+                    .get(&sign_txn.app_name)
+                    .unwrap()
+                    .lock()
+                    .unwrap()
+                    .execute(sign_txn, state_context);
+                // let sign_txn = &value as &dyn StateTraits<T, State, SignedTransaction>;
+                //TODO: Use execute hook from app
+                // if sign_txn.execute(state_trie, txn_trie) {
+                if ret {
+                    temp_vec.push(GETHASH(&sign_txn.txn));
                 }
             } else {
                 break;
@@ -228,8 +237,7 @@ where
 
     fn update_transactions(
         &self,
-        state_trie: &mut ProofMapIndex<T::Base, String, State>,
-        txn_trie: &mut ProofMapIndex<T::Base, Hash, SignedTransaction>,
+        state_context: &mut dyn StateContext,
         hash_vec: &Vec<Hash>,
     ) -> bool {
         // compute until order_pool exhusted or transaction limit crossed
@@ -237,13 +245,14 @@ where
         for each in hash_vec.iter() {
             let signed_txn = self.get(each);
             if let Some(txn) = signed_txn {
-                let sign_txn = &txn as &dyn StateTraits<T, State, SignedTransaction>;
-                if !sign_txn.execute(state_trie, txn_trie) {
-                    error!(
-                        "transaction execution error (either signature or business logic error)"
-                    );
-                    return false;
-                }
+                // let sign_txn = &txn as &dyn StateTraits<T, State, SignedTransaction>;
+                //TODO use execute hook from app
+                // if !txn.execute(state_trie, txn_trie) {
+                //     eprintln!(
+                //         "transaction execution error (either signature or business logic error)"
+                //     );
+                //     return false;
+                // }
             } else {
                 error!("transaction couldn't find for block execution");
                 return false;
@@ -257,29 +266,29 @@ lazy_static! {
     pub static ref POOL: Pool = Pool::new();
 }
 
-#[cfg(test)]
-mod tests_transactions {
+// #[cfg(test)]
+// mod tests_transactions {
 
-    #[test]
-    pub fn main_transaction() {
-        use super::*;
-        use generic_traits::traits::TransactionTrait;
-        use std::time::SystemTime;
-        use utils::keypair::{CryptoKeypair, Keypair};
+//     #[test]
+//     pub fn main_transaction() {
+//         use super::*;
+//         use generic_traits::traits::TransactionTrait;
+//         use std::time::SystemTime;
+//         use utils::keypair::{CryptoKeypair, Keypair};
 
-        let mut transaction_pool = TransactionPool::new();
-        let kp = Keypair::generate();
-        let one = SignedTransaction::generate(&kp);
-        let two = SignedTransaction::generate(&kp);
-        let time_instant = SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap()
-            .as_micros();
-        transaction_pool.insert_op(&time_instant, &one);
-        let time_instant = SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap()
-            .as_micros();
-        transaction_pool.insert_op(&time_instant, &two);
-    }
-}
+//         let mut transaction_pool = TransactionPool::new();
+//         let kp = Keypair::generate();
+//         let one = SignedTransaction::generate(&kp);
+//         let two = SignedTransaction::generate(&kp);
+//         let time_instant = SystemTime::now()
+//             .duration_since(SystemTime::UNIX_EPOCH)
+//             .unwrap()
+//             .as_micros();
+//         transaction_pool.insert_op(&time_instant, &one);
+//         let time_instant = SystemTime::now()
+//             .duration_since(SystemTime::UNIX_EPOCH)
+//             .unwrap()
+//             .as_micros();
+//         transaction_pool.insert_op(&time_instant, &two);
+//     }
+// }

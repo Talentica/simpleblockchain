@@ -1,11 +1,11 @@
 extern crate db_service;
-use futures::{channel::mpsc::*, executor::*, future, prelude::*, task::*};
-use p2plib::messages::*;
-
 use db_service::db_fork_ref::SchemaFork;
 use db_service::db_layer::{fork_db, patch_db};
+use exonum_merkledb::ObjectHash;
+use futures::{channel::mpsc::*, executor::*, future, prelude::*, task::*};
+use p2plib::messages::*;
 use schema::block::SignedBlock;
-use schema::transaction::{ObjectHash, SignedTransaction};
+use schema::signed_transaction::SignedTransaction;
 use schema::transaction_pool::{TxnPool, TxnPoolKeyType, POOL};
 use std::sync::Arc;
 use std::sync::Mutex;

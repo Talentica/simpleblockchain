@@ -15,6 +15,7 @@ use client::ClientObj;
 use std::time::SystemTime;
 use utils::logger::*;
 mod cli_config;
+const APPNAME: String = String::from("Cryptocurrency");
 
 pub fn remove_trailing_newline(input: &mut String) {
     while input.ends_with('\n') {
@@ -161,6 +162,7 @@ pub fn create_transaction(kp: &KeypairType, nonce: u64) -> Option<SignedTransact
     header.insert("timestamp".to_string(), time_stamp.to_string());
     Some(SignedTransaction {
         txn: Some(crypto_transaction),
+        app_name: APPNAME.clone(),
         signature: txn_sign,
         header,
     })
