@@ -18,7 +18,7 @@ generic_traits = { path = "../generic_traits"}
 exonum-merkledb = "^1.0.0-rc.3"
 exonum-crypto = "^1.0.0-rc.3"
 exonum-derive = "^1.0.0-rc.3"
-]
+
 actix-rt = "1.0.0"
 hex = "^0.4"
 serde = { version = "1.0", features = ["derive"] }
@@ -34,7 +34,3 @@ libloading = "^0.6"
 
 [profile.release]
 panic = 'abort'
-
-[[example]]
-name = "test_application_document_transfer"
-path = "src/test_application_1.rs"

@@ -7,16 +7,15 @@ extern crate schema;
 
 #[macro_use]
 extern crate log;
-use libloading::{Library, Symbol};
-use std::collections::HashMap;
-use std::path::Path;
+
+mod nodemsgprocessor;
+use consensus::consensus_interface;
 use controllers::client_controller::{ClientController, Controller};
-use db_service::db_fork_ref::SchemaFork;
 use db_service::db_layer::{fork_db, patch_db};
 use generic_traits::traits::AppHandler;
+use libloading::{Library, Symbol};
 use schema::appdata::{AppData, APPDATA};
-use schema::block::SignedBlock;
-use schema::signed_transaction::SignedTransaction;
+use std::path::Path;
 
 use libp2p::{identity::PublicKey, PeerId};
 use nodemsgprocessor::*;

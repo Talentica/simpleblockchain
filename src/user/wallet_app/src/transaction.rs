@@ -3,7 +3,7 @@ use super::state::CryptoState;
 pub use crate::user_messages::CryptoTransaction;
 use exonum_crypto::Hash;
 use exonum_merkledb::ObjectHash;
-use generic_traits::signed_transaction::SignedTransaction;
+pub use generic_traits::signed_transaction::SignedTransaction;
 use generic_traits::state::State;
 use generic_traits::traits::{AppHandler, StateContext};
 use std::collections::HashMap;
@@ -127,55 +127,51 @@ pub trait ModuleTraits {
 impl ModuleTraits for CryptoTransaction {
     fn transfer(&self, state_context: &mut dyn StateContext) -> bool {
         if self.validate() {
-            if state_context.contains(&self.from) {
-                let mut from_wallet: CryptoState =
-                    deserialize::<CryptoState>(state_context.get(&self.from).unwrap().get_data());
-                if from_wallet.get_balance() > self.amount {
-                    if state_context.contains(&self.to) {
-                        let mut to_wallet: CryptoState = deserialize::<CryptoState>(
-                            state_context.get(&self.to).unwrap().get_data(),
-                        );
-                        to_wallet.add_balance(self.amount);
-                        let mut new_state = State::new();
-                        new_state.set_data(&serialize(&to_wallet));
-                        state_context.put(&self.to.clone(), new_state);
-                    } else {
-                        let mut to_wallet = CryptoState::new();
-                        to_wallet.add_balance(self.amount);
-                        let mut new_state = State::new();
-                        new_state.set_data(&serialize(&to_wallet));
-                        state_context.put(&self.to.clone(), new_state);
-                    }
-                    from_wallet.deduct_balance(self.amount);
-                    from_wallet.increase_nonce();
-                    let mut new_state = State::new();
-                    new_state.set_data(&serialize(&from_wallet));
-                    state_context.put(&self.from.clone(), new_state);
-                    return true;
-                }
+            let mut from_state: State = match state_context.get(&self.from) {
+                Some(state) => state,
+                None => return false,
+            };
+            let mut from_wallet: CryptoState = deserialize(from_state.get_data().as_slice());
+            if self.nonce == from_wallet.get_nonce() + 1 {
+                return false;
+            }
+            if from_wallet.get_balance() > self.amount {
+                let mut to_state: State = match state_context.get(&self.to) {
+                    Some(state) => state,
+                    None => State::new(),
+                };
+                let mut to_wallet: CryptoState = deserialize(to_state.get_data().as_slice());
+
+                to_wallet.add_balance(self.amount);
+                to_state.set_data(&serialize(&to_wallet));
+
+                from_wallet.deduct_balance(self.amount);
+                from_wallet.increase_nonce();
+                from_state.set_data(&serialize(&from_wallet));
+
+                state_context.put(&self.to.clone(), to_state);
+                state_context.put(&self.from.clone(), from_state);
+                return true;
             }
         }
         false
     }
 
-
     fn mint(&self, state_context: &mut dyn StateContext) -> bool {
         if self.validate() {
-            if state_context.contains(&self.to) {
-                let mut new_state = state_context.get(&self.to).unwrap();
-                let mut to_wallet: CryptoState = deserialize::<CryptoState>(new_state.get_data());
-                to_wallet.add_balance(self.amount);
-                new_state.set_data(&serialize(&to_wallet));
-                state_context.put(&self.to.clone(), new_state);
-            } else {
-                let mut to_wallet = CryptoState::new();
-                to_wallet.add_balance(self.amount);
-                let mut new_state = State::new();
-                new_state.set_data(&serialize(&to_wallet));
-                state_context.put(&self.to.clone(), new_state);
+            let mut to_state: State = match state_context.get(&self.to) {
+                Some(state) => state,
+                None => return false,
+            };
+            let mut to_wallet: CryptoState = deserialize(to_state.get_data().as_slice());
+
+            if self.nonce == to_wallet.get_nonce() + 1 {
+                return false;
             }
             to_wallet.add_balance(self.amount);
-            state_trie.put(&self.to.clone(), serialize(&to_wallet));
+            to_wallet.increase_nonce();
+            to_state.set_data(&serialize(&to_wallet));
+            state_context.put(&self.to.clone(), to_state);
             return true;
         }
         false

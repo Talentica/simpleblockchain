@@ -261,16 +261,9 @@ impl Consensus {
                                                         );
                                                     }
                                                 } else {
-                                                    info!(
-                                                    "public_keys {:?} current_leader {:?} may_be_leader {:?}",
-                                                    meta_data_locked.public_keys,
-                                                    election_pong.payload.current_leader,
-                                                    election_pong.payload.may_be_leader,
-                                                );
                                                     warn!(
-                                                        "Election Pong data tempered {} {}",
+                                                        "Election Pong data tempered {}",
                                                         election_pong.payload.may_be_leader,
-                                                        election_pong.payload.current_leader
                                                     );
                                                 }
                                             }

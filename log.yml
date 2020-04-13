@@ -47,3 +47,73 @@ loggers:
     appenders:
     - console_appender
     additive: true
+  
+  p2plib::p2pbehaviour:
+    level: warn
+    appenders:
+    - console_appender
+    - rolling_file_appender
+    additive: true
+
+  p2plib::simpleswarm:
+    level: warn
+    appenders:
+    - console_appender
+    - rolling_file_appender
+    additive: true
+
+  libp2p_secio:
+    level: warn
+    appenders:
+    - console_appender
+    - rolling_file_appender
+    additive: true
+
+  multistream_select:
+    level: warn
+    appenders:
+    - console_appender
+    - rolling_file_appender
+    additive: true
+
+  libp2p_tcp:
+    level: warn
+    appenders:
+    - console_appender
+    - rolling_file_appender
+    additive: true
+
+  libp2p_core:
+    level: warn
+    appenders:
+    - console_appender
+    - rolling_file_appender
+    additive: true
+
+  yamux:
+    level: warn
+    appenders:
+    - console_appender
+    - rolling_file_appender
+    additive: true
+
+  tokio_reactor:
+    level: warn
+    appenders:
+    - console_appender
+    - rolling_file_appender
+    additive: true
+
+  hyper: 
+    level: warn 
+    appenders: 
+    - console_appender 
+    - rolling_file_appender 
+    additive: true 
+ 
+  reqwest: 
+    level: warn 
+    appenders: 
+    - console_appender 
+    - rolling_file_appender 
+    additive: true 

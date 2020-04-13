@@ -6,7 +6,7 @@ use bytes::Bytes;
 use exonum_crypto::Hash;
 use utils::crypto::keypair::{CryptoKeypair, Keypair, KeypairType};
 use utils::serializer::{deserialize, serialize};
-use wallet_app::state::State;
+use wallet_app::state::CryptoState;
 use wallet_app::transaction::SignedTransaction;
 
 pub struct ClientObj {

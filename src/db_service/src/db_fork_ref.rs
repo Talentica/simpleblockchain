@@ -13,7 +13,7 @@ use generic_traits::traits::{PoolTrait, StateContext};
 use schema::block::{Block, BlockTraits, SignedBlock};
 use schema::signed_transaction::SignedTransaction;
 use schema::state::State;
-use schema::transaction_pool::{TransactionPool, TxnPool, TxnPoolKeyType, POOL};
+use schema::transaction_pool::{TransactionPool, POOL};
 use utils::keypair::{CryptoKeypair, Keypair, KeypairType, PublicKey, Verify};
 use utils::serializer::serialize;
 
@@ -265,7 +265,6 @@ where
 
 // #[cfg(test)]
 // mod test_db_service {
-=======
 //     #[test]
 //     pub fn test_schema() {
 //         use super::*;
