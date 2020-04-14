@@ -226,11 +226,11 @@ impl ClientObj {
                                 deserialize(state.get_data().as_slice());
                             return Some(crypto_state.nonce + 1);
                         }
-                        Err(_) => return Some(0),
+                        Err(_) => return None,
                     }
                 }
                 if response.status() == 400 {
-                    return Some(0);
+                    return Some(1);
                 } else {
                     return None;
                 }

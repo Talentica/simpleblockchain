@@ -1,11 +1,13 @@
 extern crate futures;
-use doc_app::transaction::{SignedTransaction, TransactionTrait};
-use doc_app::user_messages::{CryptoTransaction, DataTypes};
+use crate::doc_app_types::APPNAME;
+use crate::doc_app_types::{CryptoTransaction, DataTypes};
+use crate::doc_app_types::{SignedTransaction, TransactionTrait};
 use exonum_crypto::{Hash, PublicKey};
 use std::collections::HashMap;
 use std::io;
 use std::time::SystemTime;
 use utils::crypto::keypair::KeypairType;
+use utils::serializer::{deserialize, serialize};
 
 pub fn remove_trailing_newline(input: &mut String) {
     while input.ends_with('\n') {
@@ -354,7 +356,8 @@ pub fn create_transaction(kp: &KeypairType) -> Option<SignedTransaction> {
         .as_micros();
     header.insert("timestamp".to_string(), time_stamp.to_string());
     Some(SignedTransaction {
-        txn: Some(crypto_transaction),
+        txn: serialize(&crypto_transaction),
+        app_name: String::from(APPNAME),
         signature: txn_sign,
         header,
     })

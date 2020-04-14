@@ -1,11 +1,15 @@
 #[macro_use]
+extern crate exonum_derive;
+
+#[macro_use]
 extern crate lazy_static;
 
 #[macro_use]
 extern crate log;
 
 extern crate futures;
-use doc_app::transaction::{SignedTransaction, TransactionTrait};
+mod doc_app_types;
+use crate::doc_app_types::{SignedTransaction, TransactionTrait};
 use exonum_crypto::Hash;
 mod client;
 use client::ClientObj;

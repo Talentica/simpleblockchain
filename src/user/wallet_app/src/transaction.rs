@@ -10,6 +10,7 @@ use std::collections::HashMap;
 use std::convert::AsRef;
 use std::time::SystemTime;
 use utils::keypair::{CryptoKeypair, Keypair, KeypairType, PublicKey, Verify};
+use utils::logger::*;
 use utils::serializer::{deserialize, serialize};
 
 const APPNAME: &str = "Cryptocurrency";
@@ -138,9 +139,23 @@ impl ModuleTraits for CryptoTransaction {
             if from_wallet.get_balance() > self.amount {
                 let mut to_state: State = match state_context.get(&self.to) {
                     Some(state) => state,
-                    None => State::new(),
+                    None => {
+                        let crypto_state: CryptoState = CryptoState::new();
+                        let mut state: State = State::new();
+                        state.set_data(&serialize(&crypto_state));
+                        state
+                    }
                 };
                 let mut to_wallet: CryptoState = deserialize(to_state.get_data().as_slice());
+
+                if self.nonce != from_wallet.get_nonce() + 1 {
+                    info!(
+                        "transfer txn nonce mismatched {:?} {:?}",
+                        self.nonce,
+                        from_wallet.get_nonce() + 1
+                    );
+                    return false;
+                }
 
                 to_wallet.add_balance(self.amount);
                 to_state.set_data(&serialize(&to_wallet));
@@ -159,19 +174,28 @@ impl ModuleTraits for CryptoTransaction {
 
     fn mint(&self, state_context: &mut dyn StateContext) -> bool {
         if self.validate() {
-            let mut to_state: State = match state_context.get(&self.to) {
+            let mut state: State = match state_context.get(&self.from) {
                 Some(state) => state,
-                None => return false,
+                None => {
+                    let crypto_state: CryptoState = CryptoState::new();
+                    let mut state: State = State::new();
+                    state.set_data(&serialize(&crypto_state));
+                    state
+                }
             };
-            let mut to_wallet: CryptoState = deserialize(to_state.get_data().as_slice());
-
-            if self.nonce == to_wallet.get_nonce() + 1 {
+            let mut wallet: CryptoState = deserialize(state.get_data().as_slice());
+            if self.nonce != wallet.get_nonce() + 1 {
+                info!(
+                    "transfer txn nonce mismatched {:?} {:?}",
+                    self.nonce,
+                    wallet.get_nonce() + 1
+                );
                 return false;
             }
-            to_wallet.add_balance(self.amount);
-            to_wallet.increase_nonce();
-            to_state.set_data(&serialize(&to_wallet));
-            state_context.put(&self.to.clone(), to_state);
+            wallet.add_balance(self.amount);
+            wallet.increase_nonce();
+            state.set_data(&serialize(&wallet));
+            state_context.put(&self.from.clone(), state);
             return true;
         }
         false
@@ -184,6 +208,7 @@ pub struct CryptoApp {
 
 impl CryptoApp {
     pub fn new(s: &String) -> CryptoApp {
+        file_logger_init_from_yml(&String::from("log.yml"));
         CryptoApp { name: s.clone() }
     }
 }

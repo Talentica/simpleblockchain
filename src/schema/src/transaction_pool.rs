@@ -215,7 +215,7 @@ where
         // let txn_pool = self.pool.lock().unwrap();
         for (_key, sign_txn) in self.order_pool.iter() {
             if temp_vec.len() < 15 {
-                let ret = APPDATA
+                let _ret = APPDATA
                     .lock()
                     .unwrap()
                     .appdata
@@ -224,9 +224,7 @@ where
                     .lock()
                     .unwrap()
                     .execute(sign_txn, state_context);
-                if ret {
-                    temp_vec.push(GETHASH(&sign_txn.txn));
-                }
+                temp_vec.push(sign_txn.object_hash());
             } else {
                 break;
             }
@@ -255,7 +253,7 @@ where
                     .execute(&txn, state_context);
                 //TODO use execute hook from app
                 // if !txn.execute(state_trie, txn_trie) {
-                if (!ret) {
+                if !ret {
                     eprintln!(
                         "transaction execution error (either signature or business logic error)"
                     );

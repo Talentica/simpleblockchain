@@ -7,10 +7,12 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+generic_traits = { path = "../../generic_traits" }
 utils = { path = "../../utils" }
-doc_app = { path = "../doc_app" }
 
+exonum-merkledb = "^1.0.0-rc.3"
 exonum-crypto = "^1.0.0-rc.3"
+exonum-derive = "^1.0.0-rc.3"
 
 bytes = "0.5.4"
 actix-web = "2.0.0"
@@ -23,3 +25,4 @@ serde = { version = "1.0", features = ["derive"] }
 serde_cbor = "^0.10"
 lazy_static = "1.4.0"
 log = "0.4.8"
+bincode = "1.0"

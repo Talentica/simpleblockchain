@@ -11,7 +11,6 @@ extern crate log;
 mod nodemsgprocessor;
 use consensus::consensus_interface;
 use controllers::client_controller::{ClientController, Controller};
-use db_service::db_layer::{fork_db, patch_db};
 use generic_traits::traits::AppHandler;
 use libloading::{Library, Symbol};
 use schema::appdata::{AppData, APPDATA};
@@ -139,10 +138,9 @@ fn load_apps() {
         let app_handle = Arc::new(Mutex::new(app_register()));
         let app_name = app_handle.lock().unwrap().name();
         println!("Loaded app {:?}", app_name);
-        APPDATA.lock().unwrap().lib.push(Arc::new(applib));
-        APPDATA
-            .lock()
-            .unwrap()
+        let mut locked_app_data = APPDATA.lock().unwrap();
+        locked_app_data.lib.push(Arc::new(applib));
+        locked_app_data
             .appdata
             .insert(app_name.clone(), app_handle.clone());
     }

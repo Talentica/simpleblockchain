@@ -1,14 +1,14 @@
 extern crate futures;
 
+use crate::cli_config::Configuration;
+use crate::doc_app_types::DocState;
+use crate::doc_app_types::SignedTransaction;
 use awc::Client;
 use bytes::Bytes;
-use doc_app::state::State;
-use doc_app::transaction::SignedTransaction;
 use exonum_crypto::Hash;
+use generic_traits::state::State;
 use utils::crypto::keypair::{CryptoKeypair, Keypair, KeypairType};
 use utils::serializer::{deserialize, serialize};
-
-use crate::cli_config::Configuration;
 
 pub struct ClientObj {
     client: Client,
@@ -96,9 +96,9 @@ impl ClientObj {
                 if response.status() == 200 {
                     match resp_body.await {
                         Ok(state) => {
-                            let ret_txn: Vec<u8> = deserialize(&state);
-                            let state: State = deserialize(ret_txn.as_slice());
-                            info!("{:#?}", state);
+                            let state: State = deserialize(&state);
+                            let crypto_state: DocState = deserialize(state.get_data().as_slice());
+                            info!("{:#?}", crypto_state);
                         }
                         Err(e) => error!("Error body: {:?}", e),
                     }
