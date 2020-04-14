@@ -8,6 +8,8 @@ use exonum_merkledb::{
     access::{Access, RawAccessMut},
     ObjectHash, ProofMapIndex,
 };
+use utils::logger::*;
+
 use generic_traits::traits::{PoolTrait, StateContext};
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
@@ -222,9 +224,6 @@ where
                     .lock()
                     .unwrap()
                     .execute(sign_txn, state_context);
-                // let sign_txn = &value as &dyn StateTraits<T, State, SignedTransaction>;
-                //TODO: Use execute hook from app
-                // if sign_txn.execute(state_trie, txn_trie) {
                 if ret {
                     temp_vec.push(GETHASH(&sign_txn.txn));
                 }
@@ -245,14 +244,23 @@ where
         for each in hash_vec.iter() {
             let signed_txn = self.get(each);
             if let Some(txn) = signed_txn {
-                // let sign_txn = &txn as &dyn StateTraits<T, State, SignedTransaction>;
+                let ret = APPDATA
+                    .lock()
+                    .unwrap()
+                    .appdata
+                    .get(&txn.app_name)
+                    .unwrap()
+                    .lock()
+                    .unwrap()
+                    .execute(&txn, state_context);
                 //TODO use execute hook from app
                 // if !txn.execute(state_trie, txn_trie) {
-                //     eprintln!(
-                //         "transaction execution error (either signature or business logic error)"
-                //     );
-                //     return false;
-                // }
+                if (!ret) {
+                    eprintln!(
+                        "transaction execution error (either signature or business logic error)"
+                    );
+                    return false;
+                }
             } else {
                 error!("transaction couldn't find for block execution");
                 return false;
