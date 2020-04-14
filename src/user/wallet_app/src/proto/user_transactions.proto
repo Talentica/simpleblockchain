@@ -11,7 +11,7 @@ message CryptoTransaction {
 }
 
 message SignedTransaction1 {
-  CryptoTransaction txn = 1;
+  bytes txn = 1;
   map<string, string> header = 2;
   bytes signature = 3;
 }

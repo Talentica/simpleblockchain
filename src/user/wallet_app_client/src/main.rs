@@ -1,21 +1,28 @@
 #[macro_use]
+extern crate exonum_derive;
+
+#[macro_use]
 extern crate lazy_static;
 
 #[macro_use]
 extern crate log;
 
 extern crate futures;
+
+mod wallet_app_types;
+use crate::wallet_app_types::{CryptoTransaction, SignedTransaction, TransactionTrait};
 use exonum_crypto::{Hash, PublicKey};
 use std::collections::HashMap;
 use std::io;
 use utils::crypto::keypair::KeypairType;
-use wallet_app::transaction::{CryptoTransaction, SignedTransaction, TransactionTrait};
 mod client;
 use client::ClientObj;
 use std::time::SystemTime;
 use utils::logger::*;
+use utils::serializer::serialize;
+
 mod cli_config;
-const APPNAME: String = String::from("Cryptocurrency");
+const APPNAME: &str = "Cryptocurrency";
 
 pub fn remove_trailing_newline(input: &mut String) {
     while input.ends_with('\n') {
@@ -161,8 +168,8 @@ pub fn create_transaction(kp: &KeypairType, nonce: u64) -> Option<SignedTransact
         .as_micros();
     header.insert("timestamp".to_string(), time_stamp.to_string());
     Some(SignedTransaction {
-        txn: Some(crypto_transaction),
-        app_name: APPNAME.clone(),
+        txn: serialize(&crypto_transaction),
+        app_name: String::from(APPNAME),
         signature: txn_sign,
         header,
     })
