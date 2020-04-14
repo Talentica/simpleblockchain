@@ -1,13 +1,13 @@
 extern crate futures;
 
 use crate::cli_config::Configuration;
+use crate::wallet_app_types::{CryptoState, CryptoTransaction, SignedTransaction};
 use awc::Client;
 use bytes::Bytes;
 use exonum_crypto::Hash;
+use generic_traits::state::State;
 use utils::crypto::keypair::{CryptoKeypair, Keypair, KeypairType};
 use utils::serializer::{deserialize, serialize};
-use wallet_app::state::CryptoState;
-use wallet_app::transaction::SignedTransaction;
 
 pub struct ClientObj {
     client: Client,
@@ -66,7 +66,9 @@ impl ClientObj {
                     match resp_body.await {
                         Ok(txnbody) => {
                             let signed_transaction: SignedTransaction = deserialize(&txnbody);
-                            info!("{:#?}", signed_transaction.txn);
+                            let crypto_transaction: CryptoTransaction =
+                                deserialize(&signed_transaction.txn);
+                            info!("{:#?}", crypto_transaction);
                         }
                         Err(e) => error!("Error body: {:?}", e),
                     }
@@ -95,9 +97,10 @@ impl ClientObj {
                 if response.status() == 200 {
                     match resp_body.await {
                         Ok(state) => {
-                            let ret_txn: Vec<u8> = deserialize(&state);
-                            let state: State = deserialize(ret_txn.as_slice());
-                            info!("{:#?}", state);
+                            let state: State = deserialize(&state);
+                            let crypto_state: CryptoState =
+                                deserialize(state.get_data().as_slice());
+                            info!("{:#?}", crypto_state);
                         }
                         Err(e) => error!("Error body: {:?}", e),
                     }
@@ -157,7 +160,9 @@ impl ClientObj {
                     match resp_body.await {
                         Ok(txnbody) => {
                             let signed_transaction: SignedTransaction = deserialize(&txnbody);
-                            info!("{:#?}", signed_transaction);
+                            let crypto_transaction: CryptoTransaction =
+                                deserialize(&signed_transaction.txn);
+                            info!("{:#?}", crypto_transaction);
                         }
                         Err(e) => error!("Error body: {:?}", e),
                     }
@@ -187,7 +192,7 @@ impl ClientObj {
                     match resp_body.await {
                         Ok(state) => {
                             let fetched_block: String = deserialize(&state);
-                            error!("{:#?}", fetched_block);
+                            info!("{:#?}", fetched_block);
                         }
                         Err(e) => error!("Error body: {:?}", e),
                     }
@@ -217,7 +222,9 @@ impl ClientObj {
                     match resp_body.await {
                         Ok(state) => {
                             let state: State = deserialize(&state);
-                            return Some(state.get_nonce() + 1);
+                            let crypto_state: CryptoState =
+                                deserialize(state.get_data().as_slice());
+                            return Some(crypto_state.nonce + 1);
                         }
                         Err(_) => return Some(0),
                     }

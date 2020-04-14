@@ -6,6 +6,7 @@ members = [
     "src/client",
     "src/user/doc_app",
     "src/user/wallet_app",
+    "src/user/wallet_app_client",
 ]
 
 

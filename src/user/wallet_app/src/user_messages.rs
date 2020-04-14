@@ -17,8 +17,8 @@ pub struct CryptoTransaction {
 #[derive(Clone, PartialEq, Serialize, Deserialize, ::prost::Message, BinaryValue, ObjectHash)]
 #[binary_value(codec = "bincode")]
 pub struct SignedTransaction1 {
-    #[prost(message, optional, tag = "1")]
-    pub txn: ::std::option::Option<CryptoTransaction>,
+    #[prost(bytes, tag = "1")]
+    pub txn: std::vec::Vec<u8>,
     #[prost(map = "string, string", tag = "2")]
     pub header: ::std::collections::HashMap<std::string::String, std::string::String>,
     #[prost(bytes, tag = "3")]

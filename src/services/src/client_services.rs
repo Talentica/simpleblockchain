@@ -17,7 +17,7 @@ impl ClientServices {
         sender: &mut Sender<Option<MessageTypes>>,
     ) -> impl Responder {
         let txn: SignedTransaction = deserialize(&transaction);
-        info!("submit_transaction {:?}", transaction);
+        info!("submit_transaction {:?}", txn);
         let timestamp = txn
             .header
             .get(&String::from("timestamp"))
@@ -31,7 +31,7 @@ impl ClientServices {
 
     pub fn fetch_pending_transaction_service(transaction_hash: web::Bytes) -> impl Responder {
         let txn_hash: Hash = deserialize(&transaction_hash);
-        info!("fetch_pending_transaction {:?}", transaction_hash);
+        info!("fetch_pending_transaction {:?}", txn_hash);
         match POOL.get(&txn_hash) {
             Some(transaction) => HttpResponse::Ok().body(serialize(&transaction)),
             None => HttpResponse::BadRequest().body("BadRequest"),
@@ -40,7 +40,7 @@ impl ClientServices {
 
     pub fn fetch_confirm_transaction_service(transaction_hash: web::Bytes) -> impl Responder {
         let txn_hash: Hash = deserialize(&transaction_hash);
-        info!("fetch_confirm_transaction {:?}", transaction_hash);
+        info!("fetch_confirm_transaction {:?}", txn_hash);
         let snapshot = snapshot_db();
         let schema = SchemaSnap::new(&snapshot);
         match schema.get_transaction(txn_hash) {
