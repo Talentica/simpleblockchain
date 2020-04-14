@@ -139,11 +139,12 @@ fn load_apps() {
         let app_handle = Arc::new(Mutex::new(app_register()));
         let app_name = app_handle.lock().unwrap().name();
         println!("Loaded app {:?}", app_name);
+        APPDATA.lock().unwrap().lib.push(Arc::new(applib));
         APPDATA
             .lock()
             .unwrap()
             .appdata
-            .insert(app_name.clone(), app_handle);
+            .insert(app_name.clone(), app_handle.clone());
     }
 }
 
