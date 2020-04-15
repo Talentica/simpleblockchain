@@ -6,8 +6,12 @@ use libp2p::{
     swarm::NetworkBehaviourEventProcess,
     NetworkBehaviour, PeerId,
 };
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::time::SystemTime;
 use utils::globaldata::{PeerData, GLOBALDATA};
+
+const LOCALHOST_V4: IpAddr = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
+const LOCALHOST_V6: IpAddr = IpAddr::V6(Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 1));
 
 /// Network behavior defined combining, floodsub and mdns (for discovery)
 ///
@@ -47,10 +51,15 @@ impl<TSubstream: AsyncRead + AsyncWrite> NetworkBehaviourEventProcess<MdnsEvent>
                         .duration_since(SystemTime::UNIX_EPOCH)
                         .unwrap()
                         .as_micros();
-                    GLOBALDATA.lock().unwrap().peers.insert(
-                        peerid_str,
-                        PeerData::new(peer_id, time_stamp, multi_address),
-                    );
+                    if !GLOBALDATA.lock().unwrap().peers.contains_key(&peerid_str) {
+                        let temp_peer_data = PeerData::new(peer_id, time_stamp, multi_address);
+                        let net_addr = temp_peer_data.get_network_addr().unwrap();
+                        if(  net_addr != LOCALHOST_V4 && net_addr != LOCALHOST_V6){
+                            GLOBALDATA.lock().unwrap().peers.insert( peerid_str, temp_peer_data);
+                        }
+                    }else {
+                        GLOBALDATA.lock().unwrap().peers.get_mut(&peerid_str).unwrap().last_seen = time_stamp;
+                    }
                 }
             }
             MdnsEvent::Expired(expired_nodes) => {
