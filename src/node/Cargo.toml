@@ -13,7 +13,7 @@ db_service = { path = "../db_service"}
 p2plib = { path = "../p2plib" }
 schema = { path = "../schema" }
 utils = { path = "../utils" }
-generic_traits = { path = "../generic_traits"}
+sdk = { path = "../sdk"}
 
 exonum-merkledb = "^1.0.0-rc.3"
 exonum-crypto = "^1.0.0-rc.3"

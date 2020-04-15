@@ -1,5 +1,5 @@
 [package]
-name = "generic_traits"
+name = "sdk"
 version = "0.1.0"
 authors = ["GauravA"]
 edition = "2018"

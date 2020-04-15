@@ -7,7 +7,7 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-generic_traits = { path = "../../generic_traits" }
+sdk = { path = "../../sdk" }
 utils = { path = "../../utils" }
 
 exonum-merkledb = "^1.0.0-rc.3"

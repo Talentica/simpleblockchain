@@ -1,8 +1,8 @@
 use super::signed_transaction::SignedTransaction;
 use super::state::State;
 use exonum_merkledb::access::{Access, RawAccessMut};
-use generic_traits::traits::AppHandler;
 use libloading::Library;
+use sdk::traits::AppHandler;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 

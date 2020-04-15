@@ -5,7 +5,7 @@ use crate::wallet_app_types::{CryptoState, CryptoTransaction, SignedTransaction}
 use awc::Client;
 use bytes::Bytes;
 use exonum_crypto::Hash;
-use generic_traits::state::State;
+use sdk::state::State;
 use utils::crypto::keypair::{CryptoKeypair, Keypair, KeypairType};
 use utils::serializer::{deserialize, serialize};
 

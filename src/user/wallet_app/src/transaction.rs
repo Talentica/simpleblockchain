@@ -3,9 +3,9 @@ use super::state::CryptoState;
 pub use crate::user_messages::CryptoTransaction;
 use exonum_crypto::Hash;
 use exonum_merkledb::ObjectHash;
-pub use generic_traits::signed_transaction::SignedTransaction;
-use generic_traits::state::State;
-use generic_traits::traits::{AppHandler, StateContext};
+pub use sdk::signed_transaction::SignedTransaction;
+use sdk::state::State;
+use sdk::traits::{AppHandler, StateContext};
 use std::collections::HashMap;
 use std::convert::AsRef;
 use std::time::SystemTime;
@@ -111,12 +111,8 @@ impl StateTraits for SignedTransaction {
             } else {
             }
         }
-        if flag {
-            state_context.put_txn(&self.get_hash(), self.clone());
-            flag
-        } else {
-            false
-        }
+        state_context.put_txn(&self.get_hash(), self.clone());
+        flag
     }
 }
 

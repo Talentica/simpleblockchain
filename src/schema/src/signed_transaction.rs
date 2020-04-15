@@ -1,1 +1,1 @@
-pub use generic_traits::signed_transaction::SignedTransaction;
+pub use sdk::signed_transaction::SignedTransaction;

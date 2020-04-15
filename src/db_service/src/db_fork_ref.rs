@@ -9,11 +9,11 @@ use exonum_merkledb::{
     access::{Access, FromAccess, RawAccessMut},
     ListIndex, ObjectHash, ProofMapIndex,
 };
-use generic_traits::traits::{PoolTrait, StateContext};
 use schema::block::{Block, BlockTraits, SignedBlock};
 use schema::signed_transaction::SignedTransaction;
 use schema::state::State;
 use schema::transaction_pool::{TransactionPool, POOL};
+use sdk::traits::{PoolTrait, StateContext};
 use utils::keypair::{CryptoKeypair, Keypair, KeypairType, PublicKey, Verify};
 use utils::serializer::serialize;
 
@@ -269,7 +269,7 @@ where
 //     pub fn test_schema() {
 //         use super::*;
 //         use crate::db_layer::{fork_db, patch_db};
-//         use generic_traits::traits::TransactionTrait;
+//         use sdk::traits::TransactionTrait;
 //         use schema::transaction_pool::TxnPool;
 //         use std::time::SystemTime;
 //         let mut secret =

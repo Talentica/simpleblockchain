@@ -1,12 +1,12 @@
 extern crate futures;
 
 use crate::cli_config::Configuration;
-use crate::doc_app_types::DocState;
 use crate::doc_app_types::SignedTransaction;
+use crate::doc_app_types::{CryptoTransaction, DocState};
 use awc::Client;
 use bytes::Bytes;
 use exonum_crypto::Hash;
-use generic_traits::state::State;
+use sdk::state::State;
 use utils::crypto::keypair::{CryptoKeypair, Keypair, KeypairType};
 use utils::serializer::{deserialize, serialize};
 
@@ -67,7 +67,9 @@ impl ClientObj {
                     match resp_body.await {
                         Ok(txnbody) => {
                             let signed_transaction: SignedTransaction = deserialize(&txnbody);
-                            info!("{:#?}", signed_transaction.txn);
+                            let crypto_transaction: CryptoTransaction =
+                                deserialize(&signed_transaction.txn);
+                            info!("{:#?}", crypto_transaction);
                         }
                         Err(e) => error!("Error body: {:?}", e),
                     }
@@ -158,7 +160,9 @@ impl ClientObj {
                     match resp_body.await {
                         Ok(txnbody) => {
                             let signed_transaction: SignedTransaction = deserialize(&txnbody);
-                            info!("{:#?}", signed_transaction.txn);
+                            let crypto_transaction: CryptoTransaction =
+                                deserialize(&signed_transaction.txn);
+                            info!("{:#?}", crypto_transaction);
                         }
                         Err(e) => error!("Error body: {:?}", e),
                     }

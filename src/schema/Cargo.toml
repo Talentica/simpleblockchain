@@ -12,7 +12,7 @@ prost-build = { version = "0.6.1" }
 [dependencies]
 # doc_app = { path = "../user/doc_app" }
 # wallet_app = { path = "../user/wallet_app" }
-generic_traits = { path = "../generic_traits" }
+sdk = { path = "../sdk" }
 utils = { path = "../utils" }
 
 exonum-merkledb = "^1.0.0-rc.3"

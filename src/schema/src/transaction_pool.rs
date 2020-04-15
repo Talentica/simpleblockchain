@@ -10,7 +10,7 @@ use exonum_merkledb::{
 };
 use utils::logger::*;
 
-use generic_traits::traits::{PoolTrait, StateContext};
+use sdk::traits::{PoolTrait, StateContext};
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 pub type TxnPoolKeyType = u128;
@@ -278,7 +278,7 @@ lazy_static! {
 //     #[test]
 //     pub fn main_transaction() {
 //         use super::*;
-//         use generic_traits::traits::TransactionTrait;
+//         use sdk::traits::TransactionTrait;
 //         use std::time::SystemTime;
 //         use utils::keypair::{CryptoKeypair, Keypair};
 

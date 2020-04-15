@@ -1,7 +1,7 @@
 extern crate utils;
 use exonum_crypto::Hash;
 use exonum_merkledb::ObjectHash;
-pub use generic_traits::signed_transaction::SignedTransaction;
+pub use sdk::signed_transaction::SignedTransaction;
 use std::collections::HashMap;
 use std::convert::AsRef;
 use std::time::SystemTime;

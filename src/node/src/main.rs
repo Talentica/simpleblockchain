@@ -11,9 +11,9 @@ extern crate log;
 mod nodemsgprocessor;
 use consensus::consensus_interface;
 use controllers::client_controller::{ClientController, Controller};
-use generic_traits::traits::AppHandler;
 use libloading::{Library, Symbol};
 use schema::appdata::{AppData, APPDATA};
+use sdk::traits::AppHandler;
 use std::path::Path;
 
 use libp2p::{identity::PublicKey, PeerId};

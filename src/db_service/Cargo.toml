@@ -10,7 +10,7 @@ exonum-build = "^1.0.0-rc.3"
 
 [dependencies]
 client = { path = "../client" }
-generic_traits = { path = "../generic_traits" }
+sdk = { path = "../sdk" }
 schema = { path = "../schema" }
 utils = { path = "../utils" }
 

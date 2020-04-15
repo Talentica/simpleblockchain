@@ -3,9 +3,9 @@ use crate::state::{DocStatus, NFTToken, State as DocState};
 use crate::user_messages::{CryptoTransaction, DataTypes};
 use exonum_crypto::Hash;
 use exonum_merkledb::ObjectHash;
-pub use generic_traits::signed_transaction::SignedTransaction;
-use generic_traits::state::State;
-use generic_traits::traits::{AppHandler, StateContext};
+pub use sdk::signed_transaction::SignedTransaction;
+use sdk::state::State;
+use sdk::traits::{AppHandler, StateContext};
 use std::collections::HashMap;
 use std::convert::AsRef;
 use std::time::SystemTime;
@@ -125,13 +125,8 @@ impl StateTraits for SignedTransaction {
             } else {
             }
         }
-        if flag {
-            // TODO: decide how to add transaction in the block txn-pool
-            // txn_trie.put(&self.get_hash(), self.clone());
-            flag
-        } else {
-            false
-        }
+        state_context.put_txn(&self.get_hash(), self.clone());
+        flag
     }
 }
 
@@ -172,7 +167,12 @@ impl ModuleTraits for CryptoTransaction {
         };
         let mut app_state: State = match state_context.get(&self.from) {
             Some(state) => state,
-            None => return false,
+            None => {
+                let doc_state: DocState = DocState::new();
+                let mut state: State = State::new();
+                state.set_data(&serialize(&doc_state));
+                state
+            }
         };
         let mut state: DocState = deserialize(app_state.get_data().as_slice());
         let flag: bool = state.set_hash(token_id, file_hash);
@@ -211,7 +211,12 @@ impl ModuleTraits for CryptoTransaction {
         };
         let mut app_state: State = match state_context.get(&self.from) {
             Some(state) => state,
-            None => return false,
+            None => {
+                let doc_state: DocState = DocState::new();
+                let mut state: State = State::new();
+                state.set_data(&serialize(&doc_state));
+                state
+            }
         };
         let mut state: DocState = deserialize(app_state.get_data().as_slice());
         for each in token_ids.iter() {

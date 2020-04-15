@@ -13,7 +13,7 @@ exonum-build = "^1.0.0-rc.3"
 prost-build = { version = "0.6.1" }
 
 [dependencies]
-generic_traits = { path = "../../generic_traits" }
+sdk = { path = "../../sdk" }
 utils = { path = "../../utils" }
 
 exonum-merkledb = "^1.0.0-rc.3"
