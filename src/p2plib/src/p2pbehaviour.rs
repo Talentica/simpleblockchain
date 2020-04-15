@@ -6,6 +6,8 @@ use libp2p::{
     swarm::NetworkBehaviourEventProcess,
     NetworkBehaviour, PeerId,
 };
+use std::time::SystemTime;
+use utils::globaldata::{PeerData, GLOBALDATA};
 
 /// Network behavior defined combining, floodsub and mdns (for discovery)
 ///
@@ -37,15 +39,26 @@ impl<TSubstream: AsyncRead + AsyncWrite> NetworkBehaviourEventProcess<MdnsEvent>
         match mdns_event {
             MdnsEvent::Discovered(discovered_nodes) => {
                 debug!("Discovered address {:?}", discovered_nodes);
-                for (peer_id, _) in discovered_nodes {
-                    info!("peer discovered {}", peer_id);
-                    self.floodsub.add_node_to_partial_view(peer_id);
+                for (peer_id, multi_address) in discovered_nodes {
+                    let peerid_str = peer_id.to_string();
+                    info!("peer discovered {} with address {}", peer_id, multi_address);
+                    self.floodsub.add_node_to_partial_view(peer_id.clone());
+                    let time_stamp = SystemTime::now()
+                        .duration_since(SystemTime::UNIX_EPOCH)
+                        .unwrap()
+                        .as_micros();
+                    GLOBALDATA.lock().unwrap().peers.insert(
+                        peerid_str,
+                        PeerData::new(peer_id, time_stamp, multi_address),
+                    );
                 }
             }
             MdnsEvent::Expired(expired_nodes) => {
                 debug!("Expired address {:?}", expired_nodes);
                 for (peer_id, _) in expired_nodes {
+                    let peerid_str = peer_id.to_string();
                     self.floodsub.remove_node_from_partial_view(&peer_id);
+                    GLOBALDATA.lock().unwrap().peers.remove(&peerid_str);
                 }
             }
         }
