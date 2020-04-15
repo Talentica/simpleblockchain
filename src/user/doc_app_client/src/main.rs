@@ -21,7 +21,7 @@ mod cli_config;
 //this attribute allows main to not need to return anything and still use async calls.
 #[actix_rt::main]
 async fn main() {
-    console_logger_init(&String::from("console.yml"));
+    file_logger_init_from_yml(&String::from("log.yml"));
     info!("Document Application CLient Bootstrapping");
     let cli_configuration: &cli_config::Configuration = &cli_config::GLOBAL_CONFIG;
     let client: ClientObj = ClientObj::new(cli_configuration);

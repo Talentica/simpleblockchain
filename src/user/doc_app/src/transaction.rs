@@ -165,7 +165,7 @@ impl ModuleTraits for CryptoTransaction {
             DataTypes::HashVal(value) => value.clone(),
             _ => return false,
         };
-        let mut app_state: State = match state_context.get(&self.from) {
+        let mut app_state: State = match state_context.get(&STATE_KEY.to_string()) {
             Some(state) => state,
             None => {
                 let doc_state: DocState = DocState::new();
@@ -209,7 +209,7 @@ impl ModuleTraits for CryptoTransaction {
             DataTypes::VecHashVal(value) => value.clone(),
             _ => return false,
         };
-        let mut app_state: State = match state_context.get(&self.from) {
+        let mut app_state: State = match state_context.get(&STATE_KEY.to_string()) {
             Some(state) => state,
             None => {
                 let doc_state: DocState = DocState::new();
@@ -261,7 +261,7 @@ impl ModuleTraits for CryptoTransaction {
             DataTypes::StringVal(value) => value.clone(),
             _ => return false,
         };
-        let mut app_state: State = match state_context.get(&self.from) {
+        let mut app_state: State = match state_context.get(&STATE_KEY.to_string()) {
             Some(state) => state,
             None => return false,
         };
@@ -307,7 +307,7 @@ impl ModuleTraits for CryptoTransaction {
             DataTypes::StringVal(value) => value.clone(),
             _ => return false,
         };
-        let mut app_state: State = match state_context.get(&self.from) {
+        let mut app_state: State = match state_context.get(&STATE_KEY.to_string()) {
             Some(state) => state,
             None => return false,
         };
@@ -371,7 +371,7 @@ impl ModuleTraits for CryptoTransaction {
             DataTypes::StringVal(value) => value.clone(),
             _ => return false,
         };
-        let mut app_state: State = match state_context.get(&self.from) {
+        let mut app_state: State = match state_context.get(&STATE_KEY.to_string()) {
             Some(state) => state,
             None => return false,
         };
@@ -424,7 +424,7 @@ impl ModuleTraits for CryptoTransaction {
             DataTypes::BoolVal(value) => value.clone(),
             _ => return false,
         };
-        let mut app_state: State = match state_context.get(&self.from) {
+        let mut app_state: State = match state_context.get(&STATE_KEY.to_string()) {
             Some(state) => state,
             None => return false,
         };
@@ -489,7 +489,7 @@ impl ModuleTraits for CryptoTransaction {
             DataTypes::StringVal(value) => value.clone(),
             _ => return false,
         };
-        let mut app_state: State = match state_context.get(&self.from) {
+        let mut app_state: State = match state_context.get(&STATE_KEY.to_string()) {
             Some(state) => state,
             None => return false,
         };
