@@ -129,7 +129,12 @@ impl ModuleTraits for CryptoTransaction {
                 None => return false,
             };
             let mut from_wallet: CryptoState = deserialize(from_state.get_data().as_slice());
-            if self.nonce == from_wallet.get_nonce() + 1 {
+            if self.nonce != from_wallet.get_nonce() + 1 {
+                info!(
+                    "transfer txn nonce mismatched {:?} {:?}",
+                    self.nonce,
+                    from_wallet.get_nonce() + 1
+                );
                 return false;
             }
             if from_wallet.get_balance() > self.amount {
@@ -143,16 +148,6 @@ impl ModuleTraits for CryptoTransaction {
                     }
                 };
                 let mut to_wallet: CryptoState = deserialize(to_state.get_data().as_slice());
-
-                if self.nonce != from_wallet.get_nonce() + 1 {
-                    info!(
-                        "transfer txn nonce mismatched {:?} {:?}",
-                        self.nonce,
-                        from_wallet.get_nonce() + 1
-                    );
-                    return false;
-                }
-
                 to_wallet.add_balance(self.amount);
                 to_state.set_data(&serialize(&to_wallet));
 
