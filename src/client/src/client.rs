@@ -1,4 +1,3 @@
-use crate::cli_config;
 use exonum_crypto::Hash;
 use reqwest::{Client, Error};
 use schema::block::SignedBlock;
@@ -6,11 +5,33 @@ use schema::signed_transaction::SignedTransaction;
 use schema::state::State;
 use schema::transaction_pool::{TxnPool, TxnPoolKeyType, POOL};
 use std::collections::HashMap;
+use std::net::IpAddr;
+use utils::global_peer_data::{PeerData, GLOBALDATA};
 use utils::serializer::{deserialize, serialize};
+
+fn get_peer_url() -> Option<String> {
+    let locked_peer_map = GLOBALDATA.lock().unwrap();
+    for (_, peer_data) in locked_peer_map.peers.iter() {
+        let peer: PeerData = peer_data.clone();
+        match peer.get_network_addr() {
+            Ok(ip_address) => {
+                let ip_string: String = match ip_address {
+                    IpAddr::V4(ip) => ip.to_string(),
+                    IpAddr::V6(ip) => ip.to_string(),
+                };
+                let mut url: String = String::from("http://");
+                url.extend(ip_string.chars());
+                url.extend(":8089/".chars());
+                return Some(url);
+            }
+            Err(_) => {}
+        }
+    }
+    None
+}
 
 pub struct ClientObj {
     client: Client,
-    url: String,
 }
 
 #[derive(Debug)]
@@ -25,36 +46,31 @@ impl SyncState {
         SyncState {
             index: 0,
             block_map: HashMap::new(),
-            // txn_map: HashMap::new(),
         }
     }
 
-    pub fn new_from(
-        index: u64,
-        block_map: HashMap<u64, SignedBlock>,
-        // txn_map: HashMap<Hash, SignedTransaction>,
-    ) -> SyncState {
-        SyncState {
-            index,
-            block_map,
-            // txn_map,
-        }
+    pub fn new_from(index: u64, block_map: HashMap<u64, SignedBlock>) -> SyncState {
+        SyncState { index, block_map }
     }
 }
 
 impl ClientObj {
     pub fn new() -> ClientObj {
-        let cli_configuration: &cli_config::Configuration = &cli_config::GLOBAL_CONFIG;
         std::env::set_var("RUST_BACKTRACE", "1");
         ClientObj {
             client: Client::new(),
-            url: cli_configuration.url.clone(),
         }
     }
 
     // request to peer to fetch pending transaction
-    pub fn fetch_pending_transaction(&self, txn_hash: &Hash) -> Result<SignedTransaction, Error> {
-        let mut url: String = self.url.clone();
+    pub fn fetch_pending_transaction(
+        &self,
+        txn_hash: &Hash,
+    ) -> Result<Option<SignedTransaction>, Error> {
+        let mut url: String = match get_peer_url() {
+            Some(url) => url,
+            None => return Ok(None),
+        };
         url.extend("client/fetch_pending_transaction".chars());
         let mut result = self
             .client
@@ -67,12 +83,15 @@ impl ClientObj {
         let mut buf: Vec<u8> = vec![];
         result.copy_to(&mut buf)?;
         let signed_transaction: SignedTransaction = deserialize(buf.as_slice());
-        Ok(signed_transaction)
+        Ok(Some(signed_transaction))
     }
 
     // request to peer to fetch public_address state
-    pub fn fetch_state(&self, public_address: &String) -> Result<State, Error> {
-        let mut url: String = self.url.clone();
+    pub fn fetch_state(&self, public_address: &String) -> Result<Option<State>, Error> {
+        let mut url: String = match get_peer_url() {
+            Some(url) => url,
+            None => return Ok(None),
+        };
         url.extend("client/fetch_state".chars());
         let mut result = self
             .client
@@ -84,12 +103,15 @@ impl ClientObj {
         let mut buf: Vec<u8> = vec![];
         result.copy_to(&mut buf)?;
         let state: State = deserialize(buf.as_slice());
-        Ok(state)
+        Ok(Some(state))
     }
 
     // request to peer to fetch block
-    pub fn fetch_block(&self, block_index: &u64) -> Result<SignedBlock, Error> {
-        let mut url: String = self.url.clone();
+    pub fn fetch_block(&self, block_index: &u64) -> Result<Option<SignedBlock>, Error> {
+        let mut url: String = match get_peer_url() {
+            Some(url) => url,
+            None => return Ok(None),
+        };
         url.extend("peer/fetch_block".chars());
         let mut result = self
             .client
@@ -101,12 +123,18 @@ impl ClientObj {
         let mut buf: Vec<u8> = vec![];
         result.copy_to(&mut buf)?;
         let signed_block: SignedBlock = deserialize(buf.as_slice());
-        Ok(signed_block)
+        Ok(Some(signed_block))
     }
 
     // request to peer to fetch confirmed transaction
-    pub fn fetch_confirm_transaction(&self, txn_hash: &Hash) -> Result<SignedTransaction, Error> {
-        let mut url: String = self.url.clone();
+    pub fn fetch_confirm_transaction(
+        &self,
+        txn_hash: &Hash,
+    ) -> Result<Option<SignedTransaction>, Error> {
+        let mut url: String = match get_peer_url() {
+            Some(url) => url,
+            None => return Ok(None),
+        };
         url.extend("client/fetch_confirm_transaction".chars());
         let mut result = self
             .client
@@ -118,12 +146,15 @@ impl ClientObj {
         let mut buf: Vec<u8> = vec![];
         result.copy_to(&mut buf)?;
         let signed_transaction: SignedTransaction = deserialize(buf.as_slice());
-        Ok(signed_transaction)
+        Ok(Some(signed_transaction))
     }
 
     // request for fetching latest block
-    pub fn fetch_latest_block(&self) -> Result<SignedBlock, Error> {
-        let mut url: String = self.url.clone();
+    pub fn fetch_latest_block(&self) -> Result<Option<SignedBlock>, Error> {
+        let mut url: String = match get_peer_url() {
+            Some(url) => url,
+            None => return Ok(None),
+        };
         url.extend("peer/fetch_latest_block".chars());
         let mut result = self
             .client
@@ -135,12 +166,15 @@ impl ClientObj {
         let mut buf: Vec<u8> = vec![];
         result.copy_to(&mut buf)?;
         let signed_block: SignedBlock = deserialize(buf.as_slice());
-        Ok(signed_block)
+        Ok(Some(signed_block))
     }
 
     // request for fetching latest block
     pub fn fetch_blockchain_length(&self) -> Result<u64, Error> {
-        let mut url: String = self.url.clone();
+        let mut url: String = match get_peer_url() {
+            Some(url) => url,
+            None => return Ok(0),
+        };
         url.extend("peer/fetch_blockchain_length".chars());
         let mut result = self
             .client
@@ -167,13 +201,20 @@ impl ClientObj {
             Ok(length) => length,
             Err(_) => return SyncState::new(),
         };
-
+        if blockchain_length == 0 {
+            return SyncState::new();
+        }
         while own_chain_length < blockchain_length {
-            let block: Result<SignedBlock, Error> = self.fetch_block(&own_chain_length);
+            let block: Result<Option<SignedBlock>, Error> = self.fetch_block(&own_chain_length);
             match block {
-                Ok(signed_block) => {
-                    block_pool.insert(own_chain_length.clone(), signed_block);
-                    own_chain_length = own_chain_length + 1;
+                Ok(is_signed_block) => {
+                    match is_signed_block {
+                        Some(signed_block) => {
+                            block_pool.insert(own_chain_length.clone(), signed_block);
+                            own_chain_length = own_chain_length + 1;
+                        }
+                        None => own_chain_length = blockchain_length,
+                    };
                 }
                 // no point in fetching higher block since lower is missing.
                 Err(_) => own_chain_length = blockchain_length,
@@ -183,18 +224,23 @@ impl ClientObj {
         while fetch_flag {
             for (_key, value) in block_pool.iter() {
                 for each in value.block.txn_pool.iter() {
-                    let fetch_txn_output: Result<SignedTransaction, Error> =
+                    let fetch_txn_output: Result<Option<SignedTransaction>, Error> =
                         self.fetch_confirm_transaction(each);
                     match fetch_txn_output {
-                        Ok(txn) => {
-                            let timestamp = txn
-                                .header
-                                .get(&String::from("timestamp"))
-                                .unwrap()
-                                .parse::<TxnPoolKeyType>()
-                                .unwrap();
-                            POOL.insert_op(&timestamp, &txn);
-                            // txn_pool.insert(each.clone(), txn);
+                        Ok(is_txn) => {
+                            match is_txn {
+                                Some(txn) => {
+                                    let timestamp = txn
+                                        .header
+                                        .get(&String::from("timestamp"))
+                                        .unwrap()
+                                        .parse::<TxnPoolKeyType>()
+                                        .unwrap();
+                                    POOL.insert_op(&timestamp, &txn);
+                                    // txn_pool.insert(each.clone(), txn);
+                                }
+                                None => fetch_flag = false,
+                            };
                         }
                         Err(_) => {
                             fetch_flag = false;

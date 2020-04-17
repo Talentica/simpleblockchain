@@ -1,10 +1,6 @@
 #[macro_use]
-extern crate lazy_static;
-
-#[macro_use]
 extern crate log;
 
-mod cli_config;
 mod client;
 
 use crate::client::{ClientObj, SyncState};
@@ -128,7 +124,7 @@ pub fn get_vec_input(input: &mut String) -> Option<Vec<u8>> {
 
 //this attribute allows main to not need to return anything and still use async calls.
 fn main() {
-    console_logger_init(&String::from("log.yml"));
+    console_logger_init(&String::from("client_log.yml"));
     info!("Peer Client Bootstrapping");
     let mut client: ClientObj = ClientObj::new();
     let mut end_flag: bool = false;

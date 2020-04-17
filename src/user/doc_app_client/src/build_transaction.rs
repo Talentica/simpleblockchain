@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::io;
 use std::time::SystemTime;
 use utils::crypto::keypair::KeypairType;
-use utils::serializer::{deserialize, serialize};
+use utils::serializer::serialize;
 
 pub fn remove_trailing_newline(input: &mut String) {
     while input.ends_with('\n') {

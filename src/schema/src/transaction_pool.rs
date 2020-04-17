@@ -242,7 +242,7 @@ where
         for each in hash_vec.iter() {
             let signed_txn = self.get(each);
             if let Some(txn) = signed_txn {
-                let ret = APPDATA
+                let _ret = APPDATA
                     .lock()
                     .unwrap()
                     .appdata
@@ -251,14 +251,6 @@ where
                     .lock()
                     .unwrap()
                     .execute(&txn, state_context);
-                //TODO use execute hook from app
-                // if !txn.execute(state_trie, txn_trie) {
-                if !ret {
-                    eprintln!(
-                        "transaction execution error (either signature or business logic error)"
-                    );
-                    return false;
-                }
             } else {
                 error!("transaction couldn't find for block execution");
                 return false;

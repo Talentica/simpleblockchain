@@ -124,6 +124,10 @@ pub trait ModuleTraits {
 impl ModuleTraits for CryptoTransaction {
     fn transfer(&self, state_context: &mut dyn StateContext) -> bool {
         if self.validate() {
+            if self.from == self.to {
+                info!("self transfer transaction not allowed");
+                return false;
+            }
             let mut from_state: State = match state_context.get(&self.from) {
                 Some(state) => state,
                 None => return false,
@@ -137,7 +141,7 @@ impl ModuleTraits for CryptoTransaction {
                 );
                 return false;
             }
-            if from_wallet.get_balance() > self.amount {
+            if from_wallet.get_balance() >= self.amount {
                 let mut to_state: State = match state_context.get(&self.to) {
                     Some(state) => state,
                     None => {
@@ -148,7 +152,9 @@ impl ModuleTraits for CryptoTransaction {
                     }
                 };
                 let mut to_wallet: CryptoState = deserialize(to_state.get_data().as_slice());
-                to_wallet.add_balance(self.amount);
+                if !to_wallet.add_balance(self.amount) {
+                    return false;
+                }
                 to_state.set_data(&serialize(&to_wallet));
 
                 from_wallet.deduct_balance(self.amount);
@@ -183,7 +189,9 @@ impl ModuleTraits for CryptoTransaction {
                 );
                 return false;
             }
-            wallet.add_balance(self.amount);
+            if !wallet.add_balance(self.amount) {
+                return false;
+            }
             wallet.increase_nonce();
             state.set_data(&serialize(&wallet));
             state_context.put(&self.from.clone(), state);

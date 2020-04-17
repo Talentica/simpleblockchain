@@ -140,7 +140,11 @@ impl Consensus {
         {
             let mut schema = SchemaFork::new(&fork);
             let signed_block = schema.create_block(&self.keypair);
-            info!("new block created.. hash {}", signed_block.object_hash());
+            info!(
+                "new block created.. id {},hash {}",
+                signed_block.block.id,
+                signed_block.object_hash()
+            );
             POOL.sync_pool(&signed_block.block.txn_pool);
             self.round_number = signed_block.block.id;
             MessageSender::send_block_msg(sender, signed_block);
@@ -212,7 +216,7 @@ impl Consensus {
                                                         &mut meta_data_locked.sender,
                                                         election_pong,
                                                     );
-                                                    info!(
+                                                    debug!(
                                                         "Ping message from  {} for height {} -> ",
                                                         election_ping.payload.public_key,
                                                         election_ping.payload.height,
@@ -224,7 +228,7 @@ impl Consensus {
                                                     );
                                                 }
                                             } else {
-                                                info!(
+                                                debug!(
                                                     "public_keys {:?} key {:?}",
                                                     meta_data_locked.public_keys,
                                                     election_ping.payload.public_key
@@ -249,7 +253,7 @@ impl Consensus {
                                                                 .may_be_leader
                                                                 .clone(),
                                                         );
-                                                        info!(
+                                                        debug!(
                                                         "Pong message received from  {} for height {} -> ",
                                                         election_pong.payload.may_be_leader,
                                                         election_pong.payload.height,
@@ -311,6 +315,16 @@ impl Consensus {
                     } else if key > current_block_chain_length {
                         // future leader
                         // by pass this for now and wait
+                        let fork = fork_db();
+                        #[allow(unused_assignments)]
+                        let mut flag: bool = false;
+                        {
+                            let mut schema = SchemaFork::new(&fork);
+                            flag = schema.sync_state();
+                        }
+                        if flag {
+                            patch_db(fork);
+                        }
                     } else {
                         // current leader
                         let value = _value.clone();

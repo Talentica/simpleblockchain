@@ -49,11 +49,13 @@ impl CryptoState {
         self.balance = self.balance - amount;
     }
 
-    pub fn add_balance(&mut self, amount: u64) {
+    pub fn add_balance(&mut self, amount: u64) -> bool {
         if self.balance > self.balance + amount {
-            panic!("do balance check before fxn calling");
+            info!("do balance check before creating transaction");
+            false
         } else {
             self.balance = self.balance + amount;
+            true
         }
     }
 
