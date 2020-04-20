@@ -1,0 +1,16 @@
+public = "c087853a474e7f8f4e3783250fc4f85104a179fdb1a85ae71402f0e5b66ae3f7"
+secret = "93da17b93d6cbec70bcac4e5b9eacc8f6d34f2b6fc2fbc812801dd212e713562"
+node_type = "validator"
+genesis_block = false
+dbpath = "./rockdb/db"
+p2p_port = 4444
+client_port = 8089
+client_host = "0.0.0.0"
+client_apps = ["./libwallet_app.so"]
+
+# [consensus]
+public_keys = ["2c8a35450e1d198e3834d933a35962600c33d1d0f8f6481d6e08f140791374d0",
+               "5f0323b9825360402401878d0e97f6c583c6896c79dc76d91e8375aec47918c0",
+               "c087853a474e7f8f4e3783250fc4f85104a179fdb1a85ae71402f0e5b66ae3f7"
+            ]
+
