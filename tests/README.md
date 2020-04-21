@@ -5,6 +5,9 @@
 Follow these steps to run docker container based setup
 
   * Build the docker images using build.sh script
+  * Build your application module/dynamic library on Ubuntu 18.04 OS
+  * Copy the application library (.so file) into all the config*/app directories
+  * Add application library path to all the config files in config* directories
   * Run "docker-compose up" from docker dir
  
  The above command will spin-up 3 blockchain nodes (docker container).
