@@ -17,6 +17,7 @@ use exonum_merkledb::ObjectHash;
 use schema::transaction_pool::{TxnPool, TxnPoolKeyType, POOL};
 use utils::keypair::{CryptoKeypair, Keypair};
 
+#[test]
 fn test_document_transfer_valid_scenario() {
     info!("\n ***Document Transfer Demo***");
     let mut secret =

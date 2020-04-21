@@ -51,11 +51,20 @@ impl Consensus {
         let fork = fork_db();
         {
             let mut schema = SchemaFork::new(&fork);
-            let (genesis_signed_block, txn_vec) = schema.initialize_db(&self.keypair);
-            for each in txn_vec.iter() {
-                MessageSender::send_transaction_msg(sender, each.clone());
+            if schema.blockchain_length() == 0 {
+                info!("genesis block created");
+                let (genesis_signed_block, txn_vec) = schema.initialize_db(&self.keypair);
+                for each in txn_vec.iter() {
+                    MessageSender::send_transaction_msg(sender, each.clone());
+                }
+                MessageSender::send_block_msg(sender, genesis_signed_block);
+            } else {
+                info!(
+                    "started from previous state {} {}",
+                    schema.blockchain_length(),
+                    schema.state_trie_merkle_hash()
+                )
             }
-            MessageSender::send_block_msg(sender, genesis_signed_block);
         }
         patch_db(fork);
         let leader_payload: LeaderElection = LeaderElection {
@@ -316,15 +325,11 @@ impl Consensus {
                         // future leader
                         // by pass this for now and wait
                         let fork = fork_db();
-                        #[allow(unused_assignments)]
-                        let mut flag: bool = false;
                         {
                             let mut schema = SchemaFork::new(&fork);
-                            flag = schema.sync_state();
+                            schema.sync_state();
                         }
-                        if flag {
-                            patch_db(fork);
-                        }
+                        patch_db(fork);
                     } else {
                         // current leader
                         let value = _value.clone();
@@ -383,6 +388,13 @@ impl Consensus {
                 leader_map_locked.map.insert(0, consensus_obj.pk.clone());
             }
             consensus_obj.init_state(&config.db.dbpath, leader_map.clone(), &mut sender.clone());
+        } else {
+            let fork = fork_db();
+            {
+                let mut schema = SchemaFork::new(&fork);
+                schema.sync_state();
+            }
+            patch_db(fork);
         }
         consensus_obj.state_machine(leader_map.clone(), meta_data.clone(), &mut sender.clone());
     }

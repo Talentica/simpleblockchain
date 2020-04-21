@@ -3,7 +3,6 @@ use reqwest::{Client, Error};
 use schema::block::SignedBlock;
 use schema::signed_transaction::SignedTransaction;
 use schema::state::State;
-use schema::transaction_pool::{TxnPool, TxnPoolKeyType, POOL};
 use std::collections::HashMap;
 use std::net::IpAddr;
 use utils::global_peer_data::{PeerData, GLOBALDATA};
@@ -38,7 +37,7 @@ pub struct ClientObj {
 pub struct SyncState {
     pub index: u64,
     pub block_map: HashMap<u64, SignedBlock>,
-    // pub txn_map: HashMap<Hash, SignedTransaction>,
+    pub txn_map: HashMap<Hash, SignedTransaction>,
 }
 
 impl SyncState {
@@ -46,11 +45,20 @@ impl SyncState {
         SyncState {
             index: 0,
             block_map: HashMap::new(),
+            txn_map: HashMap::new(),
         }
     }
 
-    pub fn new_from(index: u64, block_map: HashMap<u64, SignedBlock>) -> SyncState {
-        SyncState { index, block_map }
+    pub fn new_from(
+        index: u64,
+        block_map: HashMap<u64, SignedBlock>,
+        txn_map: HashMap<Hash, SignedTransaction>,
+    ) -> SyncState {
+        SyncState {
+            index,
+            block_map,
+            txn_map,
+        }
     }
 }
 
@@ -72,18 +80,24 @@ impl ClientObj {
             None => return Ok(None),
         };
         url.extend("client/fetch_pending_transaction".chars());
-        let mut result = self
+        let response = self
             .client
             .get(&url) // <- Create request builder
             .header("User-Agent", "Actix-web")
             //.send() // <- Send http request
             .body(serialize(txn_hash))
-            .send()
-            .expect("Failed to send request");
-        let mut buf: Vec<u8> = vec![];
-        result.copy_to(&mut buf)?;
-        let signed_transaction: SignedTransaction = deserialize(buf.as_slice());
-        Ok(Some(signed_transaction))
+            .send()?;
+        match response.error_for_status() {
+            Ok(mut body) => {
+                let mut buf: Vec<u8> = vec![];
+                body.copy_to(&mut buf)?;
+                let signed_transaction: SignedTransaction = deserialize(buf.as_slice());
+                Ok(Some(signed_transaction))
+            }
+            Err(err) => {
+                return Result::Err(err);
+            }
+        }
     }
 
     // request to peer to fetch public_address state
@@ -93,17 +107,23 @@ impl ClientObj {
             None => return Ok(None),
         };
         url.extend("client/fetch_state".chars());
-        let mut result = self
+        let response = self
             .client
             .get(&url) // <- Create request builder
             .header("User-Agent", "Actix-web")
             .body(serialize(public_address))
-            .send()
-            .expect("Failed to send request");
-        let mut buf: Vec<u8> = vec![];
-        result.copy_to(&mut buf)?;
-        let state: State = deserialize(buf.as_slice());
-        Ok(Some(state))
+            .send()?;
+        match response.error_for_status() {
+            Ok(mut body) => {
+                let mut buf: Vec<u8> = vec![];
+                body.copy_to(&mut buf)?;
+                let state: State = deserialize(buf.as_slice());
+                Ok(Some(state))
+            }
+            Err(err) => {
+                return Result::Err(err);
+            }
+        }
     }
 
     // request to peer to fetch block
@@ -113,17 +133,23 @@ impl ClientObj {
             None => return Ok(None),
         };
         url.extend("peer/fetch_block".chars());
-        let mut result = self
+        let response = self
             .client
             .get(&url) // <- Create request builder
             .header("User-Agent", "Actix-web")
             .body(serialize(block_index))
-            .send()
-            .expect("Failed to send request");
-        let mut buf: Vec<u8> = vec![];
-        result.copy_to(&mut buf)?;
-        let signed_block: SignedBlock = deserialize(buf.as_slice());
-        Ok(Some(signed_block))
+            .send()?;
+        match response.error_for_status() {
+            Ok(mut body) => {
+                let mut buf: Vec<u8> = vec![];
+                body.copy_to(&mut buf)?;
+                let signed_block: SignedBlock = deserialize(buf.as_slice());
+                Ok(Some(signed_block))
+            }
+            Err(err) => {
+                return Result::Err(err);
+            }
+        }
     }
 
     // request to peer to fetch confirmed transaction
@@ -136,17 +162,23 @@ impl ClientObj {
             None => return Ok(None),
         };
         url.extend("client/fetch_confirm_transaction".chars());
-        let mut result = self
+        let response = self
             .client
             .get(&url) // <- Create request builder
             .header("User-Agent", "Actix-web")
             .body(serialize(txn_hash)) // <- Send http request
-            .send()
-            .expect("Failed to send request");
-        let mut buf: Vec<u8> = vec![];
-        result.copy_to(&mut buf)?;
-        let signed_transaction: SignedTransaction = deserialize(buf.as_slice());
-        Ok(Some(signed_transaction))
+            .send()?;
+        match response.error_for_status() {
+            Ok(mut body) => {
+                let mut buf: Vec<u8> = vec![];
+                body.copy_to(&mut buf)?;
+                let signed_transaction: SignedTransaction = deserialize(buf.as_slice());
+                Ok(Some(signed_transaction))
+            }
+            Err(err) => {
+                return Result::Err(err);
+            }
+        }
     }
 
     // request for fetching latest block
@@ -156,17 +188,23 @@ impl ClientObj {
             None => return Ok(None),
         };
         url.extend("peer/fetch_latest_block".chars());
-        let mut result = self
+        let response = self
             .client
             .get(&url) // <- Create request builder
             .header("User-Agent", "Actix-web")
             //.send() // <- Send http request
-            .send()
-            .expect("Failed to send request");
-        let mut buf: Vec<u8> = vec![];
-        result.copy_to(&mut buf)?;
-        let signed_block: SignedBlock = deserialize(buf.as_slice());
-        Ok(Some(signed_block))
+            .send()?;
+        match response.error_for_status() {
+            Ok(mut body) => {
+                let mut buf: Vec<u8> = vec![];
+                body.copy_to(&mut buf)?;
+                let signed_block: SignedBlock = deserialize(buf.as_slice());
+                Ok(Some(signed_block))
+            }
+            Err(err) => {
+                return Result::Err(err);
+            }
+        }
     }
 
     // request for fetching latest block
@@ -176,22 +214,31 @@ impl ClientObj {
             None => return Ok(0),
         };
         url.extend("peer/fetch_blockchain_length".chars());
-        let mut result = self
+        let response = self
             .client
             .get(&url) // <- Create request builder
             .header("User-Agent", "Actix-web")
             //.send() // <- Send http request
-            .send()
-            .expect("Failed to send request");
-        let mut buf: Vec<u8> = vec![];
-        result.copy_to(&mut buf)?;
-        let length: u64 = deserialize(buf.as_slice());
-        Ok(length)
+            .send()?;
+        match response.error_for_status() {
+            Ok(mut body) => {
+                let mut buf: Vec<u8> = vec![];
+                body.copy_to(&mut buf)?;
+                let length: u64 = deserialize(buf.as_slice());
+                Ok(length)
+            }
+            Err(err) => {
+                // asserting a 400 as an example
+                // it could be any status between 400...599
+                return Result::Err(err);
+            }
+        }
     }
 
     /// this function will sync blockchain state with other peers
     pub fn fetch_sync_state(&self, current_length: u64) -> SyncState {
         let mut block_pool: HashMap<u64, SignedBlock> = HashMap::new();
+        let mut txn_map: HashMap<Hash, SignedTransaction> = HashMap::new();
         let mut own_chain_length = current_length;
         // let block_threads_vec = vec![];
         info!("sync-state function called");
@@ -230,14 +277,7 @@ impl ClientObj {
                         Ok(is_txn) => {
                             match is_txn {
                                 Some(txn) => {
-                                    let timestamp = txn
-                                        .header
-                                        .get(&String::from("timestamp"))
-                                        .unwrap()
-                                        .parse::<TxnPoolKeyType>()
-                                        .unwrap();
-                                    POOL.insert_op(&timestamp, &txn);
-                                    // txn_pool.insert(each.clone(), txn);
+                                    txn_map.insert(each.clone(), txn);
                                 }
                                 None => fetch_flag = false,
                             };
@@ -255,6 +295,6 @@ impl ClientObj {
             fetch_flag = false;
         }
         info!("Sync_State --All data fetched");
-        return SyncState::new_from(blockchain_length, block_pool);
+        return SyncState::new_from(blockchain_length, block_pool, txn_map);
     }
 }

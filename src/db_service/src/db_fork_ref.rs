@@ -12,7 +12,7 @@ use exonum_merkledb::{
 use schema::block::{Block, BlockTraits, SignedBlock};
 use schema::signed_transaction::SignedTransaction;
 use schema::state::State;
-use schema::transaction_pool::{TransactionPool, POOL};
+use schema::transaction_pool::{TransactionPool, TxnPool, TxnPoolKeyType, POOL};
 use sdk::traits::{PoolTrait, StateContext};
 use utils::keypair::{CryptoKeypair, Keypair, KeypairType, PublicKey, Verify};
 use utils::serializer::serialize;
@@ -243,15 +243,31 @@ where
             return false;
         }
         block_fetch_flag = true;
-        while own_chain_length < sync_data.index {
+        while block_fetch_flag && own_chain_length < sync_data.index {
             match sync_data.block_map.get(&own_chain_length) {
                 Some(signed_block) => {
-                    if self.update_block(signed_block) {
-                        own_chain_length = own_chain_length + 1;
-                    } else {
-                        own_chain_length = sync_data.index;
-                        block_fetch_flag = false;
+                    let signed_block: &SignedBlock = &signed_block;
+                    for each in signed_block.block.txn_pool.iter() {
+                        if let Some(txn) = sync_data.txn_map.get(each) {
+                            let timestamp = txn
+                                .header
+                                .get(&String::from("timestamp"))
+                                .unwrap()
+                                .parse::<TxnPoolKeyType>()
+                                .unwrap();
+                            POOL.insert_op(&timestamp, &txn);
+                        } else {
+                            block_fetch_flag = false;
+                        }
                     }
+                    if block_fetch_flag {
+                        if self.update_block(signed_block) {
+                            own_chain_length = own_chain_length + 1;
+                        } else {
+                            block_fetch_flag = false;
+                        }
+                    }
+                    POOL.sync_pool(&signed_block.block.txn_pool);
                 }
                 None => {
                     own_chain_length = sync_data.index;
@@ -259,7 +275,7 @@ where
                 }
             }
         }
-        return block_fetch_flag;
+        return true;
     }
 }
 
