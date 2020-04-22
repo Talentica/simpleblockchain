@@ -9,7 +9,8 @@ use std::sync::Mutex;
 
 pub trait Controller {
     //fn new() -> Self;
-    fn start(&mut self, sender: Sender<Option<MessageTypes>>) -> bool;
+    fn start_validator_controller(&mut self, sender: Sender<Option<MessageTypes>>) -> bool;
+    fn start_fullnode_controller(&mut self, sender: Sender<Option<MessageTypes>>) -> bool;
     fn stop(&self);
 }
 
@@ -102,7 +103,7 @@ impl ClientController {
 }
 
 impl Controller for ClientController {
-    fn start(&mut self, sender: Sender<Option<MessageTypes>>) -> bool {
+    fn start_validator_controller(&mut self, sender: Sender<Option<MessageTypes>>) -> bool {
         let sys = System::new("TransactionService");
         info!("Starting api_service at {:?}", self.srvr_addr);
         let app_data = web::Data::new(Mutex::new(AppState { txn_sender: sender }));
@@ -116,6 +117,36 @@ impl Controller for ClientController {
                     .service(submit_transaction_controller)
                     .service(fetch_confirm_transaction_controller)
                     .service(fetch_pending_transaction_controller)
+                    .service(fetch_state_controller)
+                    .service(fetch_block_controller)
+                    .service(fetch_latest_block_controller)
+                    .service(fetch_block_peer_controller)
+                    .service(fetch_latest_block_peer_controller)
+                    .service(fetch_blockchain_length_peer_controller)
+                    .service(fetch_blockchain_length_controller)
+            })
+            .bind(self.srvr_addr)
+            .unwrap()
+            .shutdown_timeout(5)
+            .run(),
+        );
+
+        let _ = sys.run();
+        true
+    }
+
+    fn start_fullnode_controller(&mut self, sender: Sender<Option<MessageTypes>>) -> bool {
+        let sys = System::new("TransactionService");
+        info!("Starting api_service at {:?}", self.srvr_addr);
+        let app_data = web::Data::new(Mutex::new(AppState { txn_sender: sender }));
+        self.srvr = Some(
+            HttpServer::new(move || {
+                App::new()
+                    .app_data(app_data.clone())
+                    // enable logger
+                    .wrap(middleware::Logger::default())
+                    //.service(web::resource("/index.html").to(|| async { "Hello world!" }))
+                    .service(fetch_confirm_transaction_controller)
                     .service(fetch_state_controller)
                     .service(fetch_block_controller)
                     .service(fetch_latest_block_controller)

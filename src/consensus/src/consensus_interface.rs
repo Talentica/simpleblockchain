@@ -59,6 +59,7 @@ impl Consensus {
                 }
                 MessageSender::send_block_msg(sender, genesis_signed_block);
             } else {
+                self.round_number = schema.blockchain_length() - 1;
                 info!(
                     "started from previous state {} {}",
                     schema.blockchain_length(),
@@ -80,7 +81,9 @@ impl Consensus {
         };
         MessageSender::send_leader_election_msg(sender, signed_new_leader);
         let mut leader_map_locked = leader_map.lock().unwrap();
-        leader_map_locked.map.insert(1, self.pk.clone());
+        leader_map_locked
+            .map
+            .insert(self.round_number, self.pk.clone());
     }
 
     fn select_leader(&self, meta_data: Arc<Mutex<MetaData>>) -> SignedLeaderElection {

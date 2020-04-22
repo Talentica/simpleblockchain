@@ -74,7 +74,7 @@ fn validator_process() {
     let host_from_config = config.node.client_host.clone();
     let mut api_service = ClientController::new(&host_from_config, port_from_config);
     info!("Starting api_service");
-    api_service.start(txn_sender);
+    api_service.start_validator_controller(txn_sender);
     info!("Started api_service");
 
     //On pressing ctrl-C, the boolean variable terminate will be set to 'true' in ctrlc handler and
@@ -100,12 +100,37 @@ fn fullnode_process() {
         swarm.topic_list.push(String::from(each.clone()));
     }
     let mut node_msg_processor = NodeMsgProcessor::new(MSG_DISPATCHER.node_msg_receiver.clone());
+    let txn_sender = swarm.tx.clone();
     {
         thread::spawn(move || {
             node_msg_processor.start();
         });
     }
-    swarm.process(peer_id, config);
+    thread::spawn(move || {
+        swarm.process(peer_id, config);
+    });
+    std::env::set_var("RUST_BACKTRACE", "1");
+    //Register the Ctrl-C handler so that user can use it to exit the application gracefully.
+    let terminate = Arc::new(AtomicBool::new(false));
+    register_signals(Arc::clone(&terminate));
+    //Starting the Transaction Service
+    //TODO: host/port details need to come from config
+    let port_from_config = config.node.client_port;
+    let host_from_config = config.node.client_host.clone();
+    let mut api_service = ClientController::new(&host_from_config, port_from_config);
+    info!("Starting api_service");
+    api_service.start_fullnode_controller(txn_sender);
+    info!("Started api_service");
+
+    //On pressing ctrl-C, the boolean variable terminate will be set to 'true' in ctrlc handler and
+    //the thread execution counter will come out of the loop. If we need to join on any thread,
+    //we can do that after the loop. We should share the same boolean variable with those threads which
+    //can keep checking this variable and exit gracefully.
+    while !terminate.load(Ordering::SeqCst) {
+        std::thread::park();
+    }
+    info!("Stopping REST End Point");
+    api_service.stop(); //blocking call
 }
 
 fn register_signals(terminate: Arc<AtomicBool>) {
