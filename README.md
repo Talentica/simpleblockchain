@@ -1,5 +1,6 @@
 # Simpleblockchain
 A framework to build blockchain applications.
+(Please refer to Wiki for details)
 
 ## Build
 To build docker image use these steps
@@ -13,4 +14,3 @@ To build docker image use these steps
 
 ![Alt text](./misc/BlockchainTxnFlowDiagram.jpg?raw=true "Transaction Flow in a blockchain")
 
-### Block creation - Consensus
