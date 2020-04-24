@@ -20,6 +20,17 @@ After the docker images are generated using build script,
   * Run `docker-compose up` to bring up all the nodes.
   * use the `wallet_app_client` to mint the coins, query the blockchain state and submit a transaction.
   
+## Deployment
+Validators and fullnodes can be deployed either using docker or directly over bare metal server. To deploy docker based setup, please follow the above [section](#setting-up-the-test-network).
+
+To deploy on the bare metal server follow these steps:
+
+  * clone the code base
+  * install rust and cargo
+  * run `cargo build --release`
+  * `node` application should be generated in `target/release` directory
+  * build the blockchain application
+  * update `config.toml` file and run the `node` application
 
 ## Basic Transaction Flow
 
