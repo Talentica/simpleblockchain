@@ -13,13 +13,12 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: install
+    - name: protobuf
       run:  |
-            apt-get update
-            apt-get install -y software-properties-common
             add-apt-repository ppa:maarten-fonville/protobuf
             apt-get update
-            apt-get install -y curl git build-essential libssl-dev libsodium-dev libsnappy-dev librocksdb-dev pkg-config clang-7 lldb-7 lld-7 libprotobuf-dev protobuf-compiler python3-pip python3-setuptools   
+    - name: install
+      run:  apt-get install -y software-properties-common curl git build-essential libssl-dev libsodium-dev libsnappy-dev librocksdb-dev pkg-config clang-7 lldb-7 lld-7 libprotobuf-dev protobuf-compiler python3-pip python3-setuptools   
     - name: Build
       run: cargo build --verbose
     - name: Run tests
