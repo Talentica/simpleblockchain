@@ -9,10 +9,20 @@ on:
 jobs:
   build:
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
 
     steps:
     - uses: actions/checkout@v2
+    - name: install
+      run:  apt-get update \
+            && apt-get install -y software-properties-common \
+            && add-apt-repository ppa:maarten-fonville/protobuf \
+            && apt-get update \
+            && apt-get install -y curl git \
+            build-essential libssl-dev libsodium-dev libsnappy-dev \
+            librocksdb-dev pkg-config clang-7 lldb-7 lld-7 \
+            libprotobuf-dev protobuf-compiler \
+            python3-pip python3-setuptools   
     - name: Build
       run: cargo build --verbose
     - name: Run tests
