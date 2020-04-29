@@ -22,7 +22,7 @@ jobs:
       env:
         PROTOC_ZIP: protoc-3.7.1-linux-x86_64.zip      
     - name: install
-      run:  apt-get install -y software-properties-common curl git build-essential libssl-dev libsodium-dev libsnappy-dev librocksdb-dev pkg-config clang-7 lldb-7 lld-7 libprotobuf-dev protobuf-compiler python3-pip python3-setuptools   
+      run:  sudo apt-get install -y software-properties-common curl git build-essential libssl-dev libsodium-dev libsnappy-dev librocksdb-dev pkg-config clang-7 lldb-7 lld-7 libprotobuf-dev protobuf-compiler python3-pip python3-setuptools   
     - name: Build
       run: cargo build --verbose
     - name: Run tests
