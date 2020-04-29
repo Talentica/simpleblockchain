@@ -2,6 +2,7 @@ use super::*;
 use std::env;
 use std::fs::File;
 use std::io::prelude::*;
+use std::io::Read;
 use toml;
 
 use crypto::keypair::CryptoKeypair;
@@ -14,7 +15,6 @@ pub enum NODETYPE {
     FullNode,
     Validator,
 }
-
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TomlReaderConfig {
     pub public: String,

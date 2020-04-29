@@ -12,9 +12,6 @@ services:
     command: bash -c "cp -r /config/* /simpleblockchain && cd /simpleblockchain && ./node"
     environment:
       - RUST_BACKTRACE=1
-        #    depends_on:
-        #- node2
-        #- node3
 
   node2:
     image: simplebc:latest
