@@ -5,7 +5,7 @@ RUN apt-get update \
     && add-apt-repository ppa:maarten-fonville/protobuf \
     && apt-get update \
     && apt-get install -y curl git \
-    build-essential libsodium-dev libsnappy-dev \
+    build-essential libssl-dev libsodium-dev libsnappy-dev \
     librocksdb-dev pkg-config clang-7 lldb-7 lld-7 \
     libprotobuf-dev protobuf-compiler \
     python3-pip python3-setuptools

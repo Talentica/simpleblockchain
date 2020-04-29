@@ -1,7 +1,17 @@
+#[macro_use]
+extern crate exonum_derive;
+
+#[macro_use]
+extern crate lazy_static;
+
+#[macro_use]
+extern crate log;
+
+pub mod types;
+
+pub mod appdata;
 pub mod block;
+pub mod signed_transaction;
+pub mod state;
 pub mod transaction;
 pub mod transaction_pool;
-pub mod user_messages;
-pub mod wallet;
-#[macro_use]
-extern crate serde;

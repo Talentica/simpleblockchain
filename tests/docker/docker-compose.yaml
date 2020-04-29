@@ -4,25 +4,37 @@ services:
     image: simplebc:latest
     expose:
       - 4444
+      - 8089
+    ports:
+      - 8090:8089
     volumes:
       - ./config1:/config 
-    command: bash -c "cp /config/config.toml /simpleblockchain && cd /simpleblockchain && ./node"
-    depends_on:
-      - node2
-      - node3
+    command: bash -c "cp -r /config/* /simpleblockchain && cd /simpleblockchain && ./node"
+    environment:
+      - RUST_BACKTRACE=1
 
   node2:
     image: simplebc:latest
     expose:
       - 4444
+      - 8089
+    ports:
+      - 8091:8089
     volumes:
       - ./config2:/config 
-    command: bash -c "cp /config/config.toml /simpleblockchain && cd /simpleblockchain && ./node"
+    command: bash -c "cp -r /config/* /simpleblockchain && cd /simpleblockchain && ./node"
+    depends_on:
+      - node1
   node3:
     image: simplebc:latest
     expose:
       - 4444
+      - 8089
+    ports:
+      - 8092:8089
     volumes:
       - ./config3:/config 
-    command: bash -c "cp /config/config.toml /simpleblockchain && cd /simpleblockchain && ./node"
+    command: bash -c "cp -r /config/* /simpleblockchain && cd /simpleblockchain && ./node"
+    depends_on:
+      - node1
     # cd /simpleblockchain; bash ./node"

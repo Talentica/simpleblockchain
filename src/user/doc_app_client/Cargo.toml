@@ -1,0 +1,28 @@
+[package]
+name = "doc_app_client"
+version = "0.1.0"
+authors = ["gaurav agarwal <gaurav.agarwal@talentica.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+sdk = { path = "../../sdk" }
+utils = { path = "../../utils" }
+
+exonum-merkledb = "^1.0.0-rc.3"
+exonum-crypto = "^1.0.0-rc.3"
+exonum-derive = "^1.0.0-rc.3"
+
+bytes = "0.5.4"
+actix-web = "2.0.0"
+actix-rt = "1.0.0"
+awc = "1.0.1"
+futures = "0.3.1"
+hex = "0.4.2"
+toml = "0.5.5"
+serde = { version = "1.0", features = ["derive"] }
+serde_cbor = "^0.10"
+lazy_static = "1.4.0"
+log = "0.4.8"
+bincode = "1.0"

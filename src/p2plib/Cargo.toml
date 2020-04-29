@@ -8,9 +8,13 @@ edition = "2018"
 
 [dependencies]
 utils = { path = "../utils" }
+sdk = { path = "../sdk" }
+schema = { path = "../schema" }
+
 futures = "^0.3"
 libp2p = "^0.15"
-env_logger = "0.7.1"
 serde = { version = "1.0", features = ["derive"] }
 serde_cbor = "^0.11"
 lazy_static = "^1.4"
+hex = "0.4.2"
+log = "0.4.8"

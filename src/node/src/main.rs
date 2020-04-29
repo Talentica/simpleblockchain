@@ -1,69 +1,136 @@
-mod nodemsgprocessor;
-use libp2p::PeerId;
-use nodemsgprocessor::*;
-use p2plib::simpleswarm::SimpleSwarm;
-use services::*;
-use utils::configreader;
-use utils::configreader::Configuration;
+extern crate consensus;
+extern crate controllers;
 extern crate ctrlc;
+extern crate db_service;
+extern crate p2plib;
+extern crate schema;
+
+#[macro_use]
+extern crate log;
+
+mod nodemsgprocessor;
+use consensus::consensus_interface;
+use controllers::client_controller::{ClientController, Controller};
+use libloading::{Library, Symbol};
+use schema::appdata::{AppData, APPDATA};
+use sdk::traits::AppHandler;
+use std::path::Path;
+
+use libp2p::{identity::PublicKey, PeerId};
+use nodemsgprocessor::*;
+use p2plib::messages::{CONSENSUS_MSG_TOPIC_STR, MSG_DISPATCHER, NODE_MSG_TOPIC_STR};
+use p2plib::simpleswarm::SimpleSwarm;
+
 use std::sync::{
     atomic::{AtomicBool, Ordering},
-    Arc,
+    Arc, Mutex,
 };
+use std::thread;
+use utils::configreader;
+use utils::configreader::{Configuration, NODETYPE};
+use utils::logger::*;
 
-use p2plib::messages::Message;
-use p2plib::messages::*;
-
-use std::{thread, time};
-
-fn publish() {
+fn validator_process() {
     let config: &Configuration = &configreader::GLOBAL_CONFIG;
-    let peer_id = PeerId::from_public_key(config.node.public.clone());
-    println!("peer id = {:?}", peer_id);
+    let pk: PublicKey = PublicKey::Ed25519(config.node.public.clone());
+    let peer_id = PeerId::from_public_key(pk);
+    info!("peer id = {:?}", peer_id);
     let mut swarm = SimpleSwarm::new();
-    swarm.topic_list.push(String::from(BlockCreate::TOPIC));
-    swarm
-        .topic_list
-        .push(String::from(TransactionCreate::TOPIC));
-
+    for each in NODE_MSG_TOPIC_STR {
+        swarm.topic_list.push(String::from(each.clone()));
+    }
+    for each in CONSENSUS_MSG_TOPIC_STR {
+        swarm.topic_list.push(String::from(each.clone()));
+    }
     let mut node_msg_processor = NodeMsgProcessor::new(MSG_DISPATCHER.node_msg_receiver.clone());
-    let mut tx = swarm.tx.clone();
-
+    let mut sender = swarm.tx.clone();
+    let txn_sender = swarm.tx.clone();
     {
         thread::spawn(move || {
             node_msg_processor.start();
         });
     }
 
+    // this thread will be responsible for whole consensus part.
+    // in future this thread will spwan new child thread accrding to consensus requirement.
+    let consensus_msg_receiver_clone = MSG_DISPATCHER.consensus_msg_receiver.clone();
     thread::spawn(move || {
-        let mut ictr: i64 = 0;
-        const NUM_MSG: i64 = 10;
-        loop {
-            ictr += 1;
-            if ictr > NUM_MSG {
-                break;
-            }
-            let msg1 = Some(MessageTypes::NodeMsg(NodeMessageTypes::BlockCreate(
-                BlockCreate {
-                    height: ictr,
-                    hash: String::from("test"),
-                },
-            )));
-            let msg2 = Some(MessageTypes::NodeMsg(NodeMessageTypes::TransactionCreate(
-                TransactionCreate {
-                    nonce: ictr,
-                    payload: String::from("payload"),
-                    signature: String::from("abcdefg"),
-                },
-            )));
-
-            thread::sleep(time::Duration::from_secs(2));
-            tx.try_send(msg1);
-            tx.try_send(msg2);
-        }
+        consensus_interface::Consensus::init_consensus(
+            config,
+            &mut sender,
+            consensus_msg_receiver_clone,
+        )
     });
+    thread::spawn(move || {
+        swarm.process(peer_id, config);
+    });
+    std::env::set_var("RUST_BACKTRACE", "1");
+    //Register the Ctrl-C handler so that user can use it to exit the application gracefully.
+    let terminate = Arc::new(AtomicBool::new(false));
+    register_signals(Arc::clone(&terminate));
+    //Starting the Transaction Service
+    //TODO: host/port details need to come from config
+    let port_from_config = config.node.client_port;
+    let host_from_config = config.node.client_host.clone();
+    let mut api_service = ClientController::new(&host_from_config, port_from_config);
+    info!("Starting api_service");
+    api_service.start_validator_controller(txn_sender);
+    info!("Started api_service");
 
-    swarm.process(peer_id, config);
+    //On pressing ctrl-C, the boolean variable terminate will be set to 'true' in ctrlc handler and
+    //the thread execution counter will come out of the loop. If we need to join on any thread,
+    //we can do that after the loop. We should share the same boolean variable with those threads which
+    //can keep checking this variable and exit gracefully.
+    while !terminate.load(Ordering::SeqCst) {
+        std::thread::park();
+    }
+    info!("Stopping REST End Point");
+    api_service.stop(); //blocking call
+}
+
+fn fullnode_process() {
+    let config: &Configuration = &configreader::GLOBAL_CONFIG;
+    let pk: PublicKey = PublicKey::Ed25519(config.node.public.clone());
+    let peer_id = PeerId::from_public_key(pk);
+    let mut swarm = SimpleSwarm::new();
+    for each in NODE_MSG_TOPIC_STR {
+        swarm.topic_list.push(String::from(each.clone()));
+    }
+    for each in CONSENSUS_MSG_TOPIC_STR {
+        swarm.topic_list.push(String::from(each.clone()));
+    }
+    let mut node_msg_processor = NodeMsgProcessor::new(MSG_DISPATCHER.node_msg_receiver.clone());
+    let txn_sender = swarm.tx.clone();
+    {
+        thread::spawn(move || {
+            node_msg_processor.start();
+        });
+    }
+    thread::spawn(move || {
+        swarm.process(peer_id, config);
+    });
+    std::env::set_var("RUST_BACKTRACE", "1");
+    //Register the Ctrl-C handler so that user can use it to exit the application gracefully.
+    let terminate = Arc::new(AtomicBool::new(false));
+    register_signals(Arc::clone(&terminate));
+    //Starting the Transaction Service
+    //TODO: host/port details need to come from config
+    let port_from_config = config.node.client_port;
+    let host_from_config = config.node.client_host.clone();
+    let mut api_service = ClientController::new(&host_from_config, port_from_config);
+    info!("Starting api_service");
+    api_service.start_fullnode_controller(txn_sender);
+    info!("Started api_service");
+
+    //On pressing ctrl-C, the boolean variable terminate will be set to 'true' in ctrlc handler and
+    //the thread execution counter will come out of the loop. If we need to join on any thread,
+    //we can do that after the loop. We should share the same boolean variable with those threads which
+    //can keep checking this variable and exit gracefully.
+    while !terminate.load(Ordering::SeqCst) {
+        std::thread::park();
+    }
+    info!("Stopping REST End Point");
+    api_service.stop(); //blocking call
 }
 
 fn register_signals(terminate: Arc<AtomicBool>) {
@@ -75,51 +142,46 @@ fn register_signals(terminate: Arc<AtomicBool>) {
     .expect("Error setting Ctrl-C handler");
 }
 
-fn main() {
+fn load_apps() {
     let config: &Configuration = &configreader::GLOBAL_CONFIG;
-    let peer_id = PeerId::from_public_key(config.node.public.clone());
-    println!("peer id = {:?}", peer_id);
-    std::env::set_var("RUST_BACKTRACE", "1");
-    //Register the Ctrl-C handler so that user can use it to exit the application gracefully.
-    let terminate = Arc::new(AtomicBool::new(false));
-    register_signals(Arc::clone(&terminate));
+    println!("config = {:?}", config.node);
+    let mut app_iter = IntoIterator::into_iter(&config.node.client_apps);
+    while let Some(app) = app_iter.next() {
+        println!("loading library {:?}", app);
+        let app_path = Path::new(app);
+        println!("is file = {:?}", app_path.is_file());
+        let applib = Library::new(app)
+            .expect(format!("Loading App library {:?} failed", app.clone()).as_str());
+        let app_register: Symbol<fn() -> Box<dyn AppHandler + Send>> =
+            unsafe { applib.get(b"register_app") }.expect(
+                format!(
+                    "register_app symbol is not found in library {:?}",
+                    app.clone()
+                )
+                .as_str(),
+            );
+        let app_handle = Arc::new(Mutex::new(app_register()));
+        let app_name = app_handle.lock().unwrap().name();
+        println!("Loaded app {:?}", app_name);
+        let mut locked_app_data = APPDATA.lock().unwrap();
+        locked_app_data.lib.push(Arc::new(applib));
+        locked_app_data
+            .appdata
+            .insert(app_name.clone(), app_handle.clone());
+    }
+}
 
-    if config.node.genesis_block {
-        publish();
-    } else {
-        let mut swarm = SimpleSwarm::new();
-        swarm.topic_list.push(String::from(BlockCreate::TOPIC));
-        swarm
-            .topic_list
-            .push(String::from(TransactionCreate::TOPIC));
-
-        let mut node_msg_processor =
-            NodeMsgProcessor::new(MSG_DISPATCHER.node_msg_receiver.clone());
-        {
-            thread::spawn(move || {
-                node_msg_processor.start();
-            });
+fn main() {
+    file_logger_init_from_yml(&String::from("log.yml"));
+    info!("Node Bootstrapping");
+    let config: &Configuration = &configreader::GLOBAL_CONFIG;
+    load_apps();
+    match config.node.node_type {
+        NODETYPE::Validator => {
+            validator_process();
         }
-        swarm.process(peer_id, config);
+        NODETYPE::FullNode => {
+            fullnode_process();
+        }
     }
-
-    //Starting the Transaction Service
-    //TODO: host/port details need to come from config
-    let port_from_config = 8089;
-    let host_from_config = "127.0.0.1".to_string();
-    let mut api_service =
-        transaction_service::TransactionService::new(&host_from_config, port_from_config);
-    println!("Starting api_service");
-    api_service.start();
-    println!("Started api_service");
-
-    //On pressing ctrl-C, the boolean variable terminate will be set to 'true' in ctrlc handler and
-    //the thread execution counter will come out of the loop. If we need to join on any thread,
-    //we can do that after the loop. We should share the same boolean variable with those threads which
-    //can keep checking this variable and exit gracefully.
-    while !terminate.load(Ordering::SeqCst) {
-        std::thread::park();
-    }
-    println!("Stopping REST End Point");
-    api_service.stop(); //blocking call
 }

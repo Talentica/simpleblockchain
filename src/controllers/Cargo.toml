@@ -1,0 +1,27 @@
+[package]
+name = "controllers"
+version = "0.1.0"
+authors = ["gaurav agarwal <gaurav.agarwal@talentica.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+p2plib = { path = "../p2plib" }
+services = { path = "../services" }
+utils = { path = "../utils" }
+
+exonum-merkledb = "^1.0.0-rc.3"
+exonum-crypto = "^1.0.0-rc.3"
+exonum-derive = "^1.0.0-rc.3"
+
+hex = "^0.4"
+serde = { version = "1.0", features = ["derive"] }
+serde_cbor = "^0.10"
+libp2p = "^0.15"
+futures = "0.3.1"
+async-std = "^1.4"
+log = "0.4.8"
+lazy_static = "^1.4"
+actix-web = "2.0"
+actix-rt = "1.0"

@@ -1,6 +1,13 @@
-public = "2c8a35450e1d198e3834d933a35962600c33d1d0f8f6481d6e08f140791374d0"
-secret = "97ba6f71a5311c4986e01798d525d0da8ee5c54acbf6ef7c3fadd1e2f624442f"
-node_type = 1
-genesis_block = false
-p2p_port = 4444
+public = "c087853a474e7f8f4e3783250fc4f85104a179fdb1a85ae71402f0e5b66ae3f7"
+secret = "93da17b93d6cbec70bcac4e5b9eacc8f6d34f2b6fc2fbc812801dd212e713562"
+node_type = "validator"
+genesis_block = true
 dbpath = "./rockdb/db"
+p2p_port = 4444
+client_port = 8089
+client_host = "0.0.0.0"
+client_apps = ["./app/wallet.so"]
+
+# [consensus]
+public_keys = ["c087853a474e7f8f4e3783250fc4f85104a179fdb1a85ae71402f0e5b66ae3f7"]
+

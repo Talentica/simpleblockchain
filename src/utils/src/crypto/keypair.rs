@@ -17,6 +17,7 @@ pub trait Sign<T> {
 
 pub trait Verify<T> {
     fn verify(public: &T, msg: &[u8], signature: &[u8]) -> bool;
+    fn verify_from_encoded_pk(public: &String, msg: &[u8], signature: &[u8]) -> bool;
 }
 
 #[derive(Debug)]
@@ -51,6 +52,19 @@ impl Verify<PublicKeyType> for PublicKey {
     fn verify(public: &PublicKeyType, msg: &[u8], signature: &[u8]) -> bool {
         public.verify(msg, signature)
     }
+
+    fn verify_from_encoded_pk(public: &String, msg: &[u8], signature: &[u8]) -> bool {
+        let decode_public_key = match hex::decode(public) {
+            Ok(decode_public_key) => decode_public_key,
+            Err(_e) => return false,
+        };
+
+        let public_key = match PublicKeyType::decode(&decode_public_key) {
+            Ok(public_key) => public_key,
+            Err(_e) => return false,
+        };
+        public_key.verify(msg, signature)
+    }
 }
 
 #[cfg(test)]
@@ -77,11 +91,11 @@ mod tests {
     #[test]
     fn test_verify() {
         use super::*;
-        let s = "97ba6f71a5311c4986e01798d525d0da8ee5c54acbf6ef7c3fadd1e2f624442f";
+        let s = "5f7c3fadd1e2f6225d0da8ee5c5a4435acbf6ef7c3fa543dd16e2544f624442f";
         let mut secret_bytes = hex::decode(s).expect("invalid secret");
         let kp = Keypair::generate_from(secret_bytes.as_mut_slice());
-        println!("pub : {:?}", hex::encode(kp.public().encode()));
-        // println!("secrete {:?}", hex::encode(kp.secret().as_ref()));
+        info!("pub : {:?}", hex::encode(Keypair::public(&kp).encode()));
+        // info!("secrete {:?}", hex::encode(kp.secret().as_ref()));
         let sign = Keypair::sign(&kp, b"Hello World");
         assert_eq!(
             true,

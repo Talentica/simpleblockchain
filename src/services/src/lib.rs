@@ -1,10 +1,7 @@
-pub mod transaction_service;
+#[macro_use]
+extern crate log;
 
-pub trait Service {
-    //fn new() -> Self;
-    fn start(&mut self) -> bool;
-    fn stop(&self);
-}
+pub mod client_services;
 
 #[cfg(test)]
 mod tests {

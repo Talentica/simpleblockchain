@@ -1,0 +1,31 @@
+[package]
+name = "wallet_app"
+version = "0.1.0"
+authors = ["GauravA"]
+edition = "2018"
+
+[lib]
+crate-type = ["cdylib"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[build-dependencies]
+exonum-build = "^1.0.0-rc.3"
+prost-build = { version = "0.6.1" }
+
+[dependencies]
+sdk = { path = "../../sdk" }
+utils = { path = "../../utils" }
+
+exonum-merkledb = "^1.0.0-rc.3"
+exonum-crypto = "^1.0.0-rc.3"
+exonum-derive = "^1.0.0-rc.3"
+
+futures = "^0.3"
+serde = { version = "1.0", features = ["derive"] }
+serde_cbor = "^0.11"
+hex = "^0.4"
+failure = "0.1"
+bincode = "1.0"
+prost = "0.6.1"
+protobuf = "2.8.0"
+log = "0.4.8"

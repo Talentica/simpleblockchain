@@ -1,8 +1,9 @@
 use super::*;
 use std::env;
-use std::fs::{File};
-use toml;
+use std::fs::File;
+use std::io::prelude::*;
 use std::io::Read;
+use toml;
 
 use crypto::keypair::CryptoKeypair;
 use crypto::keypair::Keypair;
@@ -18,12 +19,16 @@ pub enum NODETYPE {
 pub struct TomlReaderConfig {
     pub public: String,
     pub secret: String,
-    node_type: i32,
+    node_type: String,
     genesis_block: bool,
     //p2p
     p2p_port: u16,
     //db config
     dbpath: String,
+    //client config
+    client_port: u32,
+    client_host: String,
+    client_apps: Vec<String>,
 }
 
 #[derive(Debug)]
@@ -44,13 +49,22 @@ impl Configuration {
         if hex::encode(keypair.public().encode()) != tomlreader.public {
             panic!("Secret and public key pair is invalid");
         }
+        let mut node_type: NODETYPE = NODETYPE::Validator;
+        if tomlreader.node_type.to_ascii_lowercase() == "fullnode" {
+            node_type = NODETYPE::FullNode
+        } else if tomlreader.node_type.to_ascii_lowercase() != "validator" {
+            panic!("node type not defined properly");
+        }
         let node_obj: Node = Node {
             public: Keypair::public(&keypair),
             hex_public: tomlreader.public,
             keypair: keypair,
-            node_type: NODETYPE::FullNode,
+            node_type,
             genesis_block: tomlreader.genesis_block,
             p2p_port: tomlreader.p2p_port,
+            client_host: tomlreader.client_host,
+            client_port: tomlreader.client_port,
+            client_apps: tomlreader.client_apps.to_vec(),
         };
         let db_path: Database = Database {
             dbpath: "utils/rocksdb".to_string(),
@@ -70,9 +84,9 @@ impl Configuration {
                 e
             ),
         };
-        println!(">> Current Working Directory: {}", cwd);
+        info!(">> Current Working Directory: {}", cwd);
         let config_file_path: String = cwd + &String::from("/config.toml");
-        println!("path = {}", config_file_path);
+        info!("path = {}", config_file_path);
         let mut config_file = match File::open(config_file_path) {
             Ok(f) => f,
             Err(e) => panic!("Error occurred opening config file:  Err: {}", e),
@@ -95,6 +109,9 @@ pub struct Node {
     pub node_type: NODETYPE,
     pub genesis_block: bool,
     pub p2p_port: u16,
+    pub client_host: String,
+    pub client_port: u32,
+    pub client_apps: Vec<String>,
 }
 
 #[derive(Debug)]
@@ -111,7 +128,7 @@ mod tests {
     #[test]
     fn test_config() {
         use super::*;
-        println!("conf data = {:?}", configreader::GLOBAL_CONFIG.node);
+        info!("conf data = {:?}", configreader::GLOBAL_CONFIG.node);
         assert_eq!(
             hex::encode(configreader::GLOBAL_CONFIG.node.keypair.public().encode()),
             configreader::GLOBAL_CONFIG.node.hex_public
