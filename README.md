@@ -1,3 +1,7 @@
+![Build](https://github.com/Talentica/simpleblockchain/workflows/Build/badge.svg)
+[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/go-apla?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+
+
 # Simpleblockchain
 A framework to build blockchain applications.
 (Please refer to Wiki for details)
@@ -8,7 +12,7 @@ To build the docker image, use these below steps
   * Run from shell ./build.sh
   * The build will generate 3 docker images simplebc_buildbase, simplebc_build and simplebc
   * The build will also generate a wallet_app_client binary which can be used to test the wallet functionality of the blockchain.
-![Build](https://github.com/Talentica/simpleblockchain/workflows/Build/badge.svg)
+
 
 ## Setting up the test network
 We will deploy a three node network where one node is in validator configuration with POA consensus and other 2 in observation mode. 
