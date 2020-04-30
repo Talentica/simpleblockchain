@@ -1,5 +1,5 @@
 ![Build](https://github.com/Talentica/simpleblockchain/workflows/Build/badge.svg)
-[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/go-apla?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+[![Gitter](https://badges.gitter.im/simpleblockchain-framework/community.svg)](https://gitter.im/simpleblockchain-framework/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 
 # Simpleblockchain
