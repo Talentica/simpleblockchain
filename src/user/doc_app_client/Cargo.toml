@@ -16,7 +16,7 @@ exonum-derive = "^1.0.0-rc.3"
 
 bytes = "0.5.4"
 actix-web = "2.0.0"
-actix-rt = "1.0.0"
+actix-rt = "1.1.1"
 awc = "1.0.1"
 futures = "0.3.1"
 hex = "0.4.2"
