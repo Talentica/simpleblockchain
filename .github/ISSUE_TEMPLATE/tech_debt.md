@@ -2,7 +2,7 @@
 name: Tech debt
 about: Track internal tech debt
 title: ''
-labels: tech-debt
+labels: techdebt
 assignees: ''
 
 ---
