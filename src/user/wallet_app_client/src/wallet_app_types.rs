@@ -43,7 +43,10 @@ impl TransactionTrait<CryptoTransaction> for CryptoTransaction {
     }
 
     fn sign(&self, kp: &KeypairType) -> Vec<u8> {
-        let ser_txn = serialize(&self);
+        let ser_txn: Vec<u8> = match serialize(&self) {
+            Result::Ok(value) => value,
+            Result::Err(_) => vec![0],
+        };
         let sign = Keypair::sign(&kp, &ser_txn);
         sign
     }
@@ -68,7 +71,10 @@ impl TransactionTrait<CryptoTransaction> for CryptoTransaction {
 
 impl TransactionTrait<SignedTransaction> for SignedTransaction {
     fn validate(&self) -> bool {
-        let txn = deserialize::<CryptoTransaction>(&self.txn);
+        let txn: CryptoTransaction = match deserialize(&self.txn) {
+            Result::Ok(value) => value,
+            Result::Err(_) => return false,
+        };
         PublicKey::verify_from_encoded_pk(&txn.from, &self.txn, &self.signature.as_ref())
     }
 
@@ -94,8 +100,12 @@ impl TransactionTrait<SignedTransaction> for SignedTransaction {
             .unwrap()
             .as_micros();
         header.insert("timestamp".to_string(), time_stamp.to_string());
+        let serialized_txn: Vec<u8> = match serialize(&txn) {
+            Result::Ok(value) => value,
+            Result::Err(_) => vec![0],
+        };
         SignedTransaction {
-            txn: serialize(&txn),
+            txn: serialized_txn,
             app_name: String::from(APPNAME),
             signature: txn_sign,
             header,

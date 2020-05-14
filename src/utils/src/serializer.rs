@@ -1,38 +1,71 @@
 // Module responsible for serializing and deserializing
 use libp2p::multihash::{encode, Hash};
 pub use serde::{Deserialize, Serialize};
+pub use serde_cbor::error::Error as serde_error;
+use std::error;
+use std::fmt;
+
+type ResultType<T> = std::result::Result<T, DoubleError>;
+
+#[derive(Debug, Clone)]
+pub struct DoubleError;
+
+impl fmt::Display for DoubleError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "couldn't able to compute serialize hash256")
+    }
+}
+
+impl error::Error for DoubleError {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
+        // Generic error, underlying cause isn't tracked.
+        None
+    }
+}
 
 /// serialize a generic type T
 /// Needs trait Serialize to be implemented
 /// can be done directly by using macro
 /// #[derive(Serialize)] defined in serde
-pub fn serialize<T>(to_ser: &T) -> Vec<u8>
+pub fn serialize<T>(to_ser: &T) -> Result<Vec<u8>, serde_error>
 where
     T: Serialize,
 {
-    let servec = serde_cbor::to_vec(&to_ser).unwrap();
+    let servec = serde_cbor::to_vec(&to_ser);
     servec
 }
 
 /// returns the SHA3_256 hash of cbor value for
 /// generic type T
-pub fn serialize_hash256<T>(to_ser: &T) -> Vec<u8>
+pub fn serialize_hash256<T>(to_ser: &T) -> ResultType<Vec<u8>>
 where
     T: Serialize,
 {
-    let to_hash = serialize(&to_ser);
-    encode(Hash::SHA3256, &to_hash).unwrap().to_vec()
+    match serialize(&to_ser) {
+        Result::Ok(to_hash) => {
+            let encoded_value = match encode(Hash::SHA3256, &to_hash) {
+                Ok(value) => value,
+                Err(_) => return Err(DoubleError),
+            };
+            return Ok(encoded_value.to_vec());
+        }
+        Result::Err(_) => return Err(DoubleError),
+    };
 }
 
 /// deserialize a vec<u8> slice and returns
 /// generic type T
 /// needs to implement Deserialze trait
 /// with lifetime "a"
-pub fn deserialize<'a, T>(slice: &'a [u8]) -> T
+pub fn deserialize<'a, T>(slice: &'a [u8]) -> Result<T, serde_error>
 where
     T: Deserialize<'a>,
 {
-    serde_cbor::from_slice(&slice).unwrap()
+    let deserialize_value = serde_cbor::from_slice(&slice);
+    match deserialize_value {
+        Result::Ok(value) => return Result::Ok(value),
+        Result::Err(error) => return Result::Err(error),
+    };
 }
 
 #[cfg(test)]
@@ -67,7 +100,10 @@ mod tests_sbserde {
         };
 
         // check if hash of cbor is correct
-        let hash_of_ser = serialize_hash256(&ferris);
+        let hash_of_ser: Vec<u8> = match serialize_hash256(&ferris) {
+            Result::Ok(value) => value,
+            Result::Err(_) => vec![0],
+        };
         assert_eq!(
             hash_of_ser,
             vec![
@@ -102,11 +138,11 @@ mod tests_sbserde {
                 name: "youtee".to_owned(),
             },
         };
-        let serobj = serialize(&ferris);
+        let serobj = serialize(&ferris).unwrap();
 
-        let deserobj: Mascot = deserialize(&serobj);
-        let hash_of_ser = serialize_hash256(&ferris);
-        let hash_of_ser_deser = serialize_hash256(&deserobj);
+        let deserobj: Mascot = deserialize(&serobj).unwrap();
+        let hash_of_ser = serialize_hash256(&ferris).unwrap();
+        let hash_of_ser_deser = serialize_hash256(&deserobj).unwrap();
         assert_eq!(hash_of_ser, hash_of_ser_deser);
     }
 }

@@ -27,7 +27,13 @@ pub struct SchemaFork<T: Access> {
 
 impl<T: Access> SchemaFork<T> {
     pub fn new(access: T) -> Self {
-        Self::from_root(access).unwrap()
+        match Self::from_root(access) {
+            Result::Ok(root_access) => return root_access,
+            Result::Err(error) => {
+                error!("fork access error {:?}", error);
+                panic!("{:?}", error);
+            }
+        }
     }
 }
 
@@ -116,7 +122,13 @@ where
         }
         info!("txn count in proposed block {}", executed_txns.len());
         let length = self.block_list.len();
-        let last_block: SignedBlock = self.block_list.get(length - 1).unwrap();
+        let last_block: SignedBlock = match self.block_list.get(length - 1) {
+            Some(block) => block,
+            None => {
+                error!("last block not found");
+                panic!("last block not found");
+            }
+        };
         let prev_hash = last_block.object_hash();
         let header: [Hash; 3] = [
             self.state_trie_merkle_hash(),
@@ -156,7 +168,13 @@ where
         }
 
         // block signature check
-        let msg = serialize(&signed_block.block);
+        let msg: Vec<u8> = match serialize(&signed_block.block) {
+            Result::Ok(value) => value,
+            Result::Err(_) => {
+                error!("error occurred during block serialization process");
+                return false;
+            }
+        };
         if !PublicKey::verify_from_encoded_pk(
             &signed_block.block.peer_id,
             &msg,
@@ -189,7 +207,10 @@ where
             return true;
         } else {
             // block pre_hash check
-            let last_block: SignedBlock = self.block_list.get(length - 1).unwrap();
+            let last_block: SignedBlock = match self.block_list.get(length - 1) {
+                Some(block) => block,
+                None => return false,
+            };
             let prev_hash = last_block.object_hash();
             if signed_block.block.prev_hash != prev_hash {
                 error!(
@@ -249,13 +270,18 @@ where
                     let signed_block: &SignedBlock = &signed_block;
                     for each in signed_block.block.txn_pool.iter() {
                         if let Some(txn) = sync_data.txn_map.get(each) {
-                            let timestamp = txn
-                                .header
-                                .get(&String::from("timestamp"))
-                                .unwrap()
-                                .parse::<TxnPoolKeyType>()
-                                .unwrap();
-                            POOL.insert_op(&timestamp, &txn);
+                            match txn.header.get(&String::from("timestamp")) {
+                                Some(string) => {
+                                    match string.parse::<TxnPoolKeyType>() {
+                                        Ok(timestamp) => POOL.insert_op(&timestamp, &txn),
+                                        Err(error) => {
+                                            block_fetch_flag = false;
+                                            error!("transaction timestamp error {:?}", error);
+                                        }
+                                    };
+                                }
+                                None => block_fetch_flag = false,
+                            }
                         } else {
                             block_fetch_flag = false;
                         }

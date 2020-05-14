@@ -7,7 +7,6 @@ use crate::client::{ClientObj, SyncState};
 use exonum_crypto::{Hash, PublicKey};
 use std::io;
 use utils::logger::*;
-use utils::serializer::serialize;
 
 pub fn remove_trailing_newline(input: &mut String) {
     while input.ends_with('\n') {
@@ -105,18 +104,6 @@ pub fn get_bool_input(input: &mut String) -> Option<bool> {
             } else {
                 return None;
             }
-        }
-        Err(_) => return None,
-    };
-}
-
-pub fn get_vec_input(input: &mut String) -> Option<Vec<u8>> {
-    input.clear();
-    match io::stdin().read_line(input) {
-        Ok(_) => {
-            remove_trailing_newline(input);
-            let vec: Vec<u8> = serialize(&input);
-            return Some(vec);
         }
         Err(_) => return None,
     };

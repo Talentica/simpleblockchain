@@ -355,8 +355,12 @@ pub fn create_transaction(kp: &KeypairType) -> Option<SignedTransaction> {
         .unwrap()
         .as_micros();
     header.insert("timestamp".to_string(), time_stamp.to_string());
+    let serialized_txn: Vec<u8> = match serialize(&crypto_transaction) {
+        Result::Ok(value) => value,
+        Result::Err(_) => vec![0],
+    };
     Some(SignedTransaction {
-        txn: serialize(&crypto_transaction),
+        txn: serialized_txn,
         app_name: String::from(APPNAME),
         signature: txn_sign,
         header,

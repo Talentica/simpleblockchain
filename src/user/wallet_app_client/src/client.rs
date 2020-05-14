@@ -35,11 +35,15 @@ impl ClientObj {
     pub async fn submit_transaction(&self, txn: &SignedTransaction) {
         let mut url: String = self.url.clone();
         url.extend("client/submit_transaction".chars());
+        let serialized_body: Vec<u8> = match serialize(txn) {
+            Result::Ok(value) => value,
+            Result::Err(_) => vec![0],
+        };
         let response = self
             .client
             .post(url) // <- Create request builder
             .header("User-Agent", "Actix-web")
-            .send_body(Bytes::from(serialize(&txn))) // <- Send http request
+            .send_body(Bytes::from(serialized_body)) // <- Send http request
             .await;
         match response {
             Ok(response) => info!("submit_transaction Status: {:?}", response.status()),
@@ -51,11 +55,15 @@ impl ClientObj {
     pub async fn fetch_pending_transaction(&self, txn_hash: &Hash) {
         let mut url: String = self.url.clone();
         url.extend("client/fetch_pending_transaction".chars());
+        let serialized_body: Vec<u8> = match serialize(txn_hash) {
+            Result::Ok(value) => value,
+            Result::Err(_) => vec![0],
+        };
         let result = self
             .client
             .get(url) // <- Create request builder
             .header("User-Agent", "Actix-web")
-            .send_body(Bytes::from(serialize(txn_hash)))
+            .send_body(Bytes::from(serialized_body))
             .await
             .map_err(|_| ());
         match result {
@@ -65,10 +73,19 @@ impl ClientObj {
                 if response.status() == 200 {
                     match resp_body.await {
                         Ok(txnbody) => {
-                            let signed_transaction: SignedTransaction = deserialize(&txnbody);
-                            let crypto_transaction: CryptoTransaction =
-                                deserialize(&signed_transaction.txn);
-                            info!("{:#?}", crypto_transaction);
+                            if let Ok(signed_transaction) =
+                                deserialize::<SignedTransaction>(&txnbody)
+                            {
+                                if let Ok(crypto_transaction) =
+                                    deserialize::<CryptoTransaction>(&signed_transaction.txn)
+                                {
+                                    info!("{:#?}", crypto_transaction);
+                                } else {
+                                    info!("crypto transaction couldn't deserialize");
+                                }
+                            } else {
+                                info!("signed transaction couldn't deserialize");
+                            }
                         }
                         Err(e) => error!("Error body: {:?}", e),
                     }
@@ -82,12 +99,16 @@ impl ClientObj {
     pub async fn fetch_state(&self, public_address: &String) {
         let mut url: String = self.url.clone();
         url.extend("client/fetch_state".chars());
+        let serialized_body: Vec<u8> = match serialize(public_address) {
+            Result::Ok(value) => value,
+            Result::Err(_) => vec![0],
+        };
         let result = self
             .client
             .get(url) // <- Create request builder
             .header("User-Agent", "Actix-web")
             //.send() // <- Send http request
-            .send_body(Bytes::from(serialize(public_address)))
+            .send_body(Bytes::from(serialized_body))
             .await
             .map_err(|_| ());
         match result {
@@ -97,10 +118,17 @@ impl ClientObj {
                 if response.status() == 200 {
                     match resp_body.await {
                         Ok(state) => {
-                            let state: State = deserialize(&state);
-                            let crypto_state: CryptoState =
-                                deserialize(state.get_data().as_slice());
-                            info!("{:#?}", crypto_state);
+                            if let Ok(state) = deserialize::<State>(&state) {
+                                if let Ok(crypto_state) =
+                                    deserialize::<CryptoState>(state.get_data().as_slice())
+                                {
+                                    info!("{:#?}", crypto_state);
+                                } else {
+                                    info!("crypto state couldn't deserialize");
+                                }
+                            } else {
+                                info!("state couldn't deserialize");
+                            }
                         }
                         Err(e) => error!("Error body: {:?}", e),
                     }
@@ -114,12 +142,16 @@ impl ClientObj {
     pub async fn fetch_block(&self, block_index: &u64) {
         let mut url: String = self.url.clone();
         url.extend("client/fetch_block".chars());
+        let serialized_body: Vec<u8> = match serialize(block_index) {
+            Result::Ok(value) => value,
+            Result::Err(_) => vec![0],
+        };
         let result = self
             .client
             .get(url) // <- Create request builder
             .header("User-Agent", "Actix-web")
             //.send() // <- Send http request
-            .send_body(Bytes::from(serialize(block_index)))
+            .send_body(Bytes::from(serialized_body))
             .await
             .map_err(|_| ());
         match result {
@@ -129,8 +161,11 @@ impl ClientObj {
                 if response.status() == 200 {
                     match resp_body.await {
                         Ok(state) => {
-                            let fetched_block: String = deserialize(&state);
-                            info!("{:#?}", fetched_block);
+                            if let Ok(fetched_block) = deserialize::<String>(&state) {
+                                info!("{:#?}", fetched_block);
+                            } else {
+                                info!("block couldn't deserialize");
+                            }
                         }
                         Err(e) => error!("Error body: {:?}", e),
                     }
@@ -144,12 +179,16 @@ impl ClientObj {
     pub async fn fetch_confirm_transaction(&self, txn_hash: &Hash) {
         let mut url: String = self.url.clone();
         url.extend("client/fetch_confirm_transaction".chars());
+        let serialized_body: Vec<u8> = match serialize(txn_hash) {
+            Result::Ok(value) => value,
+            Result::Err(_) => vec![0],
+        };
         let result = self
             .client
             .get(url) // <- Create request builder
             .header("User-Agent", "Actix-web")
             //.send() // <- Send http request
-            .send_body(Bytes::from(serialize(txn_hash)))
+            .send_body(Bytes::from(serialized_body))
             .await
             .map_err(|_| ());
         match result {
@@ -159,10 +198,19 @@ impl ClientObj {
                 if response.status() == 200 {
                     match resp_body.await {
                         Ok(txnbody) => {
-                            let signed_transaction: SignedTransaction = deserialize(&txnbody);
-                            let crypto_transaction: CryptoTransaction =
-                                deserialize(&signed_transaction.txn);
-                            info!("{:#?}", crypto_transaction);
+                            if let Ok(signed_transaction) =
+                                deserialize::<SignedTransaction>(&txnbody)
+                            {
+                                if let Ok(crypto_transaction) =
+                                    deserialize::<CryptoTransaction>(&signed_transaction.txn)
+                                {
+                                    info!("{:#?}", crypto_transaction);
+                                } else {
+                                    info!("crypto transaction couldn't deserialize");
+                                }
+                            } else {
+                                info!("signed transaction couldn't deserialize");
+                            }
                         }
                         Err(e) => error!("Error body: {:?}", e),
                     }
@@ -191,8 +239,11 @@ impl ClientObj {
                 if response.status() == 200 {
                     match resp_body.await {
                         Ok(state) => {
-                            let fetched_block: String = deserialize(&state);
-                            info!("{:#?}", fetched_block);
+                            if let Ok(fetched_block) = deserialize::<String>(&state) {
+                                info!("{:#?}", fetched_block);
+                            } else {
+                                info!("block couldn't deserialize");
+                            }
                         }
                         Err(e) => error!("Error body: {:?}", e),
                     }
@@ -206,12 +257,16 @@ impl ClientObj {
         let public_key: &String = &hex::encode(self.keypair.public().encode());
         let mut url: String = self.url.clone();
         url.extend("client/fetch_state".chars());
+        let serialized_body: Vec<u8> = match serialize(public_key) {
+            Result::Ok(value) => value,
+            Result::Err(_) => vec![0],
+        };
         let result = self
             .client
             .get(url) // <- Create request builder
             .header("User-Agent", "Actix-web")
             //.send() // <- Send http request
-            .send_body(Bytes::from(serialize(public_key)))
+            .send_body(Bytes::from(serialized_body))
             .await
             .map_err(|_| ());
         match result {
@@ -221,10 +276,14 @@ impl ClientObj {
                 if response.status() == 200 {
                     match resp_body.await {
                         Ok(state) => {
-                            let state: State = deserialize(&state);
-                            let crypto_state: CryptoState =
-                                deserialize(state.get_data().as_slice());
-                            return Some(crypto_state.nonce + 1);
+                            if let Ok(state) = deserialize::<State>(&state) {
+                                if let Ok(crypto_state) =
+                                    deserialize::<CryptoState>(state.get_data().as_slice())
+                                {
+                                    return Some(crypto_state.nonce + 1);
+                                }
+                            }
+                            return Some(1);
                         }
                         Err(_) => return None,
                     }

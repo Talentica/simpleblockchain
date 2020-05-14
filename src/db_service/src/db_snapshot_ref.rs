@@ -94,7 +94,11 @@ where
     }
 
     pub fn get_block_hash(&self, index: u64) -> Hash {
-        self.block_list.get(index).unwrap().object_hash()
+        if self.block_list.len() >= index {
+            self.block_list.get(index).unwrap().object_hash()
+        } else {
+            return Hash::zero();
+        }
     }
 
     pub fn get_blockchain_length(&self) -> u64 {

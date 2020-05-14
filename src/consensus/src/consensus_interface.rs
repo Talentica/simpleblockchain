@@ -74,7 +74,11 @@ impl Consensus {
             new_leader: self.pk.clone(),
         };
         self.round_number = self.round_number + 1;
-        let signature = Keypair::sign(&self.keypair, &serialize(&leader_payload));
+        let serialized_data: Vec<u8> = match serialize(&leader_payload) {
+            Result::Ok(value) => value,
+            Result::Err(_) => vec![0],
+        };
+        let signature = Keypair::sign(&self.keypair, &serialized_data);
         let signed_new_leader: SignedLeaderElection = SignedLeaderElection {
             leader_payload,
             signature,
@@ -99,7 +103,11 @@ impl Consensus {
                 old_leader: self.pk.clone(),
                 new_leader: self.pk.clone(),
             };
-            let signature = Keypair::sign(&self.keypair, &serialize(&leader_payload));
+            let serialized_data: Vec<u8> = match serialize(&leader_payload) {
+                Result::Ok(value) => value,
+                Result::Err(_) => vec![0],
+            };
+            let signature = Keypair::sign(&self.keypair, &serialized_data);
             return SignedLeaderElection {
                 leader_payload,
                 signature,
@@ -125,7 +133,11 @@ impl Consensus {
             old_leader: self.pk.clone(),
             new_leader: String::from(meta_data_locked.active_node[iter_vec_pk].clone()),
         };
-        let signature = Keypair::sign(&self.keypair, &serialize(&leader_payload));
+        let serialized_data: Vec<u8> = match serialize(&leader_payload) {
+            Result::Ok(value) => value,
+            Result::Err(_) => vec![0],
+        };
+        let signature = Keypair::sign(&self.keypair, &serialized_data);
         SignedLeaderElection {
             leader_payload,
             signature,
@@ -187,8 +199,11 @@ impl Consensus {
                                     match msgtype {
                                         ConsensusMessageTypes::LeaderElect(data) => {
                                             let new_leader_obj: SignedLeaderElection = data;
-                                            let ser_leader_election =
-                                                serialize(&new_leader_obj.leader_payload);
+                                            let ser_leader_election: Vec<u8> =
+                                                match serialize(&new_leader_obj.leader_payload) {
+                                                    Result::Ok(value) => value,
+                                                    Result::Err(_) => vec![0],
+                                                };
                                             if PublicKey::verify_from_encoded_pk(
                                                 &new_leader_obj.leader_payload.old_leader,
                                                 &ser_leader_election,
