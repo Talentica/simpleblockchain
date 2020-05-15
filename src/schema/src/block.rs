@@ -73,7 +73,10 @@ impl SignedBlock {
         to_string
     }
     pub fn validate(&self, publickey: &String) -> bool {
-        let ser_block = serialize(&self.block);
+        let ser_block: Vec<u8> = match serialize(&self.block) {
+            Result::Ok(value) => value,
+            Result::Err(_) => return false,
+        };
         PublicKey::verify_from_encoded_pk(&publickey, &ser_block, &self.signature)
     }
 
@@ -88,15 +91,19 @@ impl SignedBlock {
 
 impl BlockTraits<KeypairType> for Block {
     fn validate(&self, publickey: &String, signature: &[u8]) -> bool {
-        // unimplemented!();
-        let ser_block = serialize(&self);
+        let ser_block: Vec<u8> = match serialize(&self) {
+            Result::Ok(value) => value,
+            Result::Err(_) => return false,
+        };
         PublicKey::verify_from_encoded_pk(&publickey, &ser_block, &signature)
         // PublicKey::verify_from_encoded_pk(&self.txn.party_a, signing_string.as_bytes(), &self.signature.as_ref())
     }
 
     fn sign(&self, kp: &KeypairType) -> Vec<u8> {
-        // unimplemented!();
-        let ser_block = serialize(&self);
+        let ser_block: Vec<u8> = match serialize(&self) {
+            Result::Ok(value) => value,
+            Result::Err(_) => return vec![0],
+        };
         let sign = Keypair::sign(&kp, &ser_block);
         sign
     }
@@ -127,29 +134,3 @@ impl BlockTraits<KeypairType> for Block {
         }
     }
 }
-
-// #[cfg(test)]
-// mod tests_blocks {
-//     #[test]
-//     pub fn test_block() {
-//         use super::*;
-//         let block: Block = Block::genesis_block();
-//         let kp = Keypair::generate();
-//         let public_key = &hex::encode(kp.public().encode());
-//         let sign = block.sign(&kp);
-//         let signed_block: SignedBlock = SignedBlock::create_block(block, sign);
-//         println!("{}", signed_block.validate(&public_key));
-//         let prev_hash: Hash = signed_block.get_hash();
-//         let id = signed_block.block.id;
-//         let block: Block = Block {
-//             id: id + 1,
-//             peer_id: String::from("peer_id"),
-//             prev_hash,
-//             txn_pool: vec![],
-//             header: [Hash::zero(), Hash::zero(), Hash::zero()],
-//         };
-//         let sign = block.sign(&kp);
-//         let validate = block.validate(&hex::encode(kp.public().encode()), &sign);
-//         println!("{}", validate);
-//     }
-// }

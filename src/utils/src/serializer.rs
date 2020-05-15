@@ -6,33 +6,47 @@ pub use serde::{Deserialize, Serialize};
 /// Needs trait Serialize to be implemented
 /// can be done directly by using macro
 /// #[derive(Serialize)] defined in serde
-pub fn serialize<T>(to_ser: &T) -> Vec<u8>
+pub fn serialize<T>(to_ser: &T) -> Result<Vec<u8>, String>
 where
     T: Serialize,
 {
-    let servec = serde_cbor::to_vec(&to_ser).unwrap();
-    servec
+    match serde_cbor::to_vec(&to_ser) {
+        Ok(value) => return Ok(value),
+        Err(_) => return Err(String::from("couldn't to serialize")),
+    };
 }
 
 /// returns the SHA3_256 hash of cbor value for
 /// generic type T
-pub fn serialize_hash256<T>(to_ser: &T) -> Vec<u8>
+pub fn serialize_hash256<T>(to_ser: &T) -> Result<Vec<u8>, String>
 where
     T: Serialize,
 {
-    let to_hash = serialize(&to_ser);
-    encode(Hash::SHA3256, &to_hash).unwrap().to_vec()
+    match serialize(&to_ser) {
+        Result::Ok(to_hash) => {
+            let encoded_value = match encode(Hash::SHA3256, &to_hash) {
+                Ok(value) => value,
+                Err(_) => return Err(String::from("couldn't able to compute serialize hash256")),
+            };
+            return Ok(encoded_value.to_vec());
+        }
+        Result::Err(_) => return Err(String::from("couldn't to serialize")),
+    };
 }
 
 /// deserialize a vec<u8> slice and returns
 /// generic type T
 /// needs to implement Deserialze trait
 /// with lifetime "a"
-pub fn deserialize<'a, T>(slice: &'a [u8]) -> T
+pub fn deserialize<'a, T>(slice: &'a [u8]) -> Result<T, String>
 where
     T: Deserialize<'a>,
 {
-    serde_cbor::from_slice(&slice).unwrap()
+    let deserialize_value = serde_cbor::from_slice(&slice);
+    match deserialize_value {
+        Result::Ok(value) => return Result::Ok(value),
+        Result::Err(_) => return Result::Err(String::from("couldn't to serialize")),
+    };
 }
 
 #[cfg(test)]
@@ -67,7 +81,10 @@ mod tests_sbserde {
         };
 
         // check if hash of cbor is correct
-        let hash_of_ser = serialize_hash256(&ferris);
+        let hash_of_ser: Vec<u8> = match serialize_hash256(&ferris) {
+            Result::Ok(value) => value,
+            Result::Err(_) => vec![0],
+        };
         assert_eq!(
             hash_of_ser,
             vec![
@@ -102,11 +119,11 @@ mod tests_sbserde {
                 name: "youtee".to_owned(),
             },
         };
-        let serobj = serialize(&ferris);
+        let serobj = serialize(&ferris).unwrap();
 
-        let deserobj: Mascot = deserialize(&serobj);
-        let hash_of_ser = serialize_hash256(&ferris);
-        let hash_of_ser_deser = serialize_hash256(&deserobj);
+        let deserobj: Mascot = deserialize(&serobj).unwrap();
+        let hash_of_ser = serialize_hash256(&ferris).unwrap();
+        let hash_of_ser_deser = serialize_hash256(&deserobj).unwrap();
         assert_eq!(hash_of_ser, hash_of_ser_deser);
     }
 }

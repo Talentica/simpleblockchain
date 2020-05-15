@@ -20,7 +20,9 @@ pub fn snapshot_db() -> Box<dyn Snapshot> {
 }
 
 pub fn patch_db(fork: Fork) {
-    DB_INSTANCE.merge(fork.into_patch()).unwrap();
+    if let Err(error) = DB_INSTANCE.merge(fork.into_patch()) {
+        error!("error occurred in patch_db process {:?}", error);
+    }
 }
 
 #[cfg(test)]

@@ -77,7 +77,10 @@ pub struct ElectionPing {
 
 impl ElectionPing {
     pub fn verify(&self) -> bool {
-        let ser_payload = serialize(&self.payload);
+        let ser_payload: Vec<u8> = match serialize(&self.payload) {
+            Result::Ok(value) => value,
+            Result::Err(_) => return false,
+        };
         PublicKey::verify_from_encoded_pk(
             &self.payload.public_key,
             &ser_payload,
@@ -86,7 +89,10 @@ impl ElectionPing {
     }
 
     fn sign(&mut self, kp: &KeypairType) {
-        let ser_txn = serialize(&self.payload);
+        let ser_txn: Vec<u8> = match serialize(&self.payload) {
+            Result::Ok(value) => value,
+            Result::Err(_) => vec![0],
+        };
         let sign = Keypair::sign(&kp, &ser_txn);
         self.signature = sign;
     }
@@ -120,7 +126,10 @@ pub struct ElectionPong {
 
 impl ElectionPong {
     pub fn verify(&self) -> bool {
-        let ser_payload = serialize(&self.payload);
+        let ser_payload: Vec<u8> = match serialize(&self.payload) {
+            Result::Ok(value) => value,
+            Result::Err(_) => return false,
+        };
         PublicKey::verify_from_encoded_pk(
             &self.payload.may_be_leader,
             &ser_payload,
@@ -129,7 +138,10 @@ impl ElectionPong {
     }
 
     fn sign(&mut self, kp: &KeypairType) {
-        let ser_txn = serialize(&self.payload);
+        let ser_txn: Vec<u8> = match serialize(&self.payload) {
+            Result::Ok(value) => value,
+            Result::Err(_) => vec![0],
+        };
         let sign = Keypair::sign(&kp, &ser_txn);
         self.signature = sign;
     }
@@ -255,13 +267,14 @@ impl MsgProcess for protocol::FloodsubMessage {
     fn process(&self, topics: &Vec<TopicHash>, data: &Vec<u8>) {
         if topics[0] == TopicBuilder::new(constants::NODE).build().hash().clone() {
             info!("NodeMessageTypes data received");
-            let deserialize_msg = deserialize::<NodeMessageTypes>(data);
-            let result = MSG_DISPATCHER
-                .node_msg_dispatcher
-                .clone()
-                .try_send(Some(deserialize_msg));
-            if result.is_err() {
-                result.unwrap_err().into_send_error();
+            if let Ok(deserialize_msg) = deserialize::<NodeMessageTypes>(data) {
+                let result = MSG_DISPATCHER
+                    .node_msg_dispatcher
+                    .clone()
+                    .try_send(Some(deserialize_msg));
+                if result.is_err() {
+                    result.unwrap_err().into_send_error();
+                }
             }
         } else if topics[0]
             == TopicBuilder::new(constants::CONSENSUS)
@@ -270,13 +283,14 @@ impl MsgProcess for protocol::FloodsubMessage {
                 .clone()
         {
             info!("ConsensusMessageTypes data received");
-            let deserialize_msg = deserialize::<ConsensusMessageTypes>(data);
-            let result = MSG_DISPATCHER
-                .consensus_msg_dispatcher
-                .clone()
-                .try_send(Some(deserialize_msg));
-            if result.is_err() {
-                result.unwrap_err().into_send_error();
+            if let Ok(deserialize_msg) = deserialize::<ConsensusMessageTypes>(data) {
+                let result = MSG_DISPATCHER
+                    .consensus_msg_dispatcher
+                    .clone()
+                    .try_send(Some(deserialize_msg));
+                if result.is_err() {
+                    result.unwrap_err().into_send_error();
+                }
             }
         }
     }

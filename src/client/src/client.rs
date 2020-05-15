@@ -80,18 +80,25 @@ impl ClientObj {
             None => return Ok(None),
         };
         url.extend("client/fetch_pending_transaction".chars());
+        let serialized_body: Vec<u8> = match serialize(txn_hash) {
+            Result::Ok(value) => value,
+            Result::Err(_) => vec![0],
+        };
         let response = self
             .client
             .get(&url) // <- Create request builder
             .header("User-Agent", "Actix-web")
             //.send() // <- Send http request
-            .body(serialize(txn_hash))
+            .body(serialized_body)
             .send()?;
         match response.error_for_status() {
             Ok(mut body) => {
                 let mut buf: Vec<u8> = vec![];
                 body.copy_to(&mut buf)?;
-                let signed_transaction: SignedTransaction = deserialize(buf.as_slice());
+                let signed_transaction: SignedTransaction = match deserialize(buf.as_slice()) {
+                    Result::Ok(value) => value,
+                    Result::Err(_) => return Ok(None),
+                };
                 Ok(Some(signed_transaction))
             }
             Err(err) => {
@@ -107,17 +114,24 @@ impl ClientObj {
             None => return Ok(None),
         };
         url.extend("client/fetch_state".chars());
+        let serialized_body: Vec<u8> = match serialize(public_address) {
+            Result::Ok(value) => value,
+            Result::Err(_) => vec![0],
+        };
         let response = self
             .client
             .get(&url) // <- Create request builder
             .header("User-Agent", "Actix-web")
-            .body(serialize(public_address))
+            .body(serialized_body)
             .send()?;
         match response.error_for_status() {
             Ok(mut body) => {
                 let mut buf: Vec<u8> = vec![];
                 body.copy_to(&mut buf)?;
-                let state: State = deserialize(buf.as_slice());
+                let state: State = match deserialize(buf.as_slice()) {
+                    Result::Ok(value) => value,
+                    Result::Err(_) => return Ok(None),
+                };
                 Ok(Some(state))
             }
             Err(err) => {
@@ -133,17 +147,24 @@ impl ClientObj {
             None => return Ok(None),
         };
         url.extend("peer/fetch_block".chars());
+        let serialized_body: Vec<u8> = match serialize(block_index) {
+            Result::Ok(value) => value,
+            Result::Err(_) => vec![0],
+        };
         let response = self
             .client
             .get(&url) // <- Create request builder
             .header("User-Agent", "Actix-web")
-            .body(serialize(block_index))
+            .body(serialized_body)
             .send()?;
         match response.error_for_status() {
             Ok(mut body) => {
                 let mut buf: Vec<u8> = vec![];
                 body.copy_to(&mut buf)?;
-                let signed_block: SignedBlock = deserialize(buf.as_slice());
+                let signed_block: SignedBlock = match deserialize(buf.as_slice()) {
+                    Result::Ok(value) => value,
+                    Result::Err(_) => return Ok(None),
+                };
                 Ok(Some(signed_block))
             }
             Err(err) => {
@@ -162,17 +183,24 @@ impl ClientObj {
             None => return Ok(None),
         };
         url.extend("client/fetch_confirm_transaction".chars());
+        let serialized_body: Vec<u8> = match serialize(txn_hash) {
+            Result::Ok(value) => value,
+            Result::Err(_) => vec![0],
+        };
         let response = self
             .client
             .get(&url) // <- Create request builder
             .header("User-Agent", "Actix-web")
-            .body(serialize(txn_hash)) // <- Send http request
+            .body(serialized_body) // <- Send http request
             .send()?;
         match response.error_for_status() {
             Ok(mut body) => {
                 let mut buf: Vec<u8> = vec![];
                 body.copy_to(&mut buf)?;
-                let signed_transaction: SignedTransaction = deserialize(buf.as_slice());
+                let signed_transaction: SignedTransaction = match deserialize(buf.as_slice()) {
+                    Result::Ok(value) => value,
+                    Result::Err(_) => return Ok(None),
+                };
                 Ok(Some(signed_transaction))
             }
             Err(err) => {
@@ -198,7 +226,10 @@ impl ClientObj {
             Ok(mut body) => {
                 let mut buf: Vec<u8> = vec![];
                 body.copy_to(&mut buf)?;
-                let signed_block: SignedBlock = deserialize(buf.as_slice());
+                let signed_block: SignedBlock = match deserialize(buf.as_slice()) {
+                    Result::Ok(value) => value,
+                    Result::Err(_) => return Ok(None),
+                };
                 Ok(Some(signed_block))
             }
             Err(err) => {
@@ -224,7 +255,10 @@ impl ClientObj {
             Ok(mut body) => {
                 let mut buf: Vec<u8> = vec![];
                 body.copy_to(&mut buf)?;
-                let length: u64 = deserialize(buf.as_slice());
+                let length: u64 = match deserialize(buf.as_slice()) {
+                    Result::Ok(value) => value,
+                    Result::Err(_) => return Ok(0),
+                };
                 Ok(length)
             }
             Err(err) => {

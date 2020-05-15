@@ -36,7 +36,10 @@ impl TransactionTrait<CryptoTransaction> for CryptoTransaction {
     }
 
     fn sign(&self, kp: &KeypairType) -> Vec<u8> {
-        let ser_txn = serialize(&self);
+        let ser_txn = match serialize(&self) {
+            Result::Ok(value) => return value,
+            Result::Err(_) => vec![0],
+        };
         let sign = Keypair::sign(&kp, &ser_txn);
         sign
     }
@@ -62,7 +65,10 @@ impl TransactionTrait<CryptoTransaction> for CryptoTransaction {
 
 impl TransactionTrait<SignedTransaction> for SignedTransaction {
     fn validate(&self) -> bool {
-        let txn = deserialize::<CryptoTransaction>(&self.txn);
+        let txn: CryptoTransaction = match deserialize(&self.txn) {
+            Result::Ok(value) => value,
+            Result::Err(_) => return false,
+        };
         PublicKey::verify_from_encoded_pk(&txn.from, &self.txn, &self.signature.as_ref())
     }
 
@@ -89,8 +95,12 @@ impl TransactionTrait<SignedTransaction> for SignedTransaction {
             .unwrap()
             .as_micros();
         header.insert("timestamp".to_string(), time_stamp.to_string());
+        let serialized_txn: Vec<u8> = match serialize(&txn) {
+            Result::Ok(value) => value,
+            Result::Err(_) => vec![0],
+        };
         SignedTransaction {
-            txn: serialize(&txn),
+            txn: serialized_txn,
             app_name: String::from(APPNAME),
             signature: txn_sign,
             header,
@@ -106,7 +116,10 @@ impl StateTraits for SignedTransaction {
     fn execute(&self, state_context: &mut dyn StateContext) -> bool {
         let mut flag: bool = false;
         if self.validate() {
-            let txn: CryptoTransaction = deserialize(&self.txn);
+            let txn: CryptoTransaction = match deserialize(&self.txn) {
+                Result::Ok(value) => value,
+                Result::Err(_) => return false,
+            };
             let crypto_txn = &txn.clone() as &dyn ModuleTraits;
             if txn.fxn_call == String::from("set_hash") {
                 flag = crypto_txn.set_hash(state_context);
@@ -170,17 +183,28 @@ impl ModuleTraits for CryptoTransaction {
             None => {
                 let doc_state: DocState = DocState::new();
                 let mut state: State = State::new();
-                state.set_data(&serialize(&doc_state));
+                let serialized_doc_state: Vec<u8> = match serialize(&doc_state) {
+                    Result::Ok(value) => value,
+                    Result::Err(_) => return false,
+                };
+                state.set_data(&serialized_doc_state);
                 state
             }
         };
-        let mut state: DocState = deserialize(app_state.get_data().as_slice());
+        let mut state: DocState = match deserialize(app_state.get_data().as_slice()) {
+            Result::Ok(value) => value,
+            Result::Err(_) => return false,
+        };
         let flag: bool = state.set_hash(token_id, file_hash);
         if !flag {
             info!("operation set_hash failed");
             return false;
         }
-        app_state.set_data(&serialize(&state));
+        let serialized_state: Vec<u8> = match serialize(&state) {
+            Result::Ok(value) => value,
+            Result::Err(_) => return false,
+        };
+        app_state.set_data(&serialized_state);
         state_context.put(&STATE_KEY.to_string(), app_state);
         info!("operation set_hash done");
         true
@@ -214,11 +238,18 @@ impl ModuleTraits for CryptoTransaction {
             None => {
                 let doc_state: DocState = DocState::new();
                 let mut state: State = State::new();
-                state.set_data(&serialize(&doc_state));
+                let serialized_doc_state: Vec<u8> = match serialize(&doc_state) {
+                    Result::Ok(value) => value,
+                    Result::Err(_) => return false,
+                };
+                state.set_data(&serialized_doc_state);
                 state
             }
         };
-        let mut state: DocState = deserialize(app_state.get_data().as_slice());
+        let mut state: DocState = match deserialize(app_state.get_data().as_slice()) {
+            Result::Ok(value) => value,
+            Result::Err(_) => return false,
+        };
         for each in token_ids.iter() {
             let token: NFTToken = NFTToken {
                 super_owner: self.from.clone(),
@@ -231,7 +262,11 @@ impl ModuleTraits for CryptoTransaction {
                 return false;
             }
         }
-        app_state.set_data(&serialize(&state));
+        let serialized_state: Vec<u8> = match serialize(&state) {
+            Result::Ok(value) => value,
+            Result::Err(_) => return false,
+        };
+        app_state.set_data(&serialized_state);
         state_context.put(&STATE_KEY.to_string(), app_state);
         true
     }
@@ -265,7 +300,10 @@ impl ModuleTraits for CryptoTransaction {
             Some(state) => state,
             None => return false,
         };
-        let mut state: DocState = deserialize(app_state.get_data().as_slice());
+        let mut state: DocState = match deserialize(app_state.get_data().as_slice()) {
+            Result::Ok(value) => value,
+            Result::Err(_) => return false,
+        };
         for each in token_ids.iter() {
             match state.get_nft_token(each.clone()) {
                 Some(token) => {
@@ -277,7 +315,11 @@ impl ModuleTraits for CryptoTransaction {
             }
         }
         state.add_into_confirmation_list(&to_address, &token_ids);
-        app_state.set_data(&serialize(&state));
+        let serialized_state: Vec<u8> = match serialize(&state) {
+            Result::Ok(value) => value,
+            Result::Err(_) => return false,
+        };
+        app_state.set_data(&serialized_state);
         state_context.put(&STATE_KEY.to_string(), app_state);
         true
     }
@@ -311,7 +353,10 @@ impl ModuleTraits for CryptoTransaction {
             Some(state) => state,
             None => return false,
         };
-        let mut state: DocState = deserialize(app_state.get_data().as_slice());
+        let mut state: DocState = match deserialize(app_state.get_data().as_slice()) {
+            Result::Ok(value) => value,
+            Result::Err(_) => return false,
+        };
         let mut waiting_list: Vec<Hash> = match state.get_confirmation_waiting_list(&self.from) {
             Some(list) => list.clone(),
             None => return false,
@@ -342,7 +387,11 @@ impl ModuleTraits for CryptoTransaction {
         }
         state.set_pkg_list(&pkg_no, &token_ids);
         state.update_confirmation_list(&self.from, &waiting_list);
-        app_state.set_data(&serialize(&state));
+        let serialized_state: Vec<u8> = match serialize(&state) {
+            Result::Ok(value) => value,
+            Result::Err(_) => return false,
+        };
+        app_state.set_data(&serialized_state);
         state_context.put(&STATE_KEY.to_string(), app_state);
         true
     }
@@ -375,7 +424,10 @@ impl ModuleTraits for CryptoTransaction {
             Some(state) => state,
             None => return false,
         };
-        let mut state: DocState = deserialize(app_state.get_data().as_slice());
+        let mut state: DocState = match deserialize(app_state.get_data().as_slice()) {
+            Result::Ok(value) => value,
+            Result::Err(_) => return false,
+        };
         let pkg_doc_list: Vec<Hash> = match state.get_pkg_list(&pkg_no) {
             Some(list) => list.clone(),
             None => return false,
@@ -394,7 +446,11 @@ impl ModuleTraits for CryptoTransaction {
             };
         }
         state.add_pkg_no_for_review(&reviewer_address, &pkg_no);
-        app_state.set_data(&serialize(&state));
+        let serialized_state: Vec<u8> = match serialize(&state) {
+            Result::Ok(value) => value,
+            Result::Err(_) => return false,
+        };
+        app_state.set_data(&serialized_state);
         state_context.put(&STATE_KEY.to_string(), app_state);
         true
     }
@@ -428,7 +484,10 @@ impl ModuleTraits for CryptoTransaction {
             Some(state) => state,
             None => return false,
         };
-        let mut state: DocState = deserialize(app_state.get_data().as_slice());
+        let mut state: DocState = match deserialize(app_state.get_data().as_slice()) {
+            Result::Ok(value) => value,
+            Result::Err(_) => return false,
+        };
         match state.get_pkg_review_pending_list(&self.from) {
             Some(list) => {
                 if !list.contains(&pkg_no) {
@@ -465,7 +524,11 @@ impl ModuleTraits for CryptoTransaction {
             }
         }
         state.remove_pkg_no_from_review_list(&self.from, &pkg_no);
-        app_state.set_data(&serialize(&state));
+        let serialized_state: Vec<u8> = match serialize(&state) {
+            Result::Ok(value) => value,
+            Result::Err(_) => return false,
+        };
+        app_state.set_data(&serialized_state);
         state_context.put(&STATE_KEY.to_string(), app_state);
         true
     }
@@ -493,7 +556,10 @@ impl ModuleTraits for CryptoTransaction {
             Some(state) => state,
             None => return false,
         };
-        let mut state: DocState = deserialize(app_state.get_data().as_slice());
+        let mut state: DocState = match deserialize(app_state.get_data().as_slice()) {
+            Result::Ok(value) => value,
+            Result::Err(_) => return false,
+        };
         let pkg_doc_list: Vec<Hash> = match state.get_pkg_list(&pkg_no) {
             Some(list) => list.clone(),
             None => return false,
@@ -516,7 +582,11 @@ impl ModuleTraits for CryptoTransaction {
             token.status = DocStatus::Publish;
             state.replace_nft_token(each.clone(), token);
         }
-        app_state.set_data(&serialize(&state));
+        let serialized_state: Vec<u8> = match serialize(&state) {
+            Result::Ok(value) => value,
+            Result::Err(_) => return false,
+        };
+        app_state.set_data(&serialized_state);
         state_context.put(&STATE_KEY.to_string(), app_state);
         true
     }

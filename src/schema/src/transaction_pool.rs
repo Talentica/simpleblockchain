@@ -8,7 +8,6 @@ use exonum_merkledb::{
     access::{Access, RawAccessMut},
     ObjectHash, ProofMapIndex,
 };
-use utils::logger::*;
 
 use sdk::traits::{PoolTrait, StateContext};
 use std::collections::BTreeMap;
@@ -20,7 +19,6 @@ trait TransactionPoolTraits {
     fn new() -> Self;
     fn delete_txn_hash(&mut self, key: &Hash);
     fn delete_txn_order(&mut self, key: &TxnPoolKeyType);
-    fn pop_front(&mut self) -> TxnPoolValueType;
     fn insert_op(&mut self, key: &TxnPoolKeyType, value: &TxnPoolValueType);
     fn length_order_pool(&self) -> usize;
     fn length_hash_pool(&self) -> usize;
@@ -33,7 +31,6 @@ pub trait TxnPool {
     fn new() -> Self;
     fn delete_txn_hash(&self, key: &Hash);
     fn delete_txn_order(&self, key: &TxnPoolKeyType);
-    fn pop_front(&self) -> TxnPoolValueType;
     fn insert_op(&self, key: &TxnPoolKeyType, value: &TxnPoolValueType);
     fn length_order_pool(&self) -> usize;
     fn length_hash_pool(&self) -> usize;
@@ -78,15 +75,6 @@ impl TransactionPoolTraits for TransactionPool {
         }
     }
 
-    /// this function will pop value in fifo order from order_pool
-    fn pop_front(&mut self) -> TxnPoolValueType {
-        let (first_key, first_value) = self.order_pool.iter().next().unwrap();
-        let value = first_value.clone();
-        let key = first_key.clone();
-        self.order_pool.remove(&key);
-        value
-    }
-
     /// this function will push value in both (hash & order) pool
     fn insert_op(&mut self, key: &TxnPoolKeyType, value: &TxnPoolValueType) {
         self.hash_pool.insert(value.object_hash(), value.clone());
@@ -115,29 +103,27 @@ impl TransactionPoolTraits for TransactionPool {
     /// sync both (hash & order ) pool when block committed is created by the other node
     fn sync_pool(&mut self, txn_hash_vec: &Vec<Hash>) {
         for each_hash in txn_hash_vec.iter() {
-            let txn: SignedTransaction = self.get(each_hash).unwrap();
-            let timestamp = txn
-                .header
-                .get(&String::from("timestamp"))
-                .unwrap()
-                .parse::<TxnPoolKeyType>()
-                .unwrap();
-            self.delete_txn_order(&timestamp);
-            self.delete_txn_hash(each_hash);
+            if let Some(txn) = self.get(each_hash) {
+                if let Some(string) = txn.header.get(&String::from("timestamp")) {
+                    if let Ok(timestamp) = string.parse::<TxnPoolKeyType>() {
+                        self.delete_txn_order(&timestamp);
+                        self.delete_txn_hash(each_hash);
+                    }
+                }
+            }
         }
     }
 
     /// aim of this fxn is revert all changes happened because of block proposal which didn't accepted by the consensus.
     fn sync_order_pool(&mut self, txn_hash_vec: &Vec<Hash>) {
         for each_hash in txn_hash_vec.iter() {
-            let txn: SignedTransaction = self.get(each_hash).unwrap().clone();
-            let timestamp = txn
-                .header
-                .get(&String::from("timestamp"))
-                .unwrap()
-                .parse::<TxnPoolKeyType>()
-                .unwrap();
-            self.order_pool.insert(timestamp, txn);
+            if let Some(txn) = self.get(each_hash) {
+                if let Some(string) = txn.header.get(&String::from("timestamp")) {
+                    if let Ok(timestamp) = string.parse::<TxnPoolKeyType>() {
+                        self.order_pool.insert(timestamp, txn);
+                    }
+                }
+            }
         }
     }
 }
@@ -160,12 +146,6 @@ impl TxnPool for Pool {
     fn delete_txn_order(&self, key: &TxnPoolKeyType) {
         let mut txn_pool = self.pool.lock().unwrap();
         txn_pool.delete_txn_order(key);
-    }
-
-    /// this function will pop value in fifo order from order_pool
-    fn pop_front(&self) -> TxnPoolValueType {
-        let mut txn_pool = self.pool.lock().unwrap();
-        txn_pool.pop_front()
     }
 
     /// this function will push value in both (hash & order) pool
@@ -263,30 +243,3 @@ where
 lazy_static! {
     pub static ref POOL: Pool = Pool::new();
 }
-
-// #[cfg(test)]
-// mod tests_transactions {
-
-//     #[test]
-//     pub fn main_transaction() {
-//         use super::*;
-//         use sdk::traits::TransactionTrait;
-//         use std::time::SystemTime;
-//         use utils::keypair::{CryptoKeypair, Keypair};
-
-//         let mut transaction_pool = TransactionPool::new();
-//         let kp = Keypair::generate();
-//         let one = SignedTransaction::generate(&kp);
-//         let two = SignedTransaction::generate(&kp);
-//         let time_instant = SystemTime::now()
-//             .duration_since(SystemTime::UNIX_EPOCH)
-//             .unwrap()
-//             .as_micros();
-//         transaction_pool.insert_op(&time_instant, &one);
-//         let time_instant = SystemTime::now()
-//             .duration_since(SystemTime::UNIX_EPOCH)
-//             .unwrap()
-//             .as_micros();
-//         transaction_pool.insert_op(&time_instant, &two);
-//     }
-// }

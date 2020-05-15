@@ -63,17 +63,19 @@ impl SimpleSwarm {
                             Some(msgtype) => match msgtype {
                                 MessageTypes::NodeMsg(data) => {
                                     info!("NodeMsg received {:?}", data);
-                                    let msgdata: Vec<u8> = serialize(&data);
-                                    let topics: Vec<Topic> =
-                                        Vec::<Topic>::from(MessageTypes::NodeMsg(data)); //TODO Find way to get rid of clone
-                                    swarm.floodsub.publish_many(topics, msgdata)
+                                    if let Ok(value) = serialize(&data) {
+                                        let topics: Vec<Topic> =
+                                            Vec::<Topic>::from(MessageTypes::NodeMsg(data)); //TODO Find way to get rid of clone
+                                        swarm.floodsub.publish_many(topics, value);
+                                    };
                                 }
                                 MessageTypes::ConsensusMsg(data) => {
                                     info!("ConsensusMsg received {:?}", data);
-                                    let msgdata: Vec<u8> = serialize(&data);
-                                    let topics: Vec<Topic> =
-                                        Vec::<Topic>::from(MessageTypes::ConsensusMsg(data));
-                                    swarm.floodsub.publish_many(topics, msgdata)
+                                    if let Ok(value) = serialize(&data) {
+                                        let topics: Vec<Topic> =
+                                            Vec::<Topic>::from(MessageTypes::ConsensusMsg(data));
+                                        swarm.floodsub.publish_many(topics, value);
+                                    };
                                 }
                             },
                         }
