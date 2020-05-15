@@ -8,7 +8,6 @@ use exonum_merkledb::{
     access::{Access, RawAccessMut},
     ObjectHash, ProofMapIndex,
 };
-use utils::logger::*;
 
 use sdk::traits::{PoolTrait, StateContext};
 use std::collections::BTreeMap;
@@ -244,30 +243,3 @@ where
 lazy_static! {
     pub static ref POOL: Pool = Pool::new();
 }
-
-// #[cfg(test)]
-// mod tests_transactions {
-
-//     #[test]
-//     pub fn main_transaction() {
-//         use super::*;
-//         use sdk::traits::TransactionTrait;
-//         use std::time::SystemTime;
-//         use utils::keypair::{CryptoKeypair, Keypair};
-
-//         let mut transaction_pool = TransactionPool::new();
-//         let kp = Keypair::generate();
-//         let one = SignedTransaction::generate(&kp);
-//         let two = SignedTransaction::generate(&kp);
-//         let time_instant = SystemTime::now()
-//             .duration_since(SystemTime::UNIX_EPOCH)
-//             .unwrap()
-//             .as_micros();
-//         transaction_pool.insert_op(&time_instant, &one);
-//         let time_instant = SystemTime::now()
-//             .duration_since(SystemTime::UNIX_EPOCH)
-//             .unwrap()
-//             .as_micros();
-//         transaction_pool.insert_op(&time_instant, &two);
-//     }
-// }

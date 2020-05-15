@@ -38,19 +38,6 @@ impl TransactionTrait<CryptoTransaction> for CryptoTransaction {
         sign
     }
 
-    // fn generate(kp: &KeypairType) -> CryptoTransaction {
-    //     let from: String = hex::encode(kp.public().encode());
-    //     let to_add_kp = Keypair::generate();
-    //     let to: String = hex::encode(to_add_kp.public().encode());
-    //     CryptoTransaction {
-    //         nonce: 0,
-    //         from,
-    //         to,
-    //         amount: 32,
-    //         fxn_call: String::from("transfer"),
-    //     }
-    // }
-
     fn get_hash(&self) -> Hash {
         self.object_hash()
     }
@@ -68,36 +55,6 @@ impl TransactionTrait<SignedTransaction> for SignedTransaction {
     fn sign(&self, kp: &KeypairType) -> Vec<u8> {
         Keypair::sign(&kp, &self.txn)
     }
-
-    // fn generate(kp: &KeypairType) -> SignedTransaction {
-    //     let from: String = hex::encode(kp.public().encode());
-    //     let to_add_kp = Keypair::generate();
-    //     let to: String = hex::encode(to_add_kp.public().encode());
-    //     let txn: CryptoTransaction = CryptoTransaction {
-    //         nonce: 0,
-    //         from,
-    //         to,
-    //         amount: 32,
-    //         fxn_call: String::from("transfer"),
-    //     };
-    //     let txn_sign = txn.sign(&kp);
-    //     let mut header = HashMap::default();
-    //     let time_stamp = SystemTime::now()
-    //         .duration_since(SystemTime::UNIX_EPOCH)
-    //         .unwrap()
-    //         .as_micros();
-    //     header.insert("timestamp".to_string(), time_stamp.to_string());
-    //     let serialized_txn: Vec<u8> = match serialize(&txn) {
-    //         Result::Ok(value) => value,
-    //         Result::Err(_) => vec![0],
-    //     };
-    //     SignedTransaction {
-    //         txn: serialized_txn,
-    //         app_name: String::from(APPNAME),
-    //         signature: txn_sign,
-    //         header,
-    //     }
-    // }
 
     fn get_hash(&self) -> Hash {
         self.object_hash()

@@ -1,43 +1,24 @@
 // Module responsible for serializing and deserializing
 use libp2p::multihash::{encode, Hash};
 pub use serde::{Deserialize, Serialize};
-pub use serde_cbor::error::Error as serde_error;
-use std::error;
-use std::fmt;
-
-type ResultType<T> = std::result::Result<T, DoubleError>;
-
-#[derive(Debug, Clone)]
-pub struct DoubleError;
-
-impl fmt::Display for DoubleError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "couldn't able to compute serialize hash256")
-    }
-}
-
-impl error::Error for DoubleError {
-    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
-        // Generic error, underlying cause isn't tracked.
-        None
-    }
-}
 
 /// serialize a generic type T
 /// Needs trait Serialize to be implemented
 /// can be done directly by using macro
 /// #[derive(Serialize)] defined in serde
-pub fn serialize<T>(to_ser: &T) -> Result<Vec<u8>, serde_error>
+pub fn serialize<T>(to_ser: &T) -> Result<Vec<u8>, String>
 where
     T: Serialize,
 {
-    let servec = serde_cbor::to_vec(&to_ser);
-    servec
+    match serde_cbor::to_vec(&to_ser) {
+        Ok(value) => return Ok(value),
+        Err(_) => return Err(String::from("couldn't to serialize")),
+    };
 }
 
 /// returns the SHA3_256 hash of cbor value for
 /// generic type T
-pub fn serialize_hash256<T>(to_ser: &T) -> ResultType<Vec<u8>>
+pub fn serialize_hash256<T>(to_ser: &T) -> Result<Vec<u8>, String>
 where
     T: Serialize,
 {
@@ -45,11 +26,11 @@ where
         Result::Ok(to_hash) => {
             let encoded_value = match encode(Hash::SHA3256, &to_hash) {
                 Ok(value) => value,
-                Err(_) => return Err(DoubleError),
+                Err(_) => return Err(String::from("couldn't able to compute serialize hash256")),
             };
             return Ok(encoded_value.to_vec());
         }
-        Result::Err(_) => return Err(DoubleError),
+        Result::Err(_) => return Err(String::from("couldn't to serialize")),
     };
 }
 
@@ -57,14 +38,14 @@ where
 /// generic type T
 /// needs to implement Deserialze trait
 /// with lifetime "a"
-pub fn deserialize<'a, T>(slice: &'a [u8]) -> Result<T, serde_error>
+pub fn deserialize<'a, T>(slice: &'a [u8]) -> Result<T, String>
 where
     T: Deserialize<'a>,
 {
     let deserialize_value = serde_cbor::from_slice(&slice);
     match deserialize_value {
         Result::Ok(value) => return Result::Ok(value),
-        Result::Err(error) => return Result::Err(error),
+        Result::Err(_) => return Result::Err(String::from("couldn't to serialize")),
     };
 }
 
