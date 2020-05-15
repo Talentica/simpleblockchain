@@ -1,18 +1,19 @@
 extern crate db_service;
-extern crate p2plib;
+extern crate message_handler;
 extern crate schema;
 extern crate utils;
 
+use super::consensus_message_sender::ConsensusMessageSender;
+use super::consensus_messages::{
+    ConsensusMessageTypes, ElectionPing, ElectionPong, LeaderElection, SignedLeaderElection,
+};
 use db_service::db_fork_ref::SchemaFork;
 use db_service::db_layer::{fork_db, patch_db, snapshot_db};
 use db_service::db_snapshot_ref::SchemaSnap;
 use exonum_merkledb::ObjectHash;
 use futures::{channel::mpsc::*, executor::*, future, prelude::*, task::*};
-use p2plib::message_sender::MessageSender;
-use p2plib::messages::{
-    ConsensusMessageTypes, ElectionPing, ElectionPong, LeaderElection, MessageTypes,
-    SignedLeaderElection,
-};
+use message_handler::message_sender::MessageSender;
+use message_handler::messages::MessageTypes;
 use schema::transaction_pool::{TxnPool, POOL};
 use std::collections::{hash_map::DefaultHasher, BTreeMap};
 use std::hash::{Hash, Hasher};
@@ -21,7 +22,7 @@ use std::thread;
 use std::time::Duration;
 use utils::configreader::Configuration;
 use utils::keypair::{CryptoKeypair, Keypair, KeypairType, PublicKey, Verify};
-use utils::serializer::serialize;
+use utils::serializer::{deserialize, serialize};
 
 pub struct Consensus {
     keypair: KeypairType,
@@ -53,10 +54,7 @@ impl Consensus {
             let mut schema = SchemaFork::new(&fork);
             if schema.blockchain_length() == 0 {
                 info!("genesis block created");
-                let (genesis_signed_block, txn_vec) = schema.initialize_db(&self.keypair);
-                for each in txn_vec.iter() {
-                    MessageSender::send_transaction_msg(sender, each.clone());
-                }
+                let genesis_signed_block = schema.initialize_db(&self.keypair);
                 MessageSender::send_block_msg(sender, genesis_signed_block);
             } else {
                 self.round_number = schema.blockchain_length() - 1;
@@ -83,7 +81,7 @@ impl Consensus {
             leader_payload,
             signature,
         };
-        MessageSender::send_leader_election_msg(sender, signed_new_leader);
+        ConsensusMessageSender::send_leader_election_msg(sender, signed_new_leader);
         let mut leader_map_locked = leader_map.lock().unwrap();
         leader_map_locked
             .map
@@ -154,14 +152,6 @@ impl Consensus {
         // schema operations and p2p module
         let fork = fork_db();
         {
-            let mut meta_data_locked = meta_data.lock().unwrap();
-            meta_data_locked.active_node.clear();
-            let msg: ElectionPing =
-                ElectionPing::create(&meta_data_locked.kp, self.round_number + 1);
-            MessageSender::send_election_ping_msg(sender, msg);
-            info!("pinging for block number {}", self.round_number + 1);
-        }
-        {
             let mut schema = SchemaFork::new(&fork);
             let signed_block = schema.create_block(&self.keypair);
             info!(
@@ -172,13 +162,21 @@ impl Consensus {
             POOL.sync_pool(&signed_block.block.txn_pool);
             self.round_number = signed_block.block.id;
             MessageSender::send_block_msg(sender, signed_block);
+
+            let mut meta_data_locked = meta_data.lock().unwrap();
+            meta_data_locked.active_node.clear();
+            let msg: ElectionPing =
+                ElectionPing::create(&meta_data_locked.kp, self.round_number + 1);
+            ConsensusMessageSender::send_election_ping_msg(sender, msg);
+            info!("pinging for block number {}", self.round_number + 1);
+            thread::sleep(Duration::from_micros(1000));
         }
         patch_db(fork);
         let signed_new_leader: SignedLeaderElection = self.select_leader(meta_data);
         self.round_number = self.round_number + 1;
         let flag: bool = signed_new_leader.leader_payload.new_leader.clone()
             == signed_new_leader.leader_payload.old_leader.clone();
-        MessageSender::send_leader_election_msg(sender, signed_new_leader);
+        ConsensusMessageSender::send_leader_election_msg(sender, signed_new_leader);
 
         return flag;
     }
@@ -186,7 +184,7 @@ impl Consensus {
     pub fn consensus_msg_receiver(
         leader_map: Arc<Mutex<LeaderMap>>,
         meta_data: Arc<Mutex<MetaData>>,
-        rx: Arc<Mutex<Receiver<Option<ConsensusMessageTypes>>>>,
+        rx: Arc<Mutex<Receiver<Option<Vec<u8>>>>>,
     ) {
         thread::spawn(move || {
             block_on(future::poll_fn(move |cx: &mut Context| {
@@ -196,106 +194,113 @@ impl Consensus {
                             match msg {
                                 None => info!("Empty msg received !"),
                                 Some(msgtype) => {
-                                    match msgtype {
-                                        ConsensusMessageTypes::LeaderElect(data) => {
-                                            let new_leader_obj: SignedLeaderElection = data;
-                                            let ser_leader_election: Vec<u8> =
-                                                match serialize(&new_leader_obj.leader_payload) {
-                                                    Result::Ok(value) => value,
-                                                    Result::Err(_) => vec![0],
-                                                };
-                                            if PublicKey::verify_from_encoded_pk(
-                                                &new_leader_obj.leader_payload.old_leader,
-                                                &ser_leader_election,
-                                                &new_leader_obj.signature,
-                                            ) {
-                                                let mut leader_map_locked =
-                                                    leader_map.lock().unwrap();
-                                                leader_map_locked.map.insert(
-                                                    new_leader_obj.leader_payload.block_height,
-                                                    new_leader_obj
-                                                        .leader_payload
-                                                        .new_leader
-                                                        .clone(),
-                                                );
-                                                info!(
-                                                    "New Leader for block height {} {} -> ",
-                                                    new_leader_obj.leader_payload.block_height,
-                                                    new_leader_obj.leader_payload.new_leader,
-                                                );
-                                            }
-                                            // update leader selection process here.
-                                        }
-                                        ConsensusMessageTypes::ConsensusPing(data) => {
-                                            let election_ping: ElectionPing = data;
-                                            let mut meta_data_locked = meta_data.lock().unwrap();
-                                            if meta_data_locked
-                                                .public_keys
-                                                .contains(&election_ping.payload.public_key)
-                                            {
-                                                if election_ping.verify() {
-                                                    let election_pong: ElectionPong =
-                                                        ElectionPong::create(
-                                                            &meta_data_locked.kp,
-                                                            &election_ping,
-                                                        );
-                                                    MessageSender::send_election_pong_msg(
-                                                        &mut meta_data_locked.sender,
-                                                        election_pong,
+                                    if let Ok(msgtype) =
+                                        deserialize::<ConsensusMessageTypes>(msgtype.as_slice())
+                                    {
+                                        match msgtype {
+                                            ConsensusMessageTypes::LeaderElect(data) => {
+                                                let new_leader_obj: SignedLeaderElection = data;
+                                                let ser_leader_election: Vec<u8> =
+                                                    match serialize(&new_leader_obj.leader_payload)
+                                                    {
+                                                        Result::Ok(value) => value,
+                                                        Result::Err(_) => vec![0],
+                                                    };
+                                                if PublicKey::verify_from_encoded_pk(
+                                                    &new_leader_obj.leader_payload.old_leader,
+                                                    &ser_leader_election,
+                                                    &new_leader_obj.signature,
+                                                ) {
+                                                    let mut leader_map_locked =
+                                                        leader_map.lock().unwrap();
+                                                    leader_map_locked.map.insert(
+                                                        new_leader_obj.leader_payload.block_height,
+                                                        new_leader_obj
+                                                            .leader_payload
+                                                            .new_leader
+                                                            .clone(),
                                                     );
-                                                    debug!(
-                                                        "Ping message from  {} for height {} -> ",
-                                                        election_ping.payload.public_key,
-                                                        election_ping.payload.height,
-                                                    );
-                                                } else {
-                                                    warn!(
-                                                        "Election Ping data tempered {}",
-                                                        election_ping.payload.height
+                                                    info!(
+                                                        "New Leader for block height {} -> {}",
+                                                        new_leader_obj.leader_payload.block_height,
+                                                        new_leader_obj.leader_payload.new_leader,
                                                     );
                                                 }
-                                            } else {
-                                                debug!(
-                                                    "public_keys {:?} key {:?}",
-                                                    meta_data_locked.public_keys,
-                                                    election_ping.payload.public_key
-                                                );
-                                                warn!("Election Ping data from malicious node");
+                                                // update leader selection process here.
                                             }
-                                        }
-                                        ConsensusMessageTypes::ConsensusPong(data) => {
-                                            let election_pong: ElectionPong = data;
-                                            let mut meta_data_locked = meta_data.lock().unwrap();
-                                            if hex::encode(meta_data_locked.kp.public().encode())
-                                                == election_pong.payload.current_leader
-                                            {
+                                            ConsensusMessageTypes::ConsensusPing(data) => {
+                                                let election_ping: ElectionPing = data;
+                                                let mut meta_data_locked =
+                                                    meta_data.lock().unwrap();
                                                 if meta_data_locked
                                                     .public_keys
-                                                    .contains(&election_pong.payload.may_be_leader)
+                                                    .contains(&election_ping.payload.public_key)
                                                 {
-                                                    if election_pong.verify() {
-                                                        meta_data_locked.active_node.push(
-                                                            election_pong
-                                                                .payload
-                                                                .may_be_leader
-                                                                .clone(),
+                                                    if election_ping.verify() {
+                                                        let election_pong: ElectionPong =
+                                                            ElectionPong::create(
+                                                                &meta_data_locked.kp,
+                                                                &election_ping,
+                                                            );
+                                                        ConsensusMessageSender::send_election_pong_msg(
+                                                            &mut meta_data_locked.sender,
+                                                            election_pong,
                                                         );
                                                         debug!(
-                                                        "Pong message received from  {} for height {} -> ",
-                                                        election_pong.payload.may_be_leader,
-                                                        election_pong.payload.height,
-                                                    );
+                                                            "Ping message from  {} for height {} -> ",
+                                                            election_ping.payload.public_key,
+                                                            election_ping.payload.height,
+                                                        );
                                                     } else {
                                                         warn!(
                                                             "Election Ping data tempered {}",
-                                                            election_pong.payload.may_be_leader
+                                                            election_ping.payload.height
                                                         );
                                                     }
                                                 } else {
-                                                    warn!(
-                                                        "Election Pong data tempered {}",
-                                                        election_pong.payload.may_be_leader,
+                                                    debug!(
+                                                        "public_keys {:?} key {:?}",
+                                                        meta_data_locked.public_keys,
+                                                        election_ping.payload.public_key
                                                     );
+                                                    warn!("Election Ping data from malicious node");
+                                                }
+                                            }
+                                            ConsensusMessageTypes::ConsensusPong(data) => {
+                                                let election_pong: ElectionPong = data;
+                                                let mut meta_data_locked =
+                                                    meta_data.lock().unwrap();
+                                                if hex::encode(
+                                                    meta_data_locked.kp.public().encode(),
+                                                ) == election_pong.payload.current_leader
+                                                {
+                                                    if meta_data_locked.public_keys.contains(
+                                                        &election_pong.payload.may_be_leader,
+                                                    ) {
+                                                        if election_pong.verify() {
+                                                            meta_data_locked.active_node.push(
+                                                                election_pong
+                                                                    .payload
+                                                                    .may_be_leader
+                                                                    .clone(),
+                                                            );
+                                                            debug!(
+                                                            "Pong message received from  {} for height {} -> ",
+                                                            election_pong.payload.may_be_leader,
+                                                            election_pong.payload.height,
+                                                        );
+                                                        } else {
+                                                            warn!(
+                                                                "Election Ping data tempered {}",
+                                                                election_pong.payload.may_be_leader
+                                                            );
+                                                        }
+                                                    } else {
+                                                        warn!(
+                                                            "Election Pong data tempered {}",
+                                                            election_pong.payload.may_be_leader,
+                                                        );
+                                                    }
                                                 }
                                             }
                                         }
@@ -374,7 +379,7 @@ impl Consensus {
     pub fn init_consensus(
         config: &Configuration,
         sender: &mut Sender<Option<MessageTypes>>,
-        msg_receiver: Arc<Mutex<Receiver<Option<ConsensusMessageTypes>>>>,
+        msg_receiver: Arc<Mutex<Receiver<Option<Vec<u8>>>>>,
     ) {
         let consensus_configuration: &crate::consensus_config::Configuration =
             &crate::consensus_config::GLOBAL_CONFIG;

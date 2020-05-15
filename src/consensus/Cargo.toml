@@ -11,9 +11,10 @@ exonum-build = "^1.0.0-rc.3"
 
 [dependencies]
 db_service = { path = "../db_service" }
-p2plib = {path = "../p2plib"}
+message_handler = { path = "../message_handler" }
 schema = { path = "../schema" }
 utils = { path = "../utils" }
+sdk = { path = "../sdk" }
 
 exonum-merkledb = "^1.0.0-rc.3"
 exonum-crypto = "^1.0.0-rc.3"
@@ -29,3 +30,4 @@ toml = "0.5.5"
 lazy_static = "1.4.0"
 protobuf = "2.8.0"
 log = "0.4.8"
+libp2p = "^0.15"

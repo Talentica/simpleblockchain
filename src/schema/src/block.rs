@@ -1,6 +1,7 @@
 extern crate utils;
 use exonum_crypto::Hash;
-// use exonum_merkledb::{impl_object_hash_for_binary_value, BinaryValue, ObjectHash};
+use sdk::constants;
+use sdk::message_traits::Message;
 use std::{borrow::Cow, convert::AsRef};
 use utils::keypair::{CryptoKeypair, Keypair, KeypairType, PublicKey, Verify};
 use utils::serializer::{serialize, Deserialize, Serialize};
@@ -132,5 +133,13 @@ impl BlockTraits<KeypairType> for Block {
             txn_pool,
             header,
         }
+    }
+}
+
+impl Message for SignedBlock {
+    const TOPIC: &'static str = constants::NODE_MSG_TOPIC_STR[1];
+    const MODULE_TOPIC: &'static str = constants::NODE;
+    fn handler(&self) {
+        info!("i am SignedBlock handler");
     }
 }

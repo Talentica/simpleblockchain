@@ -1,4 +1,3 @@
-use super::messages::*;
 use futures::prelude::*;
 use libp2p::{
     floodsub::{self, Floodsub, FloodsubEvent},
@@ -6,6 +5,7 @@ use libp2p::{
     swarm::NetworkBehaviourEventProcess,
     NetworkBehaviour, PeerId,
 };
+use message_handler::messages::MsgProcess;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::time::SystemTime;
 use utils::global_peer_data::{PeerData, GLOBALDATA};

@@ -13,5 +13,4 @@ pub mod appdata;
 pub mod block;
 pub mod signed_transaction;
 pub mod state;
-pub mod transaction;
 pub mod transaction_pool;

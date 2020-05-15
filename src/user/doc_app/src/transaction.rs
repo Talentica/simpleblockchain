@@ -36,8 +36,8 @@ impl TransactionTrait<CryptoTransaction> for CryptoTransaction {
     }
 
     fn sign(&self, kp: &KeypairType) -> Vec<u8> {
-        let ser_txn = match serialize(&self) {
-            Result::Ok(value) => return value,
+        let ser_txn: Vec<u8> = match serialize(&self) {
+            Result::Ok(value) => value,
             Result::Err(_) => vec![0],
         };
         let sign = Keypair::sign(&kp, &ser_txn);

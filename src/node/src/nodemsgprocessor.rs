@@ -3,7 +3,7 @@ use db_service::db_fork_ref::SchemaFork;
 use db_service::db_layer::{fork_db, patch_db};
 use exonum_merkledb::ObjectHash;
 use futures::{channel::mpsc::*, executor::*, future, prelude::*, task::*};
-use p2plib::messages::*;
+use message_handler::node_messages::NodeMessageTypes;
 use schema::block::SignedBlock;
 use schema::signed_transaction::SignedTransaction;
 use schema::transaction_pool::{TxnPool, TxnPoolKeyType, POOL};
@@ -11,10 +11,11 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use std::thread;
 use std::time::Duration;
+use utils::serializer::deserialize;
 
 #[derive(Debug)]
 pub struct NodeMsgProcessor {
-    pub _rx: Arc<Mutex<Receiver<Option<NodeMessageTypes>>>>,
+    pub _rx: Arc<Mutex<Receiver<Option<Vec<u8>>>>>,
 }
 
 pub struct Blocks {
@@ -22,11 +23,12 @@ pub struct Blocks {
 }
 
 impl NodeMsgProcessor {
-    pub fn new(rx: Arc<Mutex<Receiver<Option<NodeMessageTypes>>>>) -> Self {
+    pub fn new(rx: Arc<Mutex<Receiver<Option<Vec<u8>>>>>) -> Self {
         // let (mut tx, mut rx) = channel::<Option<NodeMessageTypes>>(1024);
         // NodeMsgProcessor { _tx: tx, _rx: rx }
         NodeMsgProcessor { _rx: rx }
     }
+
     pub fn start(&mut self) {
         //, rx: &'static mut Receiver<Option<NodeMessageTypes>>) {
         // let thread_handle = thread::spawn(move || {
@@ -43,34 +45,43 @@ impl NodeMsgProcessor {
                         // info!("msg received {:?}", msg);
                         match msg {
                             None => info!("Empty msg received !"),
-                            Some(msgtype) => match msgtype {
-                                NodeMessageTypes::SignedBlockEnum(data) => {
-                                    info!(
-                                        "Signed Block msg in NodeMsgProcessor with data {:?}",
-                                        data.object_hash()
-                                    );
-                                    let signed_block: SignedBlock = data;
-                                    let mut block_queue = pending_blocks.lock().unwrap();
-                                    block_queue.pending_blocks.push_back(signed_block);
-                                    info!(
-                                        "block queue length {}",
-                                        block_queue.pending_blocks.len()
-                                    );
-                                }
-                                NodeMessageTypes::SignedTransactionEnum(data) => {
-                                    let txn: SignedTransaction = data;
-                                    info!(
-                                        "Signed Transaction msg in NodeMsgProcessor with Hash {:?}",
-                                        txn.object_hash()
-                                    );
-                                    if let Some(string) = txn.header.get(&String::from("timestamp"))
-                                    {
-                                        if let Ok(timestamp) = string.parse::<TxnPoolKeyType>() {
-                                            POOL.insert_op(&timestamp, &txn);
+                            Some(msgtype) => {
+                                if let Ok(msgtype) =
+                                    deserialize::<NodeMessageTypes>(msgtype.as_slice())
+                                {
+                                    match msgtype {
+                                        NodeMessageTypes::SignedBlockEnum(data) => {
+                                            info!(
+                                                "Signed Block msg in NodeMsgProcessor with data {:?}",
+                                                data.object_hash()
+                                            );
+                                            let signed_block: SignedBlock = data;
+                                            let mut block_queue = pending_blocks.lock().unwrap();
+                                            block_queue.pending_blocks.push_back(signed_block);
+                                            info!(
+                                                "block queue length {}",
+                                                block_queue.pending_blocks.len()
+                                            );
+                                        }
+                                        NodeMessageTypes::SignedTransactionEnum(data) => {
+                                            let txn: SignedTransaction = data;
+                                            info!(
+                                                "Signed Transaction msg in NodeMsgProcessor with Hash {:?}",
+                                                txn.object_hash()
+                                            );
+                                            if let Some(string) =
+                                                txn.header.get(&String::from("timestamp"))
+                                            {
+                                                if let Ok(timestamp) =
+                                                    string.parse::<TxnPoolKeyType>()
+                                                {
+                                                    POOL.insert_op(&timestamp, &txn);
+                                                }
+                                            }
                                         }
                                     }
                                 }
-                            },
+                            }
                         }
                     }
                     Poll::Ready(None) => {
