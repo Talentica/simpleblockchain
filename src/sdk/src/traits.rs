@@ -1,11 +1,7 @@
 use super::signed_transaction::SignedTransaction;
 use super::state::State;
 use exonum_crypto::Hash;
-use exonum_merkledb::{
-    access::{Access, RawAccessMut},
-    ProofMapIndex,
-};
-use utils::keypair::KeypairType;
+use exonum_merkledb::access::Access;
 
 pub trait StateContext {
     fn put(&mut self, key: &String, state: State);

@@ -1,12 +1,13 @@
+use super::constants;
+use super::node_messages::NodeMessageTypes;
 use futures::{channel::mpsc::channel, channel::mpsc::Receiver, channel::mpsc::Sender};
 use libp2p::floodsub::{protocol, Topic, TopicBuilder, TopicHash};
-use sdk::constants;
 use std::sync::{Arc, Mutex};
 use utils::serializer::{deserialize, Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum MessageTypes {
-    NodeMsg(Vec<u8>),
+    NodeMsg(NodeMessageTypes),
     ConsensusMsg(Vec<u8>),
 }
 
@@ -36,7 +37,7 @@ impl MsgProcess for protocol::FloodsubMessage {
     fn process(&self, topics: &Vec<TopicHash>, data: &Vec<u8>) {
         if topics[0] == TopicBuilder::new(constants::NODE).build().hash().clone() {
             debug!("NodeMessageTypes data received");
-            if let Ok(deserialize_msg) = deserialize::<Vec<u8>>(data) {
+            if let Ok(deserialize_msg) = deserialize::<NodeMessageTypes>(data) {
                 let result = MSG_DISPATCHER
                     .node_msg_dispatcher
                     .clone()
@@ -67,15 +68,15 @@ impl MsgProcess for protocol::FloodsubMessage {
 
 #[derive(Debug, Clone)]
 pub struct MessageDispatcher {
-    pub node_msg_dispatcher: Sender<Option<Vec<u8>>>,
-    pub node_msg_receiver: Arc<Mutex<Receiver<Option<Vec<u8>>>>>,
+    pub node_msg_dispatcher: Sender<Option<NodeMessageTypes>>,
+    pub node_msg_receiver: Arc<Mutex<Receiver<Option<NodeMessageTypes>>>>,
     pub consensus_msg_dispatcher: Sender<Option<Vec<u8>>>,
     pub consensus_msg_receiver: Arc<Mutex<Receiver<Option<Vec<u8>>>>>,
 }
 
 impl MessageDispatcher {
     pub fn new() -> Self {
-        let (tx, rx) = channel::<Option<Vec<u8>>>(1024);
+        let (tx, rx) = channel::<Option<NodeMessageTypes>>(1024);
         let (tx_consensus, rx_consensus) = channel::<Option<Vec<u8>>>(1024);
         MessageDispatcher {
             node_msg_dispatcher: tx,
@@ -84,7 +85,7 @@ impl MessageDispatcher {
             consensus_msg_receiver: Arc::new(Mutex::new(rx_consensus)),
         }
     }
-    pub fn set_node_msg_dispatcher(&mut self, tx: &Sender<Option<Vec<u8>>>) {
+    pub fn set_node_msg_dispatcher(&mut self, tx: &Sender<Option<NodeMessageTypes>>) {
         self.node_msg_dispatcher = tx.clone();
     }
 

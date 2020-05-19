@@ -17,10 +17,10 @@ use sdk::traits::AppHandler;
 use std::path::Path;
 
 use libp2p::{identity::PublicKey, PeerId};
+use message_handler::constants;
 use message_handler::messages::MSG_DISPATCHER;
 use nodemsgprocessor::*;
 use p2plib::simpleswarm::SimpleSwarm;
-use sdk::constants;
 
 use std::sync::{
     atomic::{AtomicBool, Ordering},

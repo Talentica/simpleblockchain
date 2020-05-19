@@ -15,7 +15,7 @@ use utils::serializer::deserialize;
 
 #[derive(Debug)]
 pub struct NodeMsgProcessor {
-    pub _rx: Arc<Mutex<Receiver<Option<Vec<u8>>>>>,
+    pub _rx: Arc<Mutex<Receiver<Option<NodeMessageTypes>>>>,
 }
 
 pub struct Blocks {
@@ -23,7 +23,7 @@ pub struct Blocks {
 }
 
 impl NodeMsgProcessor {
-    pub fn new(rx: Arc<Mutex<Receiver<Option<Vec<u8>>>>>) -> Self {
+    pub fn new(rx: Arc<Mutex<Receiver<Option<NodeMessageTypes>>>>) -> Self {
         // let (mut tx, mut rx) = channel::<Option<NodeMessageTypes>>(1024);
         // NodeMsgProcessor { _tx: tx, _rx: rx }
         NodeMsgProcessor { _rx: rx }
@@ -45,43 +45,34 @@ impl NodeMsgProcessor {
                         // info!("msg received {:?}", msg);
                         match msg {
                             None => info!("Empty msg received !"),
-                            Some(msgtype) => {
-                                if let Ok(msgtype) =
-                                    deserialize::<NodeMessageTypes>(msgtype.as_slice())
-                                {
-                                    match msgtype {
-                                        NodeMessageTypes::SignedBlockEnum(data) => {
-                                            info!(
-                                                "Signed Block msg in NodeMsgProcessor with data {:?}",
-                                                data.object_hash()
-                                            );
-                                            let signed_block: SignedBlock = data;
-                                            let mut block_queue = pending_blocks.lock().unwrap();
-                                            block_queue.pending_blocks.push_back(signed_block);
-                                            info!(
-                                                "block queue length {}",
-                                                block_queue.pending_blocks.len()
-                                            );
-                                        }
-                                        NodeMessageTypes::SignedTransactionEnum(data) => {
-                                            let txn: SignedTransaction = data;
-                                            info!(
-                                                "Signed Transaction msg in NodeMsgProcessor with Hash {:?}",
-                                                txn.object_hash()
-                                            );
-                                            if let Some(string) =
-                                                txn.header.get(&String::from("timestamp"))
-                                            {
-                                                if let Ok(timestamp) =
-                                                    string.parse::<TxnPoolKeyType>()
-                                                {
-                                                    POOL.insert_op(&timestamp, &txn);
-                                                }
-                                            }
+                            Some(msgtype) => match msgtype {
+                                NodeMessageTypes::SignedBlockEnum(data) => {
+                                    info!(
+                                        "Signed Block msg in NodeMsgProcessor with data {:?}",
+                                        data.object_hash()
+                                    );
+                                    let signed_block: SignedBlock = data;
+                                    let mut block_queue = pending_blocks.lock().unwrap();
+                                    block_queue.pending_blocks.push_back(signed_block);
+                                    info!(
+                                        "block queue length {}",
+                                        block_queue.pending_blocks.len()
+                                    );
+                                }
+                                NodeMessageTypes::SignedTransactionEnum(data) => {
+                                    let txn: SignedTransaction = data;
+                                    info!(
+                                        "Signed Transaction msg in NodeMsgProcessor with Hash {:?}",
+                                        txn.object_hash()
+                                    );
+                                    if let Some(string) = txn.header.get(&String::from("timestamp"))
+                                    {
+                                        if let Ok(timestamp) = string.parse::<TxnPoolKeyType>() {
+                                            POOL.insert_op(&timestamp, &txn);
                                         }
                                     }
                                 }
-                            }
+                            },
                         }
                     }
                     Poll::Ready(None) => {

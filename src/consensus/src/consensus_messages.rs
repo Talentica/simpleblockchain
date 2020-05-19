@@ -1,6 +1,6 @@
 use libp2p::floodsub::{Topic, TopicBuilder};
-use sdk::constants;
-use sdk::message_traits::Message;
+use message_handler::constants;
+use message_handler::message_traits::Message;
 use std::hash::{Hash, Hasher};
 use utils::keypair::{CryptoKeypair, Keypair, KeypairType, PublicKey, Verify};
 use utils::serializer::{serialize, Deserialize, Serialize};
