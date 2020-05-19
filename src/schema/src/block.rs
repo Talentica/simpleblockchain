@@ -1,6 +1,5 @@
 extern crate utils;
 use exonum_crypto::Hash;
-// use exonum_merkledb::{impl_object_hash_for_binary_value, BinaryValue, ObjectHash};
 use std::{borrow::Cow, convert::AsRef};
 use utils::keypair::{CryptoKeypair, Keypair, KeypairType, PublicKey, Verify};
 use utils::serializer::{serialize, Deserialize, Serialize};

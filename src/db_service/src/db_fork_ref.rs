@@ -81,7 +81,7 @@ where
         self.block_list.len()
     }
 
-    pub fn initialize_db(&mut self, kp: &KeypairType) -> (SignedBlock, Vec<SignedTransaction>) {
+    pub fn initialize_db(&mut self, kp: &KeypairType) -> SignedBlock {
         self.state_trie.clear();
         self.txn_trie.clear();
         self.storage_trie.clear();
@@ -95,7 +95,7 @@ where
         let signature = block.sign(kp);
         let genesis_block: SignedBlock = SignedBlock::create_block(block, signature);
         self.block_list.push(genesis_block.clone());
-        return (genesis_block, vec![]);
+        return genesis_block;
     }
 
     /**

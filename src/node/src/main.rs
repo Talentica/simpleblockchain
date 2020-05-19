@@ -17,8 +17,9 @@ use sdk::traits::AppHandler;
 use std::path::Path;
 
 use libp2p::{identity::PublicKey, PeerId};
+use message_handler::constants;
+use message_handler::messages::MSG_DISPATCHER;
 use nodemsgprocessor::*;
-use p2plib::messages::{CONSENSUS_MSG_TOPIC_STR, MSG_DISPATCHER, NODE_MSG_TOPIC_STR};
 use p2plib::simpleswarm::SimpleSwarm;
 
 use std::sync::{
@@ -36,12 +37,10 @@ fn validator_process() {
     let peer_id = PeerId::from_public_key(pk);
     info!("peer id = {:?}", peer_id);
     let mut swarm = SimpleSwarm::new();
-    for each in NODE_MSG_TOPIC_STR {
-        swarm.topic_list.push(String::from(each.clone()));
-    }
-    for each in CONSENSUS_MSG_TOPIC_STR {
-        swarm.topic_list.push(String::from(each.clone()));
-    }
+    swarm
+        .topic_list
+        .push(String::from(constants::CONSENSUS.clone()));
+    swarm.topic_list.push(String::from(constants::NODE.clone()));
     let mut node_msg_processor = NodeMsgProcessor::new(MSG_DISPATCHER.node_msg_receiver.clone());
     let mut sender = swarm.tx.clone();
     let txn_sender = swarm.tx.clone();
@@ -93,12 +92,7 @@ fn fullnode_process() {
     let pk: PublicKey = PublicKey::Ed25519(config.node.public.clone());
     let peer_id = PeerId::from_public_key(pk);
     let mut swarm = SimpleSwarm::new();
-    for each in NODE_MSG_TOPIC_STR {
-        swarm.topic_list.push(String::from(each.clone()));
-    }
-    for each in CONSENSUS_MSG_TOPIC_STR {
-        swarm.topic_list.push(String::from(each.clone()));
-    }
+    swarm.topic_list.push(String::from(constants::NODE.clone()));
     let mut node_msg_processor = NodeMsgProcessor::new(MSG_DISPATCHER.node_msg_receiver.clone());
     let txn_sender = swarm.tx.clone();
     {

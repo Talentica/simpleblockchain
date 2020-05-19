@@ -2,7 +2,7 @@ extern crate services;
 use actix_rt::System;
 use actix_web::{dev::Server, get, middleware, post, web, App, HttpServer, Responder};
 use futures::channel::mpsc::*;
-use p2plib::messages::MessageTypes;
+use message_handler::messages::MessageTypes;
 use services::client_services::ClientServices;
 use std::net::{SocketAddr, ToSocketAddrs};
 use std::sync::Mutex;

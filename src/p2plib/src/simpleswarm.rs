@@ -1,13 +1,10 @@
+use super::p2pbehaviour::P2PBehaviour;
 use futures::{channel::mpsc::*, executor::*, future, prelude::*, task::*};
 use libp2p::{floodsub::Topic, PeerId, Swarm};
+use message_handler::messages::*;
 use std::error::Error;
-
 use utils::configreader::Configuration;
-
 use utils::serializer::*;
-
-use super::messages::*;
-use super::p2pbehaviour::P2PBehaviour;
 
 pub struct SimpleSwarm {
     // behaviour: Option<P2PBehaviour<TSubstream>>,
