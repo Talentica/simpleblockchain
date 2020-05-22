@@ -24,7 +24,6 @@ trait TransactionPoolTraits {
     fn length_hash_pool(&self) -> usize;
     fn get(&self, key: &Hash) -> Option<TxnPoolValueType>;
     fn sync_pool(&mut self, txn_hash_vec: &Vec<Hash>);
-    fn sync_order_pool(&mut self, txn_hash_vec: &Vec<Hash>);
 }
 
 pub trait TxnPool {
@@ -36,7 +35,6 @@ pub trait TxnPool {
     fn length_hash_pool(&self) -> usize;
     fn get(&self, key: &Hash) -> Option<TxnPoolValueType>;
     fn sync_pool(&self, txn_hash_vec: &Vec<Hash>);
-    fn sync_order_pool(&self, txn_hash_vec: &Vec<Hash>);
 }
 /**
  * BTreeMap is used here for in-order push-pop values and at the same time, search operation also supported.
@@ -113,19 +111,6 @@ impl TransactionPoolTraits for TransactionPool {
             }
         }
     }
-
-    /// aim of this fxn is revert all changes happened because of block proposal which didn't accepted by the consensus.
-    fn sync_order_pool(&mut self, txn_hash_vec: &Vec<Hash>) {
-        for each_hash in txn_hash_vec.iter() {
-            if let Some(txn) = self.get(each_hash) {
-                if let Some(string) = txn.header.get(&String::from("timestamp")) {
-                    if let Ok(timestamp) = string.parse::<TxnPoolKeyType>() {
-                        self.order_pool.insert(timestamp, txn);
-                    }
-                }
-            }
-        }
-    }
 }
 
 impl TxnPool for Pool {
@@ -176,12 +161,6 @@ impl TxnPool for Pool {
     fn sync_pool(&self, txn_hash_vec: &Vec<Hash>) {
         let mut txn_pool = self.pool.lock().unwrap();
         txn_pool.sync_pool(txn_hash_vec);
-    }
-
-    /// aim of this fxn is revert all changes happened because of block proposal which didn't accepted by the consensus.
-    fn sync_order_pool(&self, txn_hash_vec: &Vec<Hash>) {
-        let mut txn_pool = self.pool.lock().unwrap();
-        txn_pool.sync_order_pool(txn_hash_vec);
     }
 }
 
@@ -242,4 +221,76 @@ where
 
 lazy_static! {
     pub static ref POOL: Pool = Pool::new();
+}
+
+
+#[cfg(test)]
+mod tests_transaction_pool {
+
+    use super::*;
+    use std::collections::HashMap;
+    use utils::serializer::{Deserialize, Serialize};
+    use std::time::SystemTime;
+    pub use sdk::signed_transaction::SignedTransaction;
+
+    #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, BinaryValue, ObjectHash)]
+    #[binary_value(codec = "bincode")]
+    pub struct MockTransaction {
+        pub from: std::string::String,
+        pub fxn_call: std::string::String,
+        pub payload: std::vec::Vec<DataTypes>,
+    }
+    #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, BinaryValue, ObjectHash)]
+    #[binary_value(codec = "bincode")]
+    pub enum DataTypes {
+        BoolVal(bool),
+        IntVal(i32),
+        HashVal(Hash),
+        StringVal(String),
+        VecHashVal(Vec<Hash>),
+        VecStringVal(Vec<String>),
+    }
+
+    #[test]
+    pub fn test_transaction_pool() {
+        let temp_pool: Pool = Pool::new();
+        const TXN_FXN_ARR: [&'static str; 5] = ["transfer_sc", "set_hash", "add_doc", "transfer_for_review", "review_docs"];
+        let mut stxn_arr = vec![];
+        for fxn in TXN_FXN_ARR.iter()
+        {
+            let signed_txn = prepare_transaction(fxn.to_string());
+            stxn_arr.push(signed_txn.clone());
+            if let Some(string) = signed_txn.header.get(&String::from("timestamp")) {
+                if let Ok(timestamp) = string.parse::<TxnPoolKeyType>() {
+                    temp_pool.insert_op(&timestamp, &signed_txn);
+                }
+            }
+        }
+        assert_eq!(temp_pool.length_order_pool(), temp_pool.length_hash_pool(), "Problem with insert_op");
+        let txn = temp_pool.get(&stxn_arr[1].object_hash()).unwrap();
+        assert!(txn.txn.iter().zip(stxn_arr[1].txn.iter()).all(|(a,b)| a == b ), "Issue with fetching transaction by hash");
+
+        let delete_arr = stxn_arr.iter().map(|txn| txn.object_hash() ).collect();
+        temp_pool.sync_pool(&delete_arr);
+        assert_eq!(temp_pool.length_order_pool(), 0, "Issue with sync_pool");
+        assert_eq!(temp_pool.length_hash_pool(), 0, "Issue with sync_pool");
+    }
+
+    pub fn prepare_transaction(txn_fxn: String)-> SignedTransaction{
+        let MOCKAPP = "Mockcurrency";
+        let serialized_txn = vec![];
+        let signed_txn = vec![]; 
+        let time_stamp = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_micros();
+        let mut header = HashMap::default();
+        header.insert("timestamp".to_string(), time_stamp.to_string());
+        SignedTransaction {
+            txn: serialized_txn,
+            app_name: String::from(MOCKAPP),
+            signature: signed_txn,
+            header,
+        }
+    }
 }
