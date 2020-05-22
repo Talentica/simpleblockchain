@@ -19,8 +19,10 @@ jobs:
     steps:
     # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
     - uses: actions/checkout@v2
-    - name: Debugging with tmate
-      uses: mxschmitt/action-tmate@v2
+    - name: install
+      run:  sudo apt-get install -y software-properties-common curl git build-essential libssl-dev libsodium-dev libsnappy-dev librocksdb-dev pkg-config clang-7 lldb-7 lld-7 libprotobuf-dev protobuf-compiler python3-pip python3-setuptools 
+    # - name: Debugging with tmate
+    #  uses: mxschmitt/action-tmate@v2
 
     # Runs a single command using the runners shell
     - name: Push to codecov.io
