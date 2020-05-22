@@ -243,3 +243,90 @@ where
 lazy_static! {
     pub static ref POOL: Pool = Pool::new();
 }
+
+
+#[cfg(test)]
+mod tests_transaction_pool {
+
+    use super::*;
+    use std::collections::HashMap;
+    use utils::crypto::keypair::{CryptoKeypair, Keypair, KeypairType};
+    use utils::serializer::{deserialize, serialize, Deserialize, Serialize};
+    use std::time::SystemTime;
+    pub use sdk::signed_transaction::SignedTransaction;
+
+    #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, BinaryValue, ObjectHash)]
+    #[binary_value(codec = "bincode")]
+    pub struct CryptoTransaction {
+        pub from: std::string::String,
+        pub fxn_call: std::string::String,
+        pub payload: std::vec::Vec<DataTypes>,
+    }
+    #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, BinaryValue, ObjectHash)]
+    #[binary_value(codec = "bincode")]
+    pub enum DataTypes {
+        BoolVal(bool),
+        IntVal(i32),
+        HashVal(Hash),
+        StringVal(String),
+        VecHashVal(Vec<Hash>),
+        VecStringVal(Vec<String>),
+    }
+
+    #[test]
+    pub fn test_transaction_pool() {
+        let temp_pool: Pool = Pool::new();
+        const txn_fxn_arr: [&'static str; 5] = ["transfer_sc", "set_hash", "add_doc", "transfer_for_review", "review_docs"];
+        let mut stxn_arr = vec![];
+        for fxn in txn_fxn_arr.iter()
+        {
+            let signed_txn = prepare_transaction(fxn.to_string());
+            stxn_arr.push(signed_txn.clone());
+            if let Some(string) = signed_txn.header.get(&String::from("timestamp")) {
+                if let Ok(timestamp) = string.parse::<TxnPoolKeyType>() {
+                    temp_pool.insert_op(&timestamp, &signed_txn);
+                }
+            }
+        }
+        assert_eq!(temp_pool.length_order_pool(), temp_pool.length_hash_pool(), "Problem with insert_op");
+        let txn = temp_pool.get(&stxn_arr[1].object_hash()).unwrap();
+        assert!(txn.txn.iter().zip(stxn_arr[1].txn.iter()).all(|(a,b)| a == b ), "Issue with fetching transaction by hash");
+
+        let delete_arr = stxn_arr.iter().map(|txn| txn.object_hash() ).collect();
+        temp_pool.sync_pool(&delete_arr);
+        assert_eq!(temp_pool.length_order_pool(), 0, "Issue with sync_order_pool");
+        assert_eq!(temp_pool.length_hash_pool(), 0, "Issue with sync_order_pool");
+    }
+
+    pub fn prepare_transaction(txn_fxn: String)-> SignedTransaction{
+        let APPNAME = "Cryptocurrency";
+        //let public_key = "2c8a35450e1d198e3834d933a35962600c33d1d0f8f6481d6e08f140791374d0";
+        let secret_key = "97ba6f71a5311c4986e01798d525d0da8ee5c54acbf6ef7c3fadd1e2f624442f";
+        let mut secret = hex::decode(secret_key.clone()).expect("invalid secret");
+        let keypair = Keypair::generate_from(secret.as_mut_slice());
+        let from: String = hex::encode(keypair.public().encode());
+        let mut payload: Vec<DataTypes> = Vec::new();
+        payload.push(DataTypes::HashVal(Hash::zero()));
+        let crypto_transaction: CryptoTransaction = 
+        CryptoTransaction {
+            from,
+            fxn_call: txn_fxn,
+            payload,
+        };
+
+        let serialized_txn = serialize(&crypto_transaction).unwrap();
+        let signed_txn = Keypair::sign(&keypair, &serialized_txn);
+        let mut header = HashMap::default();
+        let time_stamp = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_micros();
+        header.insert("timestamp".to_string(), time_stamp.to_string());
+        SignedTransaction {
+            txn: serialized_txn,
+            app_name: String::from(APPNAME),
+            signature: signed_txn,
+            header,
+        }
+    }
+}
