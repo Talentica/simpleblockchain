@@ -86,7 +86,8 @@ where
         self.txn_trie.clear();
         self.storage_trie.clear();
         self.block_list.clear();
-        let mut block = Block::genesis_block();
+        let public_key: String = hex::encode(Keypair::public(&kp).encode());
+        let mut block = Block::genesis_block(public_key);
         let public_key = hex::encode(Keypair::public(&kp).encode());
         block.peer_id = public_key.clone();
         block.header[0] = self.state_trie_merkle_hash();

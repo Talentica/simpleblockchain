@@ -7,7 +7,7 @@ use utils::serializer::{serialize, Deserialize, Serialize};
 pub trait BlockTraits<T> {
     fn validate(&self, publickey: &String, signature: &[u8]) -> bool;
     fn sign(&self, kp: &T) -> Vec<u8>;
-    fn genesis_block() -> Self;
+    fn genesis_block(peer_id: String) -> Self;
     fn new_block(
         id: u64,
         peer_id: String,
@@ -71,6 +71,7 @@ impl SignedBlock {
         to_string.extend(self.block.to_string_format().chars());
         to_string
     }
+
     pub fn validate(&self, publickey: &String) -> bool {
         let ser_block: Vec<u8> = match serialize(&self.block) {
             Result::Ok(value) => value,
@@ -107,10 +108,10 @@ impl BlockTraits<KeypairType> for Block {
         sign
     }
 
-    fn genesis_block() -> Block {
+    fn genesis_block(peer_id: String) -> Block {
         Block {
             id: 0,
-            peer_id: String::from("to_be_decided"),
+            peer_id,
             prev_hash: Hash::zero(),
             txn_pool: vec![],
             header: [Hash::zero(), Hash::zero(), Hash::zero()],
@@ -131,5 +132,44 @@ impl BlockTraits<KeypairType> for Block {
             txn_pool,
             header,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests_block {
+
+    use super::*;
+
+    #[test]
+    pub fn test_create_block() {
+        let kp: KeypairType = Keypair::generate();
+        let pk: String = hex::encode(kp.public().encode());
+        let block: Block = Block::new_block(
+            1,
+            pk.clone(),
+            Hash::zero(),
+            vec![Hash::zero()],
+            [Hash::zero(), Hash::zero(), Hash::zero()],
+        );
+        let signed_block: SignedBlock = SignedBlock::create_block(block.clone(), block.sign(&kp));
+        assert_eq!(
+            signed_block.validate(&pk),
+            true,
+            "Issue with Signature Verification"
+        );
+    }
+
+    #[test]
+    pub fn test_genesis_block() {
+        let kp: KeypairType = Keypair::generate();
+        let pk: String = hex::encode(kp.public().encode());
+        let genesis_block: Block = Block::genesis_block(pk.clone());
+        let signature: Vec<u8> = genesis_block.sign(&kp);
+        let signed_block: SignedBlock = SignedBlock::create_block(genesis_block, signature);
+        assert_eq!(
+            signed_block.validate(&pk),
+            true,
+            "Issue with Signature Verification"
+        );
     }
 }
