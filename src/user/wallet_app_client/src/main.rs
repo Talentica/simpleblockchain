@@ -18,7 +18,7 @@ use utils::crypto::keypair::KeypairType;
 mod client;
 use client::ClientObj;
 use std::time::SystemTime;
-use utils::logger::*;
+use utils::logger::logger_init_from_yml;
 use utils::serializer::serialize;
 
 mod cli_config;
@@ -182,7 +182,7 @@ pub fn create_transaction(kp: &KeypairType, nonce: u64) -> Option<SignedTransact
 //this attribute allows main to not need to return anything and still use async calls.
 #[actix_rt::main]
 async fn main() {
-    console_logger_init(&String::from("client_log.yml"));
+    logger_init_from_yml("client_log.yml");
     info!("Wallet Application CLient Bootstrapping");
     let cli_configuration: &cli_config::Configuration = &cli_config::GLOBAL_CONFIG;
     let client: ClientObj = ClientObj::new(cli_configuration);

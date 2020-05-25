@@ -2,11 +2,10 @@ extern crate utils;
 use super::appdata::{AppData, APPDATA};
 use super::signed_transaction::SignedTransaction;
 use super::state::State;
-use super::types::GETHASH;
 use exonum_crypto::Hash;
 use exonum_merkledb::{
     access::{Access, RawAccessMut},
-    ObjectHash, ProofMapIndex,
+    ObjectHash,
 };
 
 use sdk::traits::{PoolTrait, StateContext};
@@ -223,15 +222,14 @@ lazy_static! {
     pub static ref POOL: Pool = Pool::new();
 }
 
-
 #[cfg(test)]
 mod tests_transaction_pool {
 
     use super::*;
-    use std::collections::HashMap;
-    use utils::serializer::{Deserialize, Serialize};
-    use std::time::SystemTime;
     pub use sdk::signed_transaction::SignedTransaction;
+    use std::collections::HashMap;
+    use std::time::SystemTime;
+    use utils::serializer::{Deserialize, Serialize};
 
     #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, BinaryValue, ObjectHash)]
     #[binary_value(codec = "bincode")]
@@ -254,10 +252,15 @@ mod tests_transaction_pool {
     #[test]
     pub fn test_transaction_pool() {
         let temp_pool: Pool = Pool::new();
-        const TXN_FXN_ARR: [&'static str; 5] = ["transfer_sc", "set_hash", "add_doc", "transfer_for_review", "review_docs"];
+        const TXN_FXN_ARR: [&'static str; 5] = [
+            "transfer_sc",
+            "set_hash",
+            "add_doc",
+            "transfer_for_review",
+            "review_docs",
+        ];
         let mut stxn_arr = vec![];
-        for fxn in TXN_FXN_ARR.iter()
-        {
+        for fxn in TXN_FXN_ARR.iter() {
             let signed_txn = prepare_transaction(fxn.to_string());
             stxn_arr.push(signed_txn.clone());
             if let Some(string) = signed_txn.header.get(&String::from("timestamp")) {
@@ -266,20 +269,30 @@ mod tests_transaction_pool {
                 }
             }
         }
-        assert_eq!(temp_pool.length_order_pool(), temp_pool.length_hash_pool(), "Problem with insert_op");
+        assert_eq!(
+            temp_pool.length_order_pool(),
+            temp_pool.length_hash_pool(),
+            "Problem with insert_op"
+        );
         let txn = temp_pool.get(&stxn_arr[1].object_hash()).unwrap();
-        assert!(txn.txn.iter().zip(stxn_arr[1].txn.iter()).all(|(a,b)| a == b ), "Issue with fetching transaction by hash");
+        assert!(
+            txn.txn
+                .iter()
+                .zip(stxn_arr[1].txn.iter())
+                .all(|(a, b)| a == b),
+            "Issue with fetching transaction by hash"
+        );
 
-        let delete_arr = stxn_arr.iter().map(|txn| txn.object_hash() ).collect();
+        let delete_arr = stxn_arr.iter().map(|txn| txn.object_hash()).collect();
         temp_pool.sync_pool(&delete_arr);
         assert_eq!(temp_pool.length_order_pool(), 0, "Issue with sync_pool");
         assert_eq!(temp_pool.length_hash_pool(), 0, "Issue with sync_pool");
     }
 
-    pub fn prepare_transaction(txn_fxn: String)-> SignedTransaction{
+    pub fn prepare_transaction(txn_fxn: String) -> SignedTransaction {
         let MOCKAPP = "Mockcurrency";
         let serialized_txn = vec![];
-        let signed_txn = vec![]; 
+        let signed_txn = vec![];
         let time_stamp = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
             .unwrap()

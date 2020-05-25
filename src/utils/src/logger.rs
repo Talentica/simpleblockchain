@@ -1,5 +1,4 @@
 extern crate chrono;
-extern crate env_logger;
 
 use log::LevelFilter;
 use log4rs::append::rolling_file::policy::compound::roll::fixed_window::FixedWindowRoller;
@@ -9,8 +8,8 @@ use log4rs::config::{Appender, Config, Root};
 use log4rs::encode::pattern::PatternEncoder;
 use log4rs::init_file;
 
-pub fn file_logger_init_from_yml(file_path: &String) {
-    init_file(file_path, Default::default()).unwrap();
+pub fn logger_init_from_yml(file_path: &str) {
+    init_file(&String::from(file_path), Default::default()).unwrap();
 }
 
 pub fn file_logger_init() {
@@ -49,6 +48,21 @@ pub fn file_logger_init() {
     }
 }
 
-pub fn console_logger_init(file_path: &String) {
-    init_file(file_path, Default::default()).unwrap();
+#[cfg(test)]
+mod tests_logger {
+    // Note this useful idiom: importing names from outer (for mod tests) scope.
+    use super::*;
+    // fn to test logger functionality
+    #[test]
+    fn test_yml_logger() {
+        logger_init_from_yml("log.yml");
+        info!("yml logger is working");
+    }
+
+    // fn to test file_defined static logger
+    #[test]
+    fn test_file_defined_logger() {
+        // file_logger_init();
+        info!("file defined logger is working");
+    }
 }
