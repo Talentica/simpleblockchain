@@ -15,13 +15,13 @@ mod client;
 use client::ClientObj;
 mod build_transaction;
 use build_transaction::*;
-use utils::logger::*;
+use utils::logger::logger_init_from_yml;
 mod cli_config;
 
 //this attribute allows main to not need to return anything and still use async calls.
 #[actix_rt::main]
 async fn main() {
-    console_logger_init(&String::from("client_log.yml"));
+    logger_init_from_yml("client_log.yml");
     info!("Document Application CLient Bootstrapping");
     let cli_configuration: &cli_config::Configuration = &cli_config::GLOBAL_CONFIG;
     let client: ClientObj = ClientObj::new(cli_configuration);

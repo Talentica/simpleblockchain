@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use std::convert::AsRef;
 use std::time::SystemTime;
 use utils::keypair::{CryptoKeypair, Keypair, KeypairType, PublicKey, Verify};
-use utils::logger::*;
+use utils::logger::logger_init_from_yml;
 use utils::serializer::{deserialize, serialize};
 
 const APPNAME: &str = "Document_Review";
@@ -598,7 +598,7 @@ pub struct CryptoApp {
 
 impl CryptoApp {
     pub fn new(s: &String) -> CryptoApp {
-        file_logger_init_from_yml(&String::from("log.yml"));
+        logger_init_from_yml("log.yml");
         CryptoApp { name: s.clone() }
     }
 }

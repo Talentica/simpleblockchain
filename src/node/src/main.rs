@@ -29,7 +29,7 @@ use std::sync::{
 use std::thread;
 use utils::configreader;
 use utils::configreader::{Configuration, NODETYPE};
-use utils::logger::*;
+use utils::logger::logger_init_from_yml;
 
 fn validator_process() {
     let config: &Configuration = &configreader::GLOBAL_CONFIG;
@@ -166,7 +166,7 @@ fn load_apps() {
 }
 
 fn main() {
-    file_logger_init_from_yml(&String::from("log.yml"));
+    logger_init_from_yml("log.yml");
     info!("Node Bootstrapping");
     let config: &Configuration = &configreader::GLOBAL_CONFIG;
     load_apps();

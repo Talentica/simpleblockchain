@@ -6,7 +6,7 @@ mod client;
 use crate::client::{ClientObj, SyncState};
 use exonum_crypto::{Hash, PublicKey};
 use std::io;
-use utils::logger::*;
+use utils::logger::logger_init_from_yml;
 
 pub fn remove_trailing_newline(input: &mut String) {
     while input.ends_with('\n') {
@@ -111,7 +111,7 @@ pub fn get_bool_input(input: &mut String) -> Option<bool> {
 
 //this attribute allows main to not need to return anything and still use async calls.
 fn main() {
-    console_logger_init(&String::from("client_log.yml"));
+    logger_init_from_yml("client_log.yml");
     info!("Peer Client Bootstrapping");
     let mut client: ClientObj = ClientObj::new();
     let mut end_flag: bool = false;
