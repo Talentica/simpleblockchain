@@ -24,32 +24,3 @@ pub fn patch_db(fork: Fork) {
         error!("error occurred in patch_db process {:?}", error);
     }
 }
-
-#[cfg(test)]
-mod tests_db_layer {
-    use super::*;
-    use exonum_merkledb::{access::CopyAccessExt, ProofMapIndex};
-
-    #[test]
-    pub fn test_db_operations() {
-        let fork = fork_db();
-        let name = "name";
-        {
-            let mut mut_index: ProofMapIndex<_, String, String> = fork.get_proof_map(name);
-            let value: String = String::from("value_string");
-            let key: String = String::from("key_string");
-            mut_index.put(&key, value.clone());
-            info!("added in database {}", key);
-            // mut_index.clear();
-        }
-        patch_db(fork);
-        let snapshot = snapshot_db();
-        {
-            let mut_index: ProofMapIndex<_, String, String> = snapshot.get_proof_map(name);
-            info!(" data from snapshot");
-            for (_key, _value) in mut_index.iter() {
-                info!("{} {:?} ", _key, _value);
-            }
-        }
-    }
-}
