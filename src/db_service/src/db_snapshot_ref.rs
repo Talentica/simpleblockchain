@@ -109,32 +109,3 @@ where
         self.state().get(&public_key)
     }
 }
-
-#[cfg(test)]
-mod test_db_service {
-
-    #[test]
-    pub fn test_schema() {
-        use super::*;
-        use crate::db_layer::snapshot_db;
-        let public_key =
-            String::from("2c8a35450e1d198e3834d933a35962600c33d1d0f8f6481d6e08f140791374d0");
-        let snapshot = snapshot_db();
-        {
-            let schema = SchemaSnap::new(&snapshot);
-            info!("----printing details----");
-            info!("block chain length {}", schema.get_blockchain_length());
-            info!(
-                "block chain root block hash {}",
-                schema.get_root_block_hash()
-            );
-            info!(
-                "transaction_trie_hash {}",
-                schema.get_transaction_trie_hash()
-            );
-            info!("state_trie_hash {}", schema.get_state_trie_hash());
-            info!("storage_trie_hash {}", schema.get_storage_trie_hash());
-            info!("user state {:?}", schema.get_state(public_key));
-        }
-    }
-}
