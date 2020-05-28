@@ -7,7 +7,7 @@ use utils::serializer::{Deserialize, Serialize};
 
 pub const NODE_MSG_TOPIC_STR: &'static [&'static str] = &["SignedTransaction", "SignedBlock"];
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum NodeMessageTypes {
     SignedTransactionEnum(SignedTransaction),
     SignedBlockEnum(SignedBlock),

@@ -2,7 +2,6 @@ use crate::messages::MessageTypes;
 use crate::node_messages::NodeMessageTypes;
 use futures::channel::mpsc::*;
 use schema::{block::SignedBlock, signed_transaction::SignedTransaction};
-use utils::serializer::serialize;
 
 pub struct MessageSender {}
 
