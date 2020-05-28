@@ -5,7 +5,7 @@ use libp2p::floodsub::{protocol, Topic, TopicBuilder, TopicHash};
 use std::sync::{Arc, Mutex};
 use utils::serializer::{deserialize, Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum MessageTypes {
     NodeMsg(NodeMessageTypes),
     ConsensusMsg(Vec<u8>),

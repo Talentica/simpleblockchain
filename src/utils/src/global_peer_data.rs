@@ -78,7 +78,7 @@ mod tests_peer_data {
         let addr: Multiaddr = Multiaddr::from(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)));
         let id: PeerId = PeerId::random();
         let peer_data: PeerData = PeerData::new(id, time_stamp, addr);
-        std::thread::sleep(std::time::Duration::from_millis(1000));
+        thread::sleep(Duration::from_millis(1000));
         {
             GLOBALDATA
                 .lock()
