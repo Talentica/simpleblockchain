@@ -45,3 +45,37 @@ impl State {
         self.code_hash = new_code_hash;
     }
 }
+
+#[cfg(test)]
+mod test_sdk_state {
+    // Note this useful idiom: importing names from outer (for mod tests) scope.
+    use super::*;
+    use exonum_merkledb::ObjectHash;
+    use utils::serializer::{deserialize, serialize};
+
+    #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default, BinaryValue, ObjectHash)]
+    #[binary_value(codec = "bincode")]
+    pub struct MockData {
+        pub mock_field: u64,
+    }
+
+    // fn to test state operations
+    #[test]
+    fn test_state_operations() {
+        let mut state: State = State::new();
+        let state_data: MockData = MockData { mock_field: 11 };
+        let state_storage: MockData = MockData { mock_field: 12 };
+        let state_code: MockData = MockData { mock_field: 13 };
+
+        state.set_data(&serialize(&state_data).unwrap());
+        state.set_storage_root(state_storage.object_hash());
+        state.set_code_hash(state_code.object_hash());
+
+        assert_eq!(
+            deserialize::<MockData>(state.get_data()).unwrap(),
+            state_data
+        );
+        assert_eq!(state.get_storage_root(), state_storage.object_hash());
+        assert_eq!(state.get_code_hash(), state_code.object_hash());
+    }
+}

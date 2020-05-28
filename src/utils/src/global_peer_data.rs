@@ -50,6 +50,8 @@ mod tests_peer_data {
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
     use std::net::Ipv4Addr;
+    use std::thread;
+    use std::time::Duration;
     // fn to test insert & PeerData new function
     #[test]
     fn test_add_global_peer_data() {
@@ -76,6 +78,7 @@ mod tests_peer_data {
         let addr: Multiaddr = Multiaddr::from(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)));
         let id: PeerId = PeerId::random();
         let peer_data: PeerData = PeerData::new(id, time_stamp, addr);
+        std::thread::sleep(std::time::Duration::from_millis(1000));
         {
             GLOBALDATA
                 .lock()
