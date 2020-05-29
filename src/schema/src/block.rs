@@ -1,5 +1,6 @@
 extern crate utils;
 use exonum_crypto::Hash;
+use exonum_merkledb::ObjectHash;
 use std::{borrow::Cow, convert::AsRef};
 use utils::keypair::{CryptoKeypair, Keypair, KeypairType, PublicKey, Verify};
 use utils::serializer::{serialize, Deserialize, Serialize};
@@ -86,6 +87,10 @@ impl SignedBlock {
 
     pub fn from_bytes(bytes: Cow<'_, [u8]>) -> anyhow::Result<Self> {
         bincode::deserialize(bytes.as_ref()).map_err(From::from)
+    }
+
+    pub fn get_hash(&self) -> Hash {
+        self.object_hash()
     }
 }
 
