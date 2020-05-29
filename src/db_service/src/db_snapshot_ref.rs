@@ -70,22 +70,18 @@ where
     }
 
     pub fn get_root_block(&self) -> Option<SignedBlock> {
-        if self.block_list.len() > 0 {
-            return self.block_list.get(self.block_list.len() - 1);
+        let length: u64 = self.get_blockchain_length();
+        if length > 0 {
+            return self.get_block(length - 1);
         } else {
             return Option::None;
         }
     }
 
     pub fn get_root_block_hash(&self) -> Hash {
-        if self.block_list.len() > 0 {
-            return self
-                .block_list
-                .get(self.block_list.len() - 1)
-                .unwrap()
-                .object_hash();
-        } else {
-            return Hash::zero();
+        match self.get_root_block() {
+            Some(root_block) => root_block.get_hash(),
+            None => Hash::zero(),
         }
     }
 
@@ -94,8 +90,11 @@ where
     }
 
     pub fn get_block_hash(&self, index: u64) -> Hash {
-        if self.block_list.len() >= index {
-            self.block_list.get(index).unwrap().object_hash()
+        if self.get_blockchain_length() > index {
+            match self.get_block(index) {
+                Some(block) => return block.get_hash(),
+                None => return Hash::zero(),
+            };
         } else {
             return Hash::zero();
         }
