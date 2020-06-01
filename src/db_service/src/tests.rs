@@ -10,11 +10,8 @@ mod test_db_service {
     use schema::state::State;
     use sdk::traits::StateContext;
     use std::collections::HashMap;
-    use std::thread;
-    use std::time::Duration;
     use utils::keypair::{CryptoKeypair, Keypair, KeypairType};
 
-    #[test]
     fn test_db_initialization_check() {
         // reset_db_state
         let kp: KeypairType = Keypair::generate();
@@ -51,18 +48,14 @@ mod test_db_service {
         }
     }
 
-    #[test]
     fn test_db_read_write_check() {
         // reset_db_state
         let kp: KeypairType = Keypair::generate();
         let pk: String = hex::encode(kp.public().encode());
         let snapshot: Box<dyn Snapshot> = snapshot_db();
-        thread::sleep(Duration::from_millis(300));
         {
             let schema = SchemaSnap::new(&snapshot);
-            if !schema.is_db_initialized() {
-                thread::sleep(Duration::from_millis(200));
-            }
+            if !schema.is_db_initialized() {}
         }
         // db is initialized create one block and verify it with snapshot
         let fork: Fork = fork_db();
@@ -93,7 +86,6 @@ mod test_db_service {
         }
     }
 
-    #[test]
     fn test_db_state_context() {
         let kp: KeypairType = Keypair::generate();
         let pk: String = hex::encode(kp.public().encode());
@@ -113,9 +105,7 @@ mod test_db_service {
             schema.put_txn(&txn_hash, txn.clone());
         }
         patch_db(fork);
-
         let fork: Fork = fork_db();
-        let state: State = State::new();
         {
             let schema = SchemaFork::new(&fork);
             let is_contains: bool = schema.contains(&pk);
@@ -130,7 +120,6 @@ mod test_db_service {
         }
     }
 
-    #[test]
     fn test_db_sync_state() {
         // since it is unit test case sync-state should return zero-state not error
         let fork: Fork = fork_db();
@@ -138,14 +127,11 @@ mod test_db_service {
             let mut schema = SchemaFork::new(&fork);
             assert_eq!(schema.sync_state(), false);
         }
-        patch_db(fork);
     }
 
-    #[test]
     fn test_failed_scenarios() {
         let kp: KeypairType = Keypair::generate();
         let pk: String = hex::encode(kp.public().encode());
-        thread::sleep(Duration::from_millis(1500));
         // db is initialized create one block and verify it with snapshot
         let fork: Fork = fork_db();
         let block: Block = Block::genesis_block(pk.clone());
@@ -202,5 +188,14 @@ mod test_db_service {
                 signed_block.get_hash()
             );
         }
+    }
+
+    #[test]
+    fn test_db_services_checks() {
+        test_db_initialization_check();
+        test_db_read_write_check();
+        test_db_state_context();
+        test_db_sync_state();
+        test_failed_scenarios();
     }
 }

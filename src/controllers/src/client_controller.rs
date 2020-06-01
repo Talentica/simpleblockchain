@@ -1,6 +1,6 @@
 extern crate services;
 use actix_rt::System;
-use actix_web::{dev::Server, get, middleware, post, web, App, HttpServer, Responder};
+use actix_web::{dev::Server, get, middleware, post, web, App, HttpResponse, HttpServer};
 use futures::channel::mpsc::*;
 use message_handler::messages::MessageTypes;
 use services::client_services::ClientServices;
@@ -19,7 +19,7 @@ pub trait Controller {
 async fn submit_transaction_controller(
     transaction: web::Bytes,
     app_state: web::Data<Mutex<AppState>>,
-) -> impl Responder {
+) -> HttpResponse {
     // call client service handler
     ClientServices::submit_transaction_service(
         transaction,
@@ -29,47 +29,47 @@ async fn submit_transaction_controller(
 }
 
 #[get("/client/fetch_pending_transaction")]
-async fn fetch_pending_transaction_controller(transaction_hash: web::Bytes) -> impl Responder {
+async fn fetch_pending_transaction_controller(transaction_hash: web::Bytes) -> HttpResponse {
     ClientServices::fetch_pending_transaction_service(transaction_hash)
 }
 
 #[get("/client/fetch_confirm_transaction")]
-async fn fetch_confirm_transaction_controller(transaction_hash: web::Bytes) -> impl Responder {
+async fn fetch_confirm_transaction_controller(transaction_hash: web::Bytes) -> HttpResponse {
     ClientServices::fetch_confirm_transaction_service(transaction_hash)
 }
 
 #[get("/client/fetch_state")]
-async fn fetch_state_controller(address: web::Bytes) -> impl Responder {
+async fn fetch_state_controller(address: web::Bytes) -> HttpResponse {
     ClientServices::fetch_state_service(address)
 }
 
 #[get("/peer/fetch_block")]
-async fn fetch_block_peer_controller(address: web::Bytes) -> impl Responder {
+async fn fetch_block_peer_controller(address: web::Bytes) -> HttpResponse {
     ClientServices::fetch_block_peer_service(address)
 }
 
 #[get("/peer/fetch_latest_block")]
-async fn fetch_latest_block_peer_controller() -> impl Responder {
+async fn fetch_latest_block_peer_controller() -> HttpResponse {
     ClientServices::fetch_latest_block_peer_service()
 }
 
 #[get("/client/fetch_block")]
-async fn fetch_block_controller(address: web::Bytes) -> impl Responder {
+async fn fetch_block_controller(address: web::Bytes) -> HttpResponse {
     ClientServices::fetch_block_service(address)
 }
 
 #[get("/client/fetch_latest_block")]
-async fn fetch_latest_block_controller() -> impl Responder {
+async fn fetch_latest_block_controller() -> HttpResponse {
     ClientServices::fetch_latest_block_service()
 }
 
 #[get("/peer/fetch_blockchain_length")]
-async fn fetch_blockchain_length_peer_controller() -> impl Responder {
+async fn fetch_blockchain_length_peer_controller() -> HttpResponse {
     ClientServices::fetch_blockchain_length_peer_service()
 }
 
 #[get("/client/fetch_blockchain_length")]
-async fn fetch_blockchain_length_controller() -> impl Responder {
+async fn fetch_blockchain_length_controller() -> HttpResponse {
     ClientServices::fetch_blockchain_length_service()
 }
 
@@ -131,7 +131,9 @@ impl Controller for ClientController {
             .run(),
         );
 
-        let _ = sys.run();
+        if let Err(_) = sys.run() {
+            panic!("not able to start server on port 8089");
+        }
         true
     }
 

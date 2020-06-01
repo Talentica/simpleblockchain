@@ -70,6 +70,32 @@ impl ClientObj {
         }
     }
 
+    pub fn submit_transaction(&self, txn: Vec<u8>) -> Result<bool, Error> {
+        let mut url: String = match get_peer_url() {
+            Some(url) => url,
+            None => return Ok(false),
+        };
+        url.extend("client/submit_transaction".chars());
+        let response = self
+            .client
+            .post(&url) // <- Create request builder
+            .header("User-Agent", "Actix-web")
+            //.send() // <- Send http request
+            .body(txn)
+            .send()?;
+        match response.error_for_status() {
+            Ok(mut body) => {
+                let mut buf: Vec<u8> = vec![];
+                body.copy_to(&mut buf)?;
+                match deserialize::<String>(buf.as_slice()) {
+                    Result::Ok(_) => return Ok(true),
+                    Result::Err(_) => return Ok(false),
+                }
+            }
+            Err(err) => return Result::Err(err),
+        }
+    }
+
     // request to peer to fetch pending transaction
     pub fn fetch_pending_transaction(
         &self,
