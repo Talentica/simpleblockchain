@@ -1,4 +1,4 @@
-use actix_web::{web, HttpResponse, Responder};
+use actix_web::{web, HttpResponse};
 use db_service::db_layer::snapshot_db;
 use db_service::db_snapshot_ref::SchemaSnap;
 use exonum_crypto::Hash;
@@ -15,21 +15,25 @@ impl ClientServices {
     pub fn submit_transaction_service(
         transaction: web::Bytes,
         sender: &mut Sender<Option<MessageTypes>>,
-    ) -> impl Responder {
+    ) -> HttpResponse {
         if let Ok(txn) = deserialize::<SignedTransaction>(&transaction) {
             debug!("submit_transaction {:?}", txn);
             if let Some(string) = txn.header.get(&String::from("timestamp")) {
                 if let Ok(timestamp) = string.parse::<TxnPoolKeyType>() {
                     POOL.insert_op(&timestamp, &txn);
                     MessageSender::send_transaction_msg(sender, txn);
-                    return HttpResponse::Ok().body("txn added in the pool");
+                    if let Ok(serialized_string) = serialize(&String::from("txn added in the pool"))
+                    {
+                        return HttpResponse::Ok().body(serialized_string);
+                    };
+                    // return HttpResponse::Ok().body("txn added in the pool".as_bytes());
                 }
             }
         }
         HttpResponse::BadRequest().body("txn couldn't deserialize")
     }
 
-    pub fn fetch_pending_transaction_service(transaction_hash: web::Bytes) -> impl Responder {
+    pub fn fetch_pending_transaction_service(transaction_hash: web::Bytes) -> HttpResponse {
         if let Ok(txn_hash) = deserialize::<Hash>(&transaction_hash) {
             debug!("fetch_pending_transaction {:?}", txn_hash);
             if let Some(transaction) = POOL.get(&txn_hash) {
@@ -42,7 +46,7 @@ impl ClientServices {
         HttpResponse::BadRequest().body("txn_hash couldn't deserialize")
     }
 
-    pub fn fetch_confirm_transaction_service(transaction_hash: web::Bytes) -> impl Responder {
+    pub fn fetch_confirm_transaction_service(transaction_hash: web::Bytes) -> HttpResponse {
         if let Ok(txn_hash) = deserialize::<Hash>(&transaction_hash) {
             debug!("fetch_confirm_transaction {:?}", txn_hash);
             let snapshot = snapshot_db();
@@ -57,7 +61,7 @@ impl ClientServices {
         HttpResponse::BadRequest().body("txn_hash couldn't deserialize")
     }
 
-    pub fn fetch_state_service(address: web::Bytes) -> impl Responder {
+    pub fn fetch_state_service(address: web::Bytes) -> HttpResponse {
         if let Ok(public_address) = deserialize::<String>(&address) {
             debug!("fetch_state {:?}", public_address);
             let snapshot = snapshot_db();
@@ -72,7 +76,7 @@ impl ClientServices {
         HttpResponse::BadRequest().body("string couldn't deserialize")
     }
 
-    pub fn fetch_block_peer_service(address: web::Bytes) -> impl Responder {
+    pub fn fetch_block_peer_service(address: web::Bytes) -> HttpResponse {
         if let Ok(block_index) = deserialize::<u64>(&address) {
             debug!("fetch_block {:?}", block_index);
             let snapshot = snapshot_db();
@@ -87,7 +91,7 @@ impl ClientServices {
         HttpResponse::BadRequest().body("block index couldn't deserialize")
     }
 
-    pub fn fetch_latest_block_peer_service() -> impl Responder {
+    pub fn fetch_latest_block_peer_service() -> HttpResponse {
         let snapshot = snapshot_db();
         let schema = SchemaSnap::new(&snapshot);
         if let Some(block) = schema.get_root_block() {
@@ -98,7 +102,7 @@ impl ClientServices {
         return HttpResponse::BadRequest().body("BadRequest");
     }
 
-    pub fn fetch_block_service(address: web::Bytes) -> impl Responder {
+    pub fn fetch_block_service(address: web::Bytes) -> HttpResponse {
         if let Ok(block_index) = deserialize::<u64>(&address) {
             debug!("fetch_block {:?}", block_index);
             let snapshot = snapshot_db();
@@ -114,7 +118,7 @@ impl ClientServices {
         HttpResponse::BadRequest().body("block index couldn't deserialize")
     }
 
-    pub fn fetch_latest_block_service() -> impl Responder {
+    pub fn fetch_latest_block_service() -> HttpResponse {
         let snapshot = snapshot_db();
         let schema = SchemaSnap::new(&snapshot);
         if let Some(block) = schema.get_root_block() {
@@ -126,7 +130,7 @@ impl ClientServices {
         return HttpResponse::BadRequest().body("BadRequest");
     }
 
-    pub fn fetch_blockchain_length_peer_service() -> impl Responder {
+    pub fn fetch_blockchain_length_peer_service() -> HttpResponse {
         let snapshot = snapshot_db();
         let schema = SchemaSnap::new(&snapshot);
         if let Ok(serialized_length) = serialize(&schema.get_blockchain_length()) {
@@ -135,7 +139,7 @@ impl ClientServices {
         HttpResponse::BadRequest().body("BadRequest")
     }
 
-    pub fn fetch_blockchain_length_service() -> impl Responder {
+    pub fn fetch_blockchain_length_service() -> HttpResponse {
         let snapshot = snapshot_db();
         let schema = SchemaSnap::new(&snapshot);
         if let Ok(serialized_length) = serialize(&schema.get_blockchain_length()) {

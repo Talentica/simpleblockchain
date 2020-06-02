@@ -1,5 +1,5 @@
 extern crate utils;
-use super::appdata::{AppData, APPDATA};
+use super::appdata::APPDATA;
 use super::signed_transaction::SignedTransaction;
 use super::state::State;
 use exonum_crypto::Hash;
@@ -289,8 +289,8 @@ mod tests_transaction_pool {
         assert_eq!(temp_pool.length_hash_pool(), 0, "Issue with sync_pool");
     }
 
-    pub fn prepare_transaction(txn_fxn: String) -> SignedTransaction {
-        let MOCKAPP = "Mockcurrency";
+    pub fn prepare_transaction(_txn_fxn: String) -> SignedTransaction {
+        let mock_app = "Mockcurrency";
         let serialized_txn = vec![];
         let signed_txn = vec![];
         let time_stamp = SystemTime::now()
@@ -301,7 +301,7 @@ mod tests_transaction_pool {
         header.insert("timestamp".to_string(), time_stamp.to_string());
         SignedTransaction {
             txn: serialized_txn,
-            app_name: String::from(MOCKAPP),
+            app_name: String::from(mock_app),
             signature: signed_txn,
             header,
         }

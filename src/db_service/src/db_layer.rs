@@ -1,8 +1,11 @@
 use exonum_merkledb::{Database, DbOptions, Fork, RocksDB, Snapshot};
+use utils::configreader;
+use utils::configreader::Configuration;
 
 fn create_db_instance() -> RocksDB {
     let db_options: DbOptions = Default::default();
-    match RocksDB::open("dbtest/rocksdb", &db_options) {
+    let config: &Configuration = &configreader::GLOBAL_CONFIG;
+    match RocksDB::open(&config.db.dbpath, &db_options) {
         Ok(connection) => return connection,
         Err(_) => panic!("can't able to create new db instance"),
     };
@@ -24,6 +27,7 @@ pub fn snapshot_db() -> Box<dyn Snapshot> {
 pub fn patch_db(fork: Fork) {
     if let Err(error) = DB_INSTANCE.merge(fork.into_patch()) {
         error!("error occurred in patch_db process {:?}", error);
+        println!("error occurred in patch_db process {:?}", error);
     }
 }
 
@@ -35,6 +39,6 @@ mod test_db_layer {
     #[should_panic]
     fn test_create_db_instance() {
         fork_db();
-        let _conn = create_db_instance();
+        create_db_instance();
     }
 }

@@ -10,7 +10,11 @@ license = "MIT OR Apache-2.0"
 [dependencies]
 message_handler = { path = "../message_handler" }
 services = { path = "../services" }
+schema = { path = "../schema" }
+sdk = { path = "../sdk" }
 utils = { path = "../utils" }
+client = { path = "../client" }
+db_service = { path = "../db_service" }
 
 exonum-merkledb = "^1.0.0-rc.3"
 exonum-crypto = "^1.0.0-rc.3"
