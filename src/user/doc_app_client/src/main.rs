@@ -17,11 +17,38 @@ mod build_transaction;
 use build_transaction::*;
 use utils::logger::logger_init_from_yml;
 mod cli_config;
+use clap::{App, Arg};
 
 //this attribute allows main to not need to return anything and still use async calls.
 #[actix_rt::main]
 async fn main() {
-    logger_init_from_yml("client_log.yml");
+    let matches = App::new("SimpleBlockchain Document Review App Client")
+        .version("0.1.0")
+        .author("gaurav agarwal <gaurav.agarwal@talentica.com>")
+        .about("Document Review app client command line arguent parser")
+        .arg(
+            Arg::with_name("cli_config_path")
+                .short("c")
+                .long("config")
+                .takes_value(true)
+                .help("config file"),
+        )
+        .arg(
+            Arg::with_name("logger_file_path")
+                .short("l")
+                .long("logger")
+                .takes_value(true)
+                .help("logger file path"),
+        )
+        .get_matches();
+    let config_file_path = matches
+        .value_of("cli_config_path")
+        .unwrap_or("cli_config.toml");
+    let logger_file_path = matches
+        .value_of("logger_file_path")
+        .unwrap_or("client_log.yml");
+    cli_config::initialize_config(config_file_path);
+    logger_init_from_yml(logger_file_path);
     info!("Document Application CLient Bootstrapping");
     let cli_configuration: &cli_config::Configuration = &cli_config::GLOBAL_CONFIG;
     let client: ClientObj = ClientObj::new(cli_configuration);

@@ -20,6 +20,7 @@ mod test_controller_services {
     use std::net::Ipv4Addr;
     use std::time::SystemTime;
     use std::{thread, time::Duration};
+    use utils::configreader::initialize_config;
     use utils::crypto::keypair::{CryptoKeypair, Keypair, KeypairType};
     use utils::global_peer_data::*;
     use utils::serializer::serialize;
@@ -157,6 +158,7 @@ mod test_controller_services {
 
     #[test]
     fn test_controller_functionality() {
+        initialize_config("../../config.toml");
         let peer_id: String = "127.0.0.1".to_string();
         let time_stamp: u128 = 123445;
         let addr: Multiaddr = Multiaddr::from(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)));

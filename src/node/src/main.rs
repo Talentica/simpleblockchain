@@ -12,22 +12,23 @@ mod nodemsgprocessor;
 use consensus::consensus_interface;
 use controllers::client_controller::{ClientController, Controller};
 use libloading::{Library, Symbol};
-use schema::appdata::{AppData, APPDATA};
+use schema::appdata::APPDATA;
 use sdk::traits::AppHandler;
 use std::path::Path;
 
+use clap::{App, Arg};
 use libp2p::{identity::PublicKey, PeerId};
 use message_handler::constants;
 use message_handler::messages::MSG_DISPATCHER;
 use nodemsgprocessor::*;
 use p2plib::simpleswarm::SimpleSwarm;
-
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc, Mutex,
 };
 use std::thread;
 use utils::configreader;
+use utils::configreader::initialize_config;
 use utils::configreader::{Configuration, NODETYPE};
 use utils::logger::logger_init_from_yml;
 
@@ -166,7 +167,29 @@ fn load_apps() {
 }
 
 fn main() {
-    logger_init_from_yml("log.yml");
+    let matches = App::new("SimpleBlockchain Framework")
+        .version("0.1.0")
+        .author("gaurav agarwal <gaurav.agarwal@talentica.com>")
+        .about("SimpleBlockchain Framework Node Process")
+        .arg(
+            Arg::with_name("config_path")
+                .short("c")
+                .long("config")
+                .takes_value(true)
+                .help("config file"),
+        )
+        .arg(
+            Arg::with_name("logger_file_path")
+                .short("l")
+                .long("logger")
+                .takes_value(true)
+                .help("logger file path"),
+        )
+        .get_matches();
+    let config_file_path = matches.value_of("config_path").unwrap_or("config.toml");
+    let logger_file_path = matches.value_of("logger_file_path").unwrap_or("log.yml");
+    initialize_config(config_file_path);
+    logger_init_from_yml(logger_file_path);
     info!("Node Bootstrapping");
     let config: &Configuration = &configreader::GLOBAL_CONFIG;
     load_apps();

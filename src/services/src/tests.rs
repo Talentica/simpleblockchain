@@ -21,6 +21,7 @@ mod test_controller_services {
     use std::collections::HashMap;
     use std::time::SystemTime;
     use std::{thread, time::Duration};
+    use utils::configreader::initialize_config;
     use utils::crypto::keypair::{CryptoKeypair, Keypair, KeypairType};
     use utils::serializer::{deserialize, serialize};
 
@@ -273,6 +274,7 @@ mod test_controller_services {
 
     #[test]
     fn test_controller_services() {
+        initialize_config("../../config.toml");
         test_submit_transaction_service();
         test_fetch_pending_transaction_service();
         test_fetch_confirm_transaction_service();
