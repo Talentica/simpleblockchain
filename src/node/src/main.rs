@@ -28,8 +28,8 @@ use std::sync::{
 };
 use std::thread;
 use utils::configreader;
+use utils::configreader::initialize_config;
 use utils::configreader::{Configuration, NODETYPE};
-use utils::configreader::{FILE_PATH, GLOBAL_CONFIG};
 use utils::logger::logger_init_from_yml;
 
 fn validator_process() {
@@ -188,8 +188,7 @@ fn main() {
         .get_matches();
     let config_file_path = matches.value_of("config_path").unwrap_or("config.toml");
     let logger_file_path = matches.value_of("logger_file_path").unwrap_or("log.yml");
-    &FILE_PATH.set_file_path(&String::from(config_file_path));
-    lazy_static::initialize(&GLOBAL_CONFIG);
+    initialize_config(config_file_path);
     logger_init_from_yml(logger_file_path);
     info!("Node Bootstrapping");
     let config: &Configuration = &configreader::GLOBAL_CONFIG;

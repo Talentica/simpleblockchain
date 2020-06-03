@@ -8,24 +8,24 @@ use std::sync::{Arc, Mutex};
 use toml;
 
 #[derive(Debug)]
-pub struct FilePath {
+struct FilePath {
     path: Arc<std::sync::Mutex<String>>,
 }
 
 impl FilePath {
-    pub fn new() -> FilePath {
+    fn new() -> FilePath {
         FilePath {
             path: Arc::new(Mutex::new(String::new())),
         }
     }
 
-    pub fn get_file_path(&self) -> String {
+    fn get_file_path(&self) -> String {
         let locked_path = self.path.lock().unwrap();
         let file_path: String = String::from(locked_path.clone());
         file_path
     }
 
-    pub fn set_file_path(&self, file_path: &String) {
+    fn set_file_path(&self, file_path: &String) {
         let mut locked_path = self.path.lock().unwrap();
         *locked_path = file_path.clone();
     }
@@ -70,8 +70,13 @@ impl Configuration {
     }
 }
 
+pub fn initialize_config(file_path: &str) {
+    &FILE_PATH.set_file_path(&String::from(file_path));
+    lazy_static::initialize(&GLOBAL_CONFIG);
+}
+
 lazy_static! {
-    pub static ref FILE_PATH: FilePath = FilePath::new();
+    static ref FILE_PATH: FilePath = FilePath::new();
 }
 
 lazy_static! {
@@ -85,7 +90,7 @@ mod tests {
 
     #[test]
     fn test_config() {
-        &FILE_PATH.set_file_path(&String::from("../../../cli_config.toml"));
+        initialize_config("../../../cli_config.toml");
         info!("conf data = {:?}", cli_config::GLOBAL_CONFIG.url);
         let mut secret = hex::decode(GLOBAL_CONFIG.secret.clone()).expect("invalid secret");
         let keypair = Keypair::generate_from(secret.as_mut_slice());

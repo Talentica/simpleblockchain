@@ -9,23 +9,23 @@ use std::sync::{Arc, Mutex};
 use toml;
 
 #[derive(Debug)]
-pub struct FilePath {
+struct FilePath {
     path: Arc<std::sync::Mutex<String>>,
 }
 
 impl FilePath {
-    pub fn new() -> FilePath {
+    fn new() -> FilePath {
         FilePath {
             path: Arc::new(Mutex::new(String::new())),
         }
     }
 
-    pub fn get_file_path(&self) -> String {
+    fn get_file_path(&self) -> String {
         let locked_path = self.path.lock().unwrap();
         String::from(locked_path.clone())
     }
 
-    pub fn set_file_path(&self, file_path: &String) {
+    fn set_file_path(&self, file_path: &String) {
         let mut locked_path = self.path.lock().unwrap();
         *locked_path = file_path.clone();
     }
@@ -142,8 +142,13 @@ pub struct Database {
     pub dbpath: String,
 }
 
+pub fn initialize_config(file_path: &str) {
+    &FILE_PATH.set_file_path(&String::from(file_path));
+    lazy_static::initialize(&GLOBAL_CONFIG);
+}
+
 lazy_static! {
-    pub static ref FILE_PATH: FilePath = FilePath::new();
+    static ref FILE_PATH: FilePath = FilePath::new();
 }
 
 lazy_static! {
@@ -155,7 +160,7 @@ mod tests {
     #[test]
     fn test_config() {
         use super::*;
-        &FILE_PATH.set_file_path(&String::from("../../config.toml"));
+        initialize_config("../../config.toml");
         info!("conf data = {:?}", configreader::GLOBAL_CONFIG.node);
         assert_eq!(
             hex::encode(configreader::GLOBAL_CONFIG.node.keypair.public().encode()),

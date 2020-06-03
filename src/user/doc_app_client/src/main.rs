@@ -47,9 +47,7 @@ async fn main() {
     let logger_file_path = matches
         .value_of("logger_file_path")
         .unwrap_or("client_log.yml");
-    &cli_config::FILE_PATH.set_file_path(&String::from(config_file_path));
-
-    lazy_static::initialize(&cli_config::GLOBAL_CONFIG);
+    cli_config::initialize_config(config_file_path);
     logger_init_from_yml(logger_file_path);
     info!("Document Application CLient Bootstrapping");
     let cli_configuration: &cli_config::Configuration = &cli_config::GLOBAL_CONFIG;
