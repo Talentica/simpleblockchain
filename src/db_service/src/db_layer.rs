@@ -34,10 +34,13 @@ pub fn patch_db(fork: Fork) {
 #[cfg(test)]
 mod test_db_layer {
     use super::*;
+    use utils::configreader::{FILE_PATH, GLOBAL_CONFIG};
 
     #[test]
     #[should_panic]
     fn test_create_db_instance() {
+        &FILE_PATH.set_file_path(&String::from("../../config.toml"));
+        lazy_static::initialize(&GLOBAL_CONFIG);
         fork_db();
         create_db_instance();
     }

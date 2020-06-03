@@ -21,6 +21,7 @@ mod test_controller_services {
     use std::collections::HashMap;
     use std::time::SystemTime;
     use std::{thread, time::Duration};
+    use utils::configreader::{FILE_PATH, GLOBAL_CONFIG};
     use utils::crypto::keypair::{CryptoKeypair, Keypair, KeypairType};
     use utils::serializer::{deserialize, serialize};
 
@@ -273,6 +274,8 @@ mod test_controller_services {
 
     #[test]
     fn test_controller_services() {
+        &FILE_PATH.set_file_path(&String::from("../../config.toml"));
+        lazy_static::initialize(&GLOBAL_CONFIG);
         test_submit_transaction_service();
         test_fetch_pending_transaction_service();
         test_fetch_confirm_transaction_service();

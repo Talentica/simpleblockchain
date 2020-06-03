@@ -1,14 +1,35 @@
 use super::*;
+use crypto::keypair::{CryptoKeypair, Keypair};
+use serde::{Deserialize, Serialize};
 use std::env;
 use std::fs::File;
-use std::io::prelude::*;
 use std::io::Read;
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
 use toml;
 
-use crypto::keypair::CryptoKeypair;
-use crypto::keypair::Keypair;
+#[derive(Debug)]
+pub struct FilePath {
+    path: Arc<std::sync::Mutex<String>>,
+}
 
-use serde::{Deserialize, Serialize};
+impl FilePath {
+    pub fn new() -> FilePath {
+        FilePath {
+            path: Arc::new(Mutex::new(String::new())),
+        }
+    }
+
+    pub fn get_file_path(&self) -> String {
+        let locked_path = self.path.lock().unwrap();
+        String::from(locked_path.clone())
+    }
+
+    pub fn set_file_path(&self, file_path: &String) {
+        let mut locked_path = self.path.lock().unwrap();
+        *locked_path = file_path.clone();
+    }
+}
 
 #[derive(Debug)]
 pub enum NODETYPE {
@@ -84,9 +105,11 @@ impl Configuration {
                 e
             ),
         };
-        info!(">> Current Working Directory: {}", cwd);
-        let config_file_path: String = cwd + &String::from("/config.toml");
-        info!("path = {}", config_file_path);
+        let cwd: &Path = Path::new(&cwd);
+        info!(">> Current Working Directory: {}", cwd.to_string_lossy());
+
+        let config_file_path: PathBuf = cwd.join(&FILE_PATH.get_file_path());
+        info!("path = {}", config_file_path.to_string_lossy());
         let mut config_file = match File::open(config_file_path) {
             Ok(f) => f,
             Err(e) => panic!("Error occurred opening config file:  Err: {}", e),
@@ -120,6 +143,10 @@ pub struct Database {
 }
 
 lazy_static! {
+    pub static ref FILE_PATH: FilePath = FilePath::new();
+}
+
+lazy_static! {
     pub static ref GLOBAL_CONFIG: Configuration = Configuration::new();
 }
 
@@ -128,6 +155,7 @@ mod tests {
     #[test]
     fn test_config() {
         use super::*;
+        &FILE_PATH.set_file_path(&String::from("../../config.toml"));
         info!("conf data = {:?}", configreader::GLOBAL_CONFIG.node);
         assert_eq!(
             hex::encode(configreader::GLOBAL_CONFIG.node.keypair.public().encode()),

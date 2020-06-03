@@ -16,6 +16,7 @@ use std::collections::HashMap;
 use std::io;
 use utils::crypto::keypair::KeypairType;
 mod client;
+use clap::{App, Arg};
 use client::ClientObj;
 use std::time::SystemTime;
 use utils::logger::logger_init_from_yml;
@@ -182,7 +183,35 @@ pub fn create_transaction(kp: &KeypairType, nonce: u64) -> Option<SignedTransact
 //this attribute allows main to not need to return anything and still use async calls.
 #[actix_rt::main]
 async fn main() {
-    logger_init_from_yml("client_log.yml");
+    let matches = App::new("SimpleBlockchain Wallet App Client")
+        .version("0.1.0")
+        .author("gaurav agarwal <gaurav.agarwal@talentica.com>")
+        .about("Wallet app client command line arguent parser")
+        .arg(
+            Arg::with_name("cli_config_path")
+                .short("c")
+                .long("config")
+                .takes_value(true)
+                .help("config file"),
+        )
+        .arg(
+            Arg::with_name("logger_file_path")
+                .short("l")
+                .long("logger")
+                .takes_value(true)
+                .help("logger file path"),
+        )
+        .get_matches();
+    let config_file_path = matches
+        .value_of("cli_config_path")
+        .unwrap_or("cli_config.toml");
+    let logger_file_path = matches
+        .value_of("logger_file_path")
+        .unwrap_or("client_log.yml");
+    &cli_config::FILE_PATH.set_file_path(&String::from(config_file_path));
+
+    lazy_static::initialize(&cli_config::GLOBAL_CONFIG);
+    logger_init_from_yml(logger_file_path);
     info!("Wallet Application CLient Bootstrapping");
     let cli_configuration: &cli_config::Configuration = &cli_config::GLOBAL_CONFIG;
     let client: ClientObj = ClientObj::new(cli_configuration);

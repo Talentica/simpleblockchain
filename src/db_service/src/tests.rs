@@ -192,6 +192,7 @@ mod test_db_service {
 
     #[test]
     fn test_db_services_checks() {
+        std::thread::sleep(std::time::Duration::from_millis(100));
         test_db_initialization_check();
         test_db_read_write_check();
         test_db_state_context();
