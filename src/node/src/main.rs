@@ -202,3 +202,100 @@ fn main() {
         }
     }
 }
+
+#[cfg(test)]
+mod integration_test {
+    extern crate netsim;
+    extern crate futures;
+    extern crate tokio_core;
+    use std::net::UdpSocket;
+    use netsim::{node, spawn, Ipv4Range, Network};
+    use netsim::wire::Ipv4Payload;
+    use futures::{Future, Stream};
+    use tokio_core::reactor::Core;
+
+    //node includes
+    extern crate consensus;
+    extern crate controllers;
+    extern crate ctrlc;
+    extern crate db_service;
+    extern crate p2plib;
+    extern crate schema;
+
+    use consensus::consensus_interface;
+    use controllers::client_controller::{ClientController, Controller};
+    use libloading::{Library, Symbol};
+    use schema::appdata::APPDATA;
+    use sdk::traits::AppHandler;
+    use std::path::Path;
+
+    use clap::{App, Arg};
+    use libp2p::{identity::PublicKey, PeerId};
+    use message_handler::constants;
+    use message_handler::messages::MSG_DISPATCHER;
+    use p2plib::simpleswarm::SimpleSwarm;
+    use std::sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc, Mutex,
+    };
+    use std::thread;
+    use utils::configreader;
+    use utils::configreader::initialize_config;
+    use utils::configreader::{Configuration, NODETYPE};
+    use utils::logger::logger_init_from_yml;
+    //node includes
+
+    use super::{load_apps, validator_process, fullnode_process};
+
+    #[test]
+    fn setup_network() {
+        // Create an event loop and a network to bind devices to.
+        let mut core = Core::new().unwrap();
+        let network = Network::new(&core.handle());
+        let handle = network.handle();
+
+        // Create a machine which will receive a UDP packet and return its contents
+        let receiver_node = node::ipv4::machine(move |ipv4_addr| {
+          initialize_config("./fixtures/config1.toml");
+          logger_init_from_yml("./fixtures/log1.yml");
+          let config: &Configuration = &configreader::GLOBAL_CONFIG;
+          load_apps();
+          match config.node.node_type {
+              NODETYPE::Validator => {
+         //         validator_process();
+              }
+              NODETYPE::FullNode => {
+         //         fullnode_process();
+              }
+          }
+        });
+
+        // Create the machine which will send the UDP packet
+        let sender_node = node::ipv4::machine(move |_ipv4_addr| {
+          initialize_config("./fixtures/config2.toml");
+          logger_init_from_yml("./fixtures/log2.yml");
+          let config: &Configuration = &configreader::GLOBAL_CONFIG;
+          //load_apps();
+          match config.node.node_type {
+              NODETYPE::Validator => {
+  //                validator_process();
+              }
+              NODETYPE::FullNode => {
+    //              fullnode_process();
+              }
+          }
+        });
+
+        // Connect the sending and receiving nodes via a router
+        let router_node = node::ipv4::router((receiver_node, sender_node));
+
+        // Run the network with the router as the top-most node. `_plug` could be used send/receive
+        // packets from/to outside the network
+        let (spawn_complete, _plug) = spawn::ipv4_tree(&handle, Ipv4Range::global(), router_node);
+
+        // Drive the network on the event loop and get the data returned by the receiving node.
+        core.run(spawn_complete);
+        assert_eq!(true,true);
+    }
+}
+
