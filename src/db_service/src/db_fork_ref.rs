@@ -88,12 +88,12 @@ where
         self.block_list.clear();
         let public_key: String = hex::encode(Keypair::public(&kp).encode());
         let mut block = Block::genesis_block(public_key);
-        let public_key = hex::encode(Keypair::public(&kp).encode());
-        block.peer_id = public_key.clone();
+        let _public_key = hex::encode(Keypair::public(&kp).encode());
+        block.peer_id = String::from("genesis_block");
         block.header[0] = self.state_trie_merkle_hash();
         block.header[1] = self.storage_trie_merkle_hash();
         block.header[2] = self.txn_trie_merkle_hash();
-        let signature = block.sign(kp);
+        let signature = vec![0];
         let genesis_block: SignedBlock = SignedBlock::create_block(block, signature);
         self.block_list.push(genesis_block.clone());
         return genesis_block;
