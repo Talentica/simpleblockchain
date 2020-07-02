@@ -173,7 +173,7 @@ impl Aura {
                     );
                     return;
                 }
-                if last_waiting_block.get_hash() != author_block.block.get_hash() {
+                if last_waiting_block.get_hash() != author_block.block.block.prev_hash {
                     warn!("malicious block proposed, invalid previous block hash compare to waiting block!");
                     warn!(
                         "previous_hash shuold be {:?}, but previous hash is {:?}",
@@ -196,7 +196,7 @@ impl Aura {
                         );
                         return;
                     }
-                    if schema.get_root_block_hash() != author_block.block.get_hash() {
+                    if schema.get_root_block_hash() != author_block.block.block.prev_hash {
                         warn!("malicious block proposed, invalid previous block hash compare to snapshot!");
                         warn!(
                             "previous_hash shuold be {:?}, but previous hash is {:?}",
