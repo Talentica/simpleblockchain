@@ -16,7 +16,7 @@ exonum-crypto = "^1.0.0-rc.3"
 exonum-derive = "^1.0.0-rc.3"
 
 clap = "2.33.1"
-bytes = "0.5.4"
+bytes = "0.5.5"
 actix-web = "2.0.0"
 actix-rt = "1.1.1"
 awc = "1.0.1"
