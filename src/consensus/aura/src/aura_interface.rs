@@ -179,12 +179,24 @@ impl Aura {
                 let custom_header: CustomHeaders =
                     match deserialize(&author_block.block.custom_header) {
                         Ok(value) => value,
-                        Err(_) => return,
+                        Err(_) => {
+                            warn!("block custom headers couldn't deserialized");
+                            return;
+                        }
                     };
                 let last_custom_header: CustomHeaders =
                     match deserialize(&last_waiting_block.custom_header) {
                         Ok(value) => value,
-                        Err(_) => return,
+                        Err(_) => {
+                            if last_waiting_block.block.id == 0 {
+                                CustomHeaders {
+                                    timestamp: 0,
+                                    round_number: 0,
+                                }
+                            } else {
+                                return;
+                            }
+                        }
                     };
                 if custom_header.round_number <= last_custom_header.round_number {
                     warn!(
@@ -197,7 +209,7 @@ impl Aura {
                     );
                     return;
                 }
-                if custom_header.timestamp <= custom_header.timestamp {
+                if custom_header.timestamp <= last_custom_header.timestamp {
                     warn!("malicious block proposed, invalid timestamp compare to waiting block!");
                     warn!(
                         "block should proposed higher timestamp then {:?}, but got block on timestamp {:?}",
@@ -232,16 +244,32 @@ impl Aura {
                     let custom_header: CustomHeaders =
                         match deserialize(&author_block.block.custom_header) {
                             Ok(value) => value,
-                            Err(_) => return,
+                            Err(_) => {
+                                warn!("block custom headers couldn't deserialized");
+                                return;
+                            }
                         };
                     let root_block: SignedBlock = match schema.get_root_block() {
                         Some(block) => block,
-                        None => return,
+                        None => {
+                            warn!("previous block couldn't found");
+                            return;
+                        }
                     };
                     let last_custom_header: CustomHeaders =
                         match deserialize(&root_block.custom_header) {
                             Ok(value) => value,
-                            Err(_) => return,
+                            Err(_) => {
+                                if root_block.block.id == 0 {
+                                    CustomHeaders {
+                                        timestamp: 0,
+                                        round_number: 0,
+                                    }
+                                } else {
+                                    warn!("block custom headers couldn't deserialized");
+                                    return;
+                                }
+                            }
                         };
                     if custom_header.round_number <= last_custom_header.round_number {
                         warn!(
@@ -254,7 +282,7 @@ impl Aura {
                         );
                         return;
                     }
-                    if custom_header.timestamp <= custom_header.timestamp {
+                    if custom_header.timestamp <= last_custom_header.timestamp {
                         warn!("malicious block proposed, invalid timestamp compare to snapshot!");
                         warn!(
                             "block should proposed higher timestamp then {:?}, but got block on timestamp {:?}",
@@ -347,7 +375,7 @@ impl Aura {
         }
         if round_owner.verify(meta_data_obj.step_time) {
             if String::from("temp_hash") != waiting_blocks_queue.last_block_hash.clone() {
-                println!(
+                info!(
                     "block acceptted by {:?}",
                     waiting_blocks_queue.last_block_acceptance
                 );
@@ -560,7 +588,7 @@ impl Aura {
                 }
 
                 if am_i_leader {
-                    println!("I'm the leader NOW!!");
+                    info!("I'm the leader NOW!!");
                     let round_owner: RoundOwner = RoundOwner::create(&self.keypair);
                     AuraMessageSender::send_round_owner_msg(sender, round_owner.clone());
                     thread::sleep(Duration::from_millis(self.leader_epoch));
