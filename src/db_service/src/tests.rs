@@ -18,14 +18,14 @@ mod test_db_service {
         let pk: String = hex::encode(kp.public().encode());
         let block: Block = Block::genesis_block(pk.clone());
         #[allow(unused_assignments)]
-        let mut signed_block: SignedBlock = SignedBlock::create_block(block, vec![0]);
+        let mut signed_block: SignedBlock = SignedBlock::create_block(block, vec![0], Vec::new());
         let fork: Fork = fork_db();
         {
             let mut schema = SchemaFork::new(&fork);
             signed_block = schema.initialize_db(&kp);
             assert_eq!(
                 signed_block.block.validate(&pk, &signed_block.signature),
-                true
+                false
             );
         }
         patch_db(fork);
@@ -61,10 +61,10 @@ mod test_db_service {
         let fork: Fork = fork_db();
         let block: Block = Block::genesis_block(pk.clone());
         #[allow(unused_assignments)]
-        let mut signed_block: SignedBlock = SignedBlock::create_block(block, vec![0]);
+        let mut signed_block: SignedBlock = SignedBlock::create_block(block, vec![0], Vec::new());
         {
             let mut schema = SchemaFork::new(&fork);
-            signed_block = schema.create_block(&kp);
+            signed_block = schema.create_block(&kp, Vec::new());
         }
         // not using patch_db so that we can update this block
         let fork: Fork = fork_db();
@@ -136,10 +136,10 @@ mod test_db_service {
         let fork: Fork = fork_db();
         let block: Block = Block::genesis_block(pk.clone());
         #[allow(unused_assignments)]
-        let mut signed_block: SignedBlock = SignedBlock::create_block(block, vec![0]);
+        let mut signed_block: SignedBlock = SignedBlock::create_block(block, vec![0], Vec::new());
         {
             let mut schema = SchemaFork::new(&fork);
-            signed_block = schema.create_block(&kp);
+            signed_block = schema.create_block(&kp, Vec::new());
         }
         // signature error
         let mut wrong_block: SignedBlock = signed_block.clone();

@@ -94,7 +94,7 @@ where
         block.header[1] = self.storage_trie_merkle_hash();
         block.header[2] = self.txn_trie_merkle_hash();
         let signature = vec![0];
-        let genesis_block: SignedBlock = SignedBlock::create_block(block, signature);
+        let genesis_block: SignedBlock = SignedBlock::create_block(block, signature, Vec::new());
         self.block_list.push(genesis_block.clone());
         return genesis_block;
     }
@@ -113,7 +113,7 @@ where
     }
 
     /// this function only will called when the node willing to propose block and for that agree to compute block
-    pub fn create_block(&mut self, kp: &KeypairType) -> SignedBlock {
+    pub fn create_block(&mut self, kp: &KeypairType, custom_headers: Vec<u8>) -> SignedBlock {
         // all trie's state before current block computation
         #[allow(unused_assignments)]
         let mut executed_txns: Vec<Hash> = vec![];
@@ -140,7 +140,7 @@ where
         let public_key = hex::encode(Keypair::public(&kp).encode());
         let block = Block::new_block(length, public_key, prev_hash, executed_txns, header);
         let signature: Vec<u8> = block.sign(kp);
-        let signed_block: SignedBlock = SignedBlock::create_block(block, signature);
+        let signed_block: SignedBlock = SignedBlock::create_block(block, signature, custom_headers);
         self.block_list.push(signed_block.clone());
         signed_block
     }
@@ -176,14 +176,6 @@ where
                 return false;
             }
         };
-        if !PublicKey::verify_from_encoded_pk(
-            &signed_block.block.peer_id,
-            &msg,
-            &signed_block.signature,
-        ) {
-            error!("block signature couldn't verified");
-            return false;
-        }
 
         // genesis block check
         if signed_block.block.id == 0 {
@@ -207,6 +199,16 @@ where
             self.block_list.push(signed_block.clone());
             return true;
         } else {
+            // signature validation
+            if !PublicKey::verify_from_encoded_pk(
+                &signed_block.block.peer_id,
+                &msg,
+                &signed_block.signature,
+            ) {
+                error!("block signature couldn't verified");
+                return false;
+            }
+
             // block pre_hash check
             let last_block: SignedBlock = match self.block_list.get(length - 1) {
                 Some(block) => block,

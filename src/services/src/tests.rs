@@ -177,7 +177,7 @@ mod test_controller_services {
                 Body::Message(_) => panic!("invalid response body type"),
             };
             let output: SignedBlock = deserialize(&body_vec).unwrap();
-            assert_eq!(output.validate(&output.block.peer_id), true);
+            assert_eq!(output.validate(&output.block.peer_id), false);
             assert_eq!(0, output.block.id);
         } else {
             panic!("http_response not equal to 200");
@@ -196,7 +196,11 @@ mod test_controller_services {
                 Body::Message(_) => panic!("invalid response body type"),
             };
             let output: SignedBlock = deserialize(&body_vec).unwrap();
-            assert_eq!(output.validate(&output.block.peer_id), true);
+            if output.block.id == 0 {
+                assert_eq!(output.validate(&output.block.peer_id), false);
+            } else {
+                assert_eq!(output.validate(&output.block.peer_id), true);
+            }
         } else {
             panic!("http_response not equal to 200");
         }

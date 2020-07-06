@@ -175,7 +175,8 @@ mod consensus_message_test {
 
         let block: Block = Block::genesis_block(pk.clone());
         let sign: Vec<u8> = block.sign(&kp);
-        let signed_block: SignedBlock = SignedBlock::create_block(block.clone(), sign.clone());
+        let signed_block: SignedBlock =
+            SignedBlock::create_block(block.clone(), sign.clone(), Vec::new());
         let block_acceptance: BlockAcceptance = BlockAcceptance::create(&kp, signed_block.clone());
         assert_eq!(block_acceptance.verify(), true);
 

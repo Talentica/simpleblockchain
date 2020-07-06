@@ -18,7 +18,7 @@ mod test_message_handler {
         let mut sender = tx1.clone();
         let peer_id: String = String::from("mock_peer_id");
         let genesis_block: Block = Block::genesis_block(peer_id);
-        let block: SignedBlock = SignedBlock::create_block(genesis_block, vec![0]);
+        let block: SignedBlock = SignedBlock::create_block(genesis_block, vec![0], Vec::new());
         // let data = MessageTypes::NodeMsg(NodeMessageTypes::SignedBlockEnum(block));
         MessageSender::send_block_msg(&mut sender, block.clone());
         thread::sleep(Duration::from_millis(1000));

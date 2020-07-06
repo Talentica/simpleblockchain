@@ -91,7 +91,7 @@ mod tests {
     #[test]
     fn test_aura_config() {
         use super::*;
-        initialize_config("../../../config.toml");
+        initialize_config("../../../aura.toml");
         info!("conf data = {:?}", AURA_CONFIG.validator_set);
     }
 }

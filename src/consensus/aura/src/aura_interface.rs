@@ -22,9 +22,8 @@ use std::time::Duration;
 use std::time::SystemTime;
 use utils::configreader::Configuration;
 use utils::keypair::KeypairType;
-use utils::serializer::deserialize;
+use utils::serializer::{deserialize, serialize, Deserialize, Serialize};
 
-// consensus object will maintain what decide and document
 pub struct Aura {
     // peer identity
     keypair: KeypairType,
@@ -36,10 +35,10 @@ pub struct Aura {
     leader_epoch: u64,
 }
 
-/// VolatileState will store waiting block list
-/// and uncommitted volatile_state_change
-/// volatile_state_changes will help to create new block and verify new upcoming blocks.
-/// Volatile_state will be pushed to permanent state after b blocks get majority.
+/// WaitingBLocksQueue will store waiting block queue and
+/// and ongoing author block details
+/// WaitingBLocksQueue will help to create new block and verify new upcoming blocks.
+/// WaitingBLocksQueue will be pushed to permanent state after "b" blocks get majority.
 pub struct WaitingBLocksQueue {
     // waiting blocks queue
     pub queue: Vec<SignedBlock>,
@@ -81,10 +80,17 @@ pub struct MetaData {
     public_key: String,
 }
 
-// what are the required implemenatations
+// AURA consensus custom headers for the signed block
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CustomHeaders {
+    timestamp: u64,
+    round_number: u64,
+}
+
 impl Aura {
-    // what operations and initial states are defined by this functions
-    // read genesis block details from config file
+    // init_state will create genesis block if predefined storage is empty
+    // or if storage is not empty it will start from previous state
+    // read genesis block details from config file (future work)
     fn init_state(&mut self, _db_path: &String, _sender: &mut Sender<Option<MessageTypes>>) {
         let fork = fork_db();
         {
@@ -108,11 +114,6 @@ impl Aura {
 
     // fn will compute what is the round number at present time
     fn calculate_round_number(meta_data: &MetaData) -> u64 {
-        /*
-        how to find out the current round number
-        epoch from last start_time in updated config file
-        epoch / step_time + previous round number from config
-        */
         let current_epoch: u64 = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
             .unwrap()
@@ -124,13 +125,6 @@ impl Aura {
 
     // fn will compute what is the round leader at present time
     fn primary_leader(meta_data: &MetaData) -> String {
-        /*
-        how to find out how the leader is
-        first checkout the start from last config changes
-        since each config change will define new step_time and new start_time across all nodes
-        updated step_time and start_time will be used to find out the round count
-        then we will take mod of round count with validator pool size
-        */
         let round_count = Aura::calculate_round_number(meta_data);
         let leader_id: u64 = round_count
             - (round_count / meta_data.validator_pool_size) * meta_data.validator_pool_size;
@@ -145,7 +139,7 @@ impl Aura {
     // fn will process incoming AuthorBlockEnum data
     fn handle_author_block_enum(
         author_block: AuthorBlock,
-        volatile_state_obj: &mut WaitingBLocksQueue,
+        waiting_blocks_queue: &mut WaitingBLocksQueue,
         meta_data_obj: &mut MetaData,
     ) {
         let current_leader: String = Aura::primary_leader(&meta_data_obj);
@@ -161,7 +155,7 @@ impl Aura {
             return;
         }
         // validate block height & previous block hash
-        match volatile_state_obj.queue.last() {
+        match waiting_blocks_queue.queue.last() {
             Some(last_waiting_block) => {
                 let last_waiting_block: &SignedBlock = last_waiting_block;
                 if last_waiting_block.block.id + 1 != author_block.block.block.id {
@@ -179,6 +173,36 @@ impl Aura {
                         "previous_hash shuold be {:?}, but previous hash is {:?}",
                         last_waiting_block.get_hash(),
                         author_block.block.get_hash()
+                    );
+                    return;
+                }
+                let custom_header: CustomHeaders =
+                    match deserialize(&author_block.block.custom_header) {
+                        Ok(value) => value,
+                        Err(_) => return,
+                    };
+                let last_custom_header: CustomHeaders =
+                    match deserialize(&last_waiting_block.custom_header) {
+                        Ok(value) => value,
+                        Err(_) => return,
+                    };
+                if custom_header.round_number <= last_custom_header.round_number {
+                    warn!(
+                        "malicious block proposed, invalid round number compare to waiting block!"
+                    );
+                    warn!(
+                        "block should proposed higher round number then {:?}, but got block on round number {:?}",
+                        last_custom_header.round_number,
+                        custom_header.round_number
+                    );
+                    return;
+                }
+                if custom_header.timestamp <= custom_header.timestamp {
+                    warn!("malicious block proposed, invalid timestamp compare to waiting block!");
+                    warn!(
+                        "block should proposed higher timestamp then {:?}, but got block on timestamp {:?}",
+                        last_custom_header.timestamp,
+                        custom_header.timestamp
                     );
                     return;
                 }
@@ -205,6 +229,40 @@ impl Aura {
                         );
                         return;
                     }
+                    let custom_header: CustomHeaders =
+                        match deserialize(&author_block.block.custom_header) {
+                            Ok(value) => value,
+                            Err(_) => return,
+                        };
+                    let root_block: SignedBlock = match schema.get_root_block() {
+                        Some(block) => block,
+                        None => return,
+                    };
+                    let last_custom_header: CustomHeaders =
+                        match deserialize(&root_block.custom_header) {
+                            Ok(value) => value,
+                            Err(_) => return,
+                        };
+                    if custom_header.round_number <= last_custom_header.round_number {
+                        warn!(
+                            "malicious block proposed, invalid round number compare to snapshot!"
+                        );
+                        warn!(
+                            "block should proposed higher round number then {:?}, but got block on round number {:?}",
+                            last_custom_header.round_number,
+                            custom_header.round_number
+                        );
+                        return;
+                    }
+                    if custom_header.timestamp <= custom_header.timestamp {
+                        warn!("malicious block proposed, invalid timestamp compare to snapshot!");
+                        warn!(
+                            "block should proposed higher timestamp then {:?}, but got block on timestamp {:?}",
+                            last_custom_header.timestamp,
+                            custom_header.timestamp
+                        );
+                        return;
+                    }
                 }
             }
         }
@@ -220,21 +278,21 @@ impl Aura {
             author_block.block.block.id,
             author_block.block.get_hash().to_hex()
         );
-        volatile_state_obj.last_block_hash = author_block.block.get_hash().to_hex();
-        volatile_state_obj.last_block_acceptance.clear();
-        volatile_state_obj
+        waiting_blocks_queue.last_block_hash = author_block.block.get_hash().to_hex();
+        waiting_blocks_queue.last_block_acceptance.clear();
+        waiting_blocks_queue
             .last_block_acceptance
             .insert(meta_data_obj.public_key.clone());
-        volatile_state_obj
+        waiting_blocks_queue
             .last_block_acceptance
             .insert(author_block.block.block.peer_id.clone());
-        volatile_state_obj.queue.push(author_block.block);
+        waiting_blocks_queue.queue.push(author_block.block);
     }
 
     // fn will process incoming BlockAcceptenceEnum data
     fn handle_block_acceptence_enum(
         block_acceptance: BlockAcceptance,
-        volatile_state_obj: &mut WaitingBLocksQueue,
+        waiting_blocks_queue: &mut WaitingBLocksQueue,
         meta_data_obj: &MetaData,
     ) {
         // data coming from verifed validator
@@ -250,7 +308,7 @@ impl Aura {
         }
 
         // block acceptance for the correct_block
-        if volatile_state_obj.last_block_hash != block_acceptance.block.get_hash().to_hex() {
+        if waiting_blocks_queue.last_block_hash != block_acceptance.block.get_hash().to_hex() {
             warn!("Data coming for different block");
             return;
         }
@@ -264,7 +322,7 @@ impl Aura {
             "valid block acceptance came from-> {:?}",
             block_acceptance.public_key
         );
-        volatile_state_obj
+        waiting_blocks_queue
             .last_block_acceptance
             .insert(block_acceptance.public_key);
     }
@@ -272,10 +330,10 @@ impl Aura {
     // fn will handle incoming RoundOwnerEnum data
     fn handle_round_owner_enum(
         round_owner: RoundOwner,
-        volatile_state_obj: &mut WaitingBLocksQueue,
+        waiting_blocks_queue: &mut WaitingBLocksQueue,
         meta_data_obj: &MetaData,
     ) {
-        if volatile_state_obj.queue.len() == 0 {
+        if waiting_blocks_queue.queue.len() == 0 {
             info!("no waiting block to check aceeptance");
             return;
         }
@@ -288,25 +346,25 @@ impl Aura {
             return;
         }
         if round_owner.verify(meta_data_obj.step_time) {
-            if String::from("temp_hash") != volatile_state_obj.last_block_hash.clone() {
+            if String::from("temp_hash") != waiting_blocks_queue.last_block_hash.clone() {
                 println!(
                     "block acceptted by {:?}",
-                    volatile_state_obj.last_block_acceptance
+                    waiting_blocks_queue.last_block_acceptance
                 );
-                let got_votes = volatile_state_obj.last_block_acceptance.len() as u64;
+                let got_votes = waiting_blocks_queue.last_block_acceptance.len() as u64;
                 let minimum_votes: u64 = (meta_data_obj.validator_pool_size * 2) / 3;
                 if minimum_votes <= got_votes {
-                    volatile_state_obj.last_block_acceptance.clear();
-                    volatile_state_obj.last_block_hash = String::from("temp_hash");
-                    let signed_block: &SignedBlock = volatile_state_obj.queue.last().unwrap();
+                    waiting_blocks_queue.last_block_acceptance.clear();
+                    waiting_blocks_queue.last_block_hash = String::from("temp_hash");
+                    let signed_block: &SignedBlock = waiting_blocks_queue.queue.last().unwrap();
                     POOL.sync_pool(&signed_block.block.txn_pool);
                 } else {
-                    let length = volatile_state_obj.queue.len();
+                    let length = waiting_blocks_queue.queue.len();
                     warn!(
                         "last block got votes {:?} and required {:?}",
                         got_votes, minimum_votes
                     );
-                    volatile_state_obj.queue.remove(length - 1);
+                    waiting_blocks_queue.queue.remove(length - 1);
                     error!("last block couldn't  got majority either delete the block or restart the consensus");
                 }
             } else {
@@ -318,10 +376,10 @@ impl Aura {
     }
 
     // fn will update waiting blocks in sequence to local db
-    fn process_blocks(blocks_count: usize, volatile_state_obj: &mut WaitingBLocksQueue) {
+    fn process_blocks(blocks_count: usize, waiting_blocks_queue: &mut WaitingBLocksQueue) {
         let mut blocks_count = blocks_count;
         while blocks_count > 0 {
-            let signed_block: SignedBlock = volatile_state_obj.queue.remove(0);
+            let signed_block: SignedBlock = waiting_blocks_queue.queue.remove(0);
             let fork = fork_db();
             {
                 let mut schema = SchemaFork::new(&fork);
@@ -348,21 +406,21 @@ impl Aura {
     // fn will finalise blocks periodically in permanent db
     fn finalise_waiting_blocks(
         step_time: u64,
-        volatile_state: Arc<Mutex<WaitingBLocksQueue>>,
+        waiting_blocks_queue: Arc<Mutex<WaitingBLocksQueue>>,
         meta_data: Arc<Mutex<MetaData>>,
     ) {
         loop {
             {
-                let mut volatile_state_obj = volatile_state.lock().unwrap();
+                let mut waiting_blocks_queue_obj = waiting_blocks_queue.lock().unwrap();
                 let meta_data_obj = meta_data.lock().unwrap();
-                let queue_length: usize = volatile_state_obj.queue.len();
+                let queue_length: usize = waiting_blocks_queue_obj.queue.len();
                 if queue_length > meta_data_obj.block_queue_size + 1 {
                     info!("queue length {:?}", queue_length);
                     let blocks_to_be_confirmed: usize = queue_length / 3 * 2;
-                    Aura::process_blocks(blocks_to_be_confirmed, &mut volatile_state_obj);
+                    Aura::process_blocks(blocks_to_be_confirmed, &mut waiting_blocks_queue_obj);
                     info!(
                         "after processing queue length {:?}",
-                        volatile_state_obj.queue.len()
+                        waiting_blocks_queue_obj.queue.len()
                     );
                 }
             }
@@ -372,7 +430,7 @@ impl Aura {
 
     // fn will listen incoming data from other peers via P2P system
     fn aura_msg_receiver(
-        volatile_state: Arc<Mutex<WaitingBLocksQueue>>,
+        waiting_blocks_queue: Arc<Mutex<WaitingBLocksQueue>>,
         meta_data: Arc<Mutex<MetaData>>,
         rx: Arc<Mutex<Receiver<Option<Vec<u8>>>>>,
     ) {
@@ -390,36 +448,36 @@ impl Aura {
                                         AuraMessageTypes::AuthorBlockEnum(data) => {
                                             let author_block: AuthorBlock = data;
                                             info!("AuthorBlock data received");
-                                            let mut volatile_state_obj =
-                                                volatile_state.lock().unwrap();
+                                            let mut waiting_blocks_queue_obj =
+                                                waiting_blocks_queue.lock().unwrap();
                                             let mut meta_data_obj = meta_data.lock().unwrap();
                                             Aura::handle_author_block_enum(
                                                 author_block,
-                                                &mut volatile_state_obj,
+                                                &mut waiting_blocks_queue_obj,
                                                 &mut meta_data_obj,
                                             );
                                         }
                                         AuraMessageTypes::BlockAcceptanceEnum(data) => {
                                             let block_acceptance: BlockAcceptance = data;
                                             info!("BlockAcceptance data received");
-                                            let mut volatile_state_obj =
-                                                volatile_state.lock().unwrap();
+                                            let mut waiting_blocks_queue_obj =
+                                                waiting_blocks_queue.lock().unwrap();
                                             let meta_data_obj = meta_data.lock().unwrap();
                                             Aura::handle_block_acceptence_enum(
                                                 block_acceptance,
-                                                &mut volatile_state_obj,
+                                                &mut waiting_blocks_queue_obj,
                                                 &meta_data_obj,
                                             );
                                         }
                                         AuraMessageTypes::RoundOwnerEnum(data) => {
                                             let round_config: RoundOwner = data;
                                             info!("RoundOwner data received");
-                                            let mut volatile_state_obj =
-                                                volatile_state.lock().unwrap();
+                                            let mut waiting_blocks_queue_obj =
+                                                waiting_blocks_queue.lock().unwrap();
                                             let meta_data_obj = meta_data.lock().unwrap();
                                             Aura::handle_round_owner_enum(
                                                 round_config,
-                                                &mut volatile_state_obj,
+                                                &mut waiting_blocks_queue_obj,
                                                 &meta_data_obj,
                                             );
                                         }
@@ -440,20 +498,37 @@ impl Aura {
     }
 
     // fn will create new block to propose after processing waiting blocks
-    fn propose_block(&self, volatile_state_obj: &WaitingBLocksQueue) -> SignedBlock {
+    fn propose_block(
+        &self,
+        waiting_blocks_queue: &WaitingBLocksQueue,
+        meta_data: &MetaData,
+    ) -> SignedBlock {
         let fork = fork_db();
         let mut schema = SchemaFork::new(&fork);
-        for each_block in volatile_state_obj.queue.iter() {
+        for each_block in waiting_blocks_queue.queue.iter() {
             info!("blocks order {:?}", each_block.block.id);
             schema.update_block(each_block);
         }
-        schema.create_block(&self.keypair)
+        let timestamp: u64 = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        let round_number: u64 = Aura::calculate_round_number(meta_data);
+        let custom_headers: CustomHeaders = CustomHeaders {
+            timestamp,
+            round_number,
+        };
+        let custom_headers: Vec<u8> = match serialize(&custom_headers) {
+            Ok(value) => value,
+            Err(_) => Vec::new(),
+        };
+        schema.create_block(&self.keypair, custom_headers)
     }
 
     // fn will create new blocks periodically after checking round ownership
     fn state_machine(
         &mut self,
-        volatile_state: Arc<Mutex<WaitingBLocksQueue>>,
+        waiting_blocks_queue: Arc<Mutex<WaitingBLocksQueue>>,
         meta_data: Arc<Mutex<MetaData>>,
         sender: &mut Sender<Option<MessageTypes>>,
     ) {
@@ -472,9 +547,7 @@ impl Aura {
             /*
             calculate round number and find out who is the leader
             need to check continuously
-            if node is the leader propose block on top of blockwait list
-            need to maintain temp global-state
-            decide what to do when some-one will behave in benign or byzantine manner.
+            if node is the leader, propose block on top of waiting block queue
             */
             {
                 let mut am_i_leader: bool = false;
@@ -493,13 +566,14 @@ impl Aura {
                     thread::sleep(Duration::from_millis(self.leader_epoch));
                     {
                         let meta_data_obj = meta_data.lock().unwrap();
-                        let mut volatile_state_obj = volatile_state.lock().unwrap();
+                        let mut waiting_blocks_queue_obj = waiting_blocks_queue.lock().unwrap();
                         Aura::handle_round_owner_enum(
                             round_owner,
-                            &mut volatile_state_obj,
+                            &mut waiting_blocks_queue_obj,
                             &meta_data_obj,
                         );
-                        let signed_block: SignedBlock = self.propose_block(&volatile_state_obj);
+                        let signed_block: SignedBlock =
+                            self.propose_block(&waiting_blocks_queue_obj, &meta_data_obj);
                         info!(
                             "new block created.. id {},hash {}",
                             signed_block.block.id,
@@ -507,10 +581,10 @@ impl Aura {
                         );
                         let author_block: AuthorBlock = AuthorBlock::create(signed_block.clone());
                         AuraMessageSender::send_author_block_msg(sender, author_block);
-                        volatile_state_obj.last_block_hash = signed_block.get_hash().to_hex();
-                        volatile_state_obj.queue.push(signed_block);
-                        volatile_state_obj.last_block_acceptance.clear();
-                        volatile_state_obj
+                        waiting_blocks_queue_obj.last_block_hash = signed_block.get_hash().to_hex();
+                        waiting_blocks_queue_obj.queue.push(signed_block);
+                        waiting_blocks_queue_obj.last_block_acceptance.clear();
+                        waiting_blocks_queue_obj
                             .last_block_acceptance
                             .insert(meta_data_obj.public_key.clone());
                     }
@@ -561,9 +635,13 @@ impl Aura {
             block_queue_size: aura_config.block_list_size,
         };
         let meta_data = Arc::new(Mutex::new(consensus_meta_data));
-        let volatile_state: Arc<Mutex<WaitingBLocksQueue>> =
+        let waiting_blocks_queue: Arc<Mutex<WaitingBLocksQueue>> =
             Arc::new(Mutex::new(WaitingBLocksQueue::new()));
-        Aura::aura_msg_receiver(volatile_state.clone(), meta_data.clone(), msg_receiver);
+        Aura::aura_msg_receiver(
+            waiting_blocks_queue.clone(),
+            meta_data.clone(),
+            msg_receiver,
+        );
         if config.node.genesis_block {
             aura_obj.init_state(&config.db.dbpath, &mut sender.clone());
         } else {
@@ -574,18 +652,17 @@ impl Aura {
             }
             patch_db(fork);
         }
-        let cloned_volatile_state = volatile_state.clone();
+        let cloned_waiting_blocks_queue = waiting_blocks_queue.clone();
         let cloned_meta_data = meta_data.clone();
-        // TODO:: change thread from here to inside function
         thread::spawn(move || {
             Aura::finalise_waiting_blocks(
                 aura_config.step_time,
-                cloned_volatile_state,
+                cloned_waiting_blocks_queue,
                 cloned_meta_data,
             );
         });
         aura_obj.state_machine(
-            volatile_state.clone(),
+            waiting_blocks_queue.clone(),
             meta_data.clone(),
             &mut sender.clone(),
         );

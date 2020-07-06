@@ -40,6 +40,7 @@ pub struct Block {
 pub struct SignedBlock {
     pub block: Block,
     pub signature: Vec<u8>,
+    pub custom_header: Vec<u8>,
 }
 
 impl Block {
@@ -81,8 +82,12 @@ impl SignedBlock {
         PublicKey::verify_from_encoded_pk(&publickey, &ser_block, &self.signature)
     }
 
-    pub fn create_block(block: Block, signature: Vec<u8>) -> SignedBlock {
-        SignedBlock { block, signature }
+    pub fn create_block(block: Block, signature: Vec<u8>, custom_header: Vec<u8>) -> SignedBlock {
+        SignedBlock {
+            block,
+            signature,
+            custom_header,
+        }
     }
 
     pub fn from_bytes(bytes: Cow<'_, [u8]>) -> anyhow::Result<Self> {
@@ -156,7 +161,8 @@ mod tests_block {
             vec![Hash::zero()],
             [Hash::zero(), Hash::zero(), Hash::zero()],
         );
-        let signed_block: SignedBlock = SignedBlock::create_block(block.clone(), block.sign(&kp));
+        let signed_block: SignedBlock =
+            SignedBlock::create_block(block.clone(), block.sign(&kp), Vec::new());
         assert_eq!(
             signed_block.validate(&pk),
             true,
@@ -170,7 +176,8 @@ mod tests_block {
         let pk: String = hex::encode(kp.public().encode());
         let genesis_block: Block = Block::genesis_block(pk.clone());
         let signature: Vec<u8> = genesis_block.sign(&kp);
-        let signed_block: SignedBlock = SignedBlock::create_block(genesis_block, signature);
+        let signed_block: SignedBlock =
+            SignedBlock::create_block(genesis_block, signature, Vec::new());
         assert_eq!(
             signed_block.validate(&pk),
             true,
