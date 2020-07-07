@@ -173,16 +173,19 @@ where
         // let txn_pool = self.pool.lock().unwrap();
         for (_key, sign_txn) in self.order_pool.iter() {
             if temp_vec.len() < 15 {
-                let _ret = APPDATA
-                    .lock()
-                    .unwrap()
-                    .appdata
-                    .get(&sign_txn.app_name)
-                    .unwrap()
-                    .lock()
-                    .unwrap()
-                    .execute(sign_txn, state_context);
-                temp_vec.push(sign_txn.object_hash());
+                let txn_hash: Hash = sign_txn.object_hash();
+                if !state_context.contains_txn(&txn_hash) {
+                    let _ret = APPDATA
+                        .lock()
+                        .unwrap()
+                        .appdata
+                        .get(&sign_txn.app_name)
+                        .unwrap()
+                        .lock()
+                        .unwrap()
+                        .execute(sign_txn, state_context);
+                    temp_vec.push(txn_hash);
+                }
             } else {
                 break;
             }

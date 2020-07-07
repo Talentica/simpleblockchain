@@ -385,9 +385,10 @@ impl Aura {
                     waiting_blocks_queue.last_block_acceptance.clear();
                     waiting_blocks_queue.last_block_hash = String::from("temp_hash");
                     let signed_block: &SignedBlock = waiting_blocks_queue.queue.last().unwrap();
-                    POOL.sync_pool(&signed_block.block.txn_pool);
+                // POOL.sync_pool(&signed_block.block.txn_pool);
                 } else {
                     let length = waiting_blocks_queue.queue.len();
+                    waiting_blocks_queue.last_block_hash = String::from("temp_hash");
                     warn!(
                         "last block got votes {:?} and required {:?}",
                         got_votes, minimum_votes
@@ -412,6 +413,7 @@ impl Aura {
             {
                 let mut schema = SchemaFork::new(&fork);
                 if schema.update_block(&signed_block) {
+                    POOL.sync_pool(&signed_block.block.txn_pool);
                     debug!(
                         "block with id {} & hash {} added in database",
                         signed_block.block.id,
