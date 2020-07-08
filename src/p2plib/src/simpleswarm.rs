@@ -59,20 +59,24 @@ impl SimpleSwarm {
                             None => info!("empty message !"),
                             Some(msgtype) => match msgtype {
                                 MessageTypes::NodeMsg(data) => {
-                                    info!("NodeMsg received {:?}", data);
+                                    info!("NodeMsg received, publishing to p2p network");
                                     if let Ok(value) = serialize(&data) {
                                         let topics: Vec<Topic> =
                                             Vec::<Topic>::from(MessageTypes::NodeMsg(data)); //TODO Find way to get rid of clone
                                         swarm.floodsub.publish_many(topics, value);
-                                    };
+                                    } else {
+                                        warn!("NodeMsg can't able to publish to the network");
+                                    }
                                 }
                                 MessageTypes::ConsensusMsg(data) => {
-                                    info!("ConsensusMsg received {:?}", data);
+                                    info!("ConsensusMsg received, publishing to p2p network");
                                     if let Ok(value) = serialize(&data) {
                                         let topics: Vec<Topic> =
                                             Vec::<Topic>::from(MessageTypes::ConsensusMsg(data));
                                         swarm.floodsub.publish_many(topics, value);
-                                    };
+                                    } else {
+                                        warn!("ConsensusMsg can't able to publish to the network");
+                                    }
                                 }
                             },
                         }

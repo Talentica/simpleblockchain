@@ -301,7 +301,7 @@ impl Aura {
             BlockAcceptance::create(&meta_data_obj.kp, author_block.block.clone());
         AuraMessageSender::send_block_acceptance_msg(&mut meta_data_obj.sender, block_acceptance);
         info!(
-            "block acceptted created by {:?} with id {:?}, & hash {:?}",
+            "block accepted, created by {:?} with id {:?}, & hash {:?}",
             author_block.block.block.peer_id,
             author_block.block.block.id,
             author_block.block.get_hash().to_hex()
@@ -376,7 +376,7 @@ impl Aura {
         if round_owner.verify(meta_data_obj.step_time) {
             if String::from("temp_hash") != waiting_blocks_queue.last_block_hash.clone() {
                 info!(
-                    "block acceptted by {:?}",
+                    "block accepted by {:?}",
                     waiting_blocks_queue.last_block_acceptance
                 );
                 let got_votes = waiting_blocks_queue.last_block_acceptance.len() as u64;

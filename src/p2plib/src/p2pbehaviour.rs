@@ -90,7 +90,7 @@ impl<TSubstream: AsyncRead + AsyncWrite> NetworkBehaviourEventProcess<FloodsubEv
     fn inject_event(&mut self, pubsub_event: FloodsubEvent) {
         match pubsub_event {
             FloodsubEvent::Message(msg) => {
-                debug!(
+                info!(
                     "Message received from {:?}, msg topic {:?}",
                     msg.source, msg.topics
                 );
