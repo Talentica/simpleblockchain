@@ -173,16 +173,24 @@ where
         // let txn_pool = self.pool.lock().unwrap();
         for (_key, sign_txn) in self.order_pool.iter() {
             if temp_vec.len() < 15 {
-                let _ret = APPDATA
-                    .lock()
-                    .unwrap()
-                    .appdata
-                    .get(&sign_txn.app_name)
-                    .unwrap()
-                    .lock()
-                    .unwrap()
-                    .execute(sign_txn, state_context);
-                temp_vec.push(sign_txn.object_hash());
+                match APPDATA.lock().unwrap().appdata.get(&sign_txn.app_name) {
+                    Some(app) => {
+                        app.lock().unwrap().execute(sign_txn, state_context);
+                        temp_vec.push(sign_txn.object_hash());
+                        debug!(
+                            "transaction with hash {:?} executed",
+                            sign_txn.object_hash()
+                        );
+                    }
+                    None => {
+                        temp_vec.push(sign_txn.object_hash());
+                        debug!(
+                            "transaction with hash {:?} executed",
+                            sign_txn.object_hash()
+                        );
+                        warn!("unknown app transaction came for execution");
+                    }
+                }
             } else {
                 break;
             }
@@ -200,15 +208,15 @@ where
         for each in hash_vec.iter() {
             let signed_txn = self.get(each);
             if let Some(txn) = signed_txn {
-                let _ret = APPDATA
-                    .lock()
-                    .unwrap()
-                    .appdata
-                    .get(&txn.app_name)
-                    .unwrap()
-                    .lock()
-                    .unwrap()
-                    .execute(&txn, state_context);
+                match APPDATA.lock().unwrap().appdata.get(&txn.app_name) {
+                    Some(app) => {
+                        debug!("transaction with hash {:?} updated", each);
+                        app.lock().unwrap().execute(&txn, state_context);
+                    }
+                    None => {
+                        warn!("unknown app transaction bypassed in update_transaction process");
+                    }
+                }
             } else {
                 error!("transaction couldn't find for block execution");
                 return false;
