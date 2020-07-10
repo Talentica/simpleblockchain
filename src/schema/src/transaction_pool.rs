@@ -177,9 +177,18 @@ where
                     Some(app) => {
                         app.lock().unwrap().execute(sign_txn, state_context);
                         temp_vec.push(sign_txn.object_hash());
+                        debug!(
+                            "transaction with hash {:?} executed",
+                            sign_txn.object_hash()
+                        );
                     }
                     None => {
                         temp_vec.push(sign_txn.object_hash());
+                        debug!(
+                            "transaction with hash {:?} executed",
+                            sign_txn.object_hash()
+                        );
+                        warn!("unknown app transaction came for execution");
                     }
                 }
             } else {
@@ -201,9 +210,12 @@ where
             if let Some(txn) = signed_txn {
                 match APPDATA.lock().unwrap().appdata.get(&txn.app_name) {
                     Some(app) => {
+                        debug!("transaction with hash {:?} updated", each);
                         app.lock().unwrap().execute(&txn, state_context);
                     }
-                    None => {}
+                    None => {
+                        warn!("unknown app transaction bypassed in update_transaction process");
+                    }
                 }
             } else {
                 error!("transaction couldn't find for block execution");
