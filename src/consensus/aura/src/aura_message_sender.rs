@@ -13,7 +13,7 @@ impl AuraMessageSender {
             if error.is_err() {
                 error!("{:?}", error);
             } else {
-                println!("msg send send_round_owner_msg");
+                debug!("msg send send_round_owner_msg");
             }
         }
     }
@@ -28,7 +28,7 @@ impl AuraMessageSender {
             if error.is_err() {
                 error!("{:?}", error);
             } else {
-                println!("msg send send_block_acceptance_msg");
+                debug!("msg send send_block_acceptance_msg");
             }
         }
     }
@@ -40,7 +40,7 @@ impl AuraMessageSender {
             if error.is_err() {
                 error!("{:?}", error);
             } else {
-                println!("msg send send_author_block_msg");
+                debug!("msg send send_author_block_msg");
             }
         }
     }

@@ -151,7 +151,10 @@ impl Aura {
 
         // validate block signature
         if !author_block.verify() {
-            warn!("malicious block proposed!");
+            warn!(
+                "malicious block proposed by author {:?}!",
+                author_block.block.block.peer_id
+            );
             return;
         }
         // validate block height & previous block hash
@@ -159,6 +162,10 @@ impl Aura {
             Some(last_waiting_block) => {
                 let last_waiting_block: &SignedBlock = last_waiting_block;
                 if last_waiting_block.block.id + 1 != author_block.block.block.id {
+                    warn!(
+                        "malicious block proposed by author {:?}!",
+                        author_block.block.block.peer_id
+                    );
                     warn!("malicious block proposed, invalid height compare to waiting block!");
                     warn!(
                         "block should proposed on height {:?}, but got block on height {:?}",
@@ -168,6 +175,10 @@ impl Aura {
                     return;
                 }
                 if last_waiting_block.get_hash() != author_block.block.block.prev_hash {
+                    warn!(
+                        "malicious block proposed by author {:?}!",
+                        author_block.block.block.peer_id
+                    );
                     warn!("malicious block proposed, invalid previous block hash compare to waiting block!");
                     warn!(
                         "previous_hash shuold be {:?}, but previous hash is {:?}",
@@ -200,6 +211,10 @@ impl Aura {
                     };
                 if custom_header.round_number <= last_custom_header.round_number {
                     warn!(
+                        "malicious block proposed by author {:?}!",
+                        author_block.block.block.peer_id
+                    );
+                    warn!(
                         "malicious block proposed, invalid round number compare to waiting block!"
                     );
                     warn!(
@@ -210,6 +225,10 @@ impl Aura {
                     return;
                 }
                 if custom_header.timestamp <= last_custom_header.timestamp {
+                    warn!(
+                        "malicious block proposed by author {:?}!",
+                        author_block.block.block.peer_id
+                    );
                     warn!("malicious block proposed, invalid timestamp compare to waiting block!");
                     warn!(
                         "block should proposed higher timestamp then {:?}, but got block on timestamp {:?}",
@@ -224,6 +243,10 @@ impl Aura {
                 {
                     let schema = SchemaSnap::new(&snapshot);
                     if schema.get_blockchain_length() != author_block.block.block.id {
+                        warn!(
+                            "malicious block proposed by author {:?}!",
+                            author_block.block.block.peer_id
+                        );
                         warn!("malicious block proposed, invalid height from snapshot!");
                         warn!(
                             "block should proposed on height {:?}, but got block on height {:?}",
@@ -233,6 +256,10 @@ impl Aura {
                         return;
                     }
                     if schema.get_root_block_hash() != author_block.block.block.prev_hash {
+                        warn!(
+                            "malicious block proposed by author {:?}!",
+                            author_block.block.block.peer_id
+                        );
                         warn!("malicious block proposed, invalid previous block hash compare to snapshot!");
                         warn!(
                             "previous_hash shuold be {:?}, but previous hash is {:?}",
@@ -273,6 +300,10 @@ impl Aura {
                         };
                     if custom_header.round_number <= last_custom_header.round_number {
                         warn!(
+                            "malicious block proposed by author {:?}!",
+                            author_block.block.block.peer_id
+                        );
+                        warn!(
                             "malicious block proposed, invalid round number compare to snapshot!"
                         );
                         warn!(
@@ -283,6 +314,10 @@ impl Aura {
                         return;
                     }
                     if custom_header.timestamp <= last_custom_header.timestamp {
+                        warn!(
+                            "malicious block proposed by author {:?}!",
+                            author_block.block.block.peer_id
+                        );
                         warn!("malicious block proposed, invalid timestamp compare to snapshot!");
                         warn!(
                             "block should proposed higher timestamp then {:?}, but got block on timestamp {:?}",
@@ -338,12 +373,20 @@ impl Aura {
         // block acceptance for the correct_block
         if waiting_blocks_queue.last_block_hash != block_acceptance.block_hash.to_hex() {
             warn!("Data coming for different block");
+            warn!(
+                "current waiting block hash {:?} & data came for {:?}",
+                waiting_blocks_queue.last_block_hash,
+                block_acceptance.block_hash.to_hex()
+            );
             return;
         }
 
         // verify data signature using sender's public key
         if !block_acceptance.verify() {
-            warn!("malicious aceeptance came");
+            warn!(
+                "malicious aceeptance came from {:?}",
+                block_acceptance.public_key
+            );
             return;
         }
         info!(
@@ -445,10 +488,10 @@ impl Aura {
                 let meta_data_obj = meta_data.lock().unwrap();
                 let queue_length: usize = waiting_blocks_queue_obj.queue.len();
                 if queue_length > meta_data_obj.block_queue_size + 1 {
-                    info!("queue length {:?}", queue_length);
+                    debug!("queue length {:?}", queue_length);
                     let blocks_to_be_confirmed: usize = queue_length / 3 * 2;
                     Aura::process_blocks(blocks_to_be_confirmed, &mut waiting_blocks_queue_obj);
-                    info!(
+                    debug!(
                         "after processing queue length {:?}",
                         waiting_blocks_queue_obj.queue.len()
                     );
@@ -477,7 +520,7 @@ impl Aura {
                                     match msgtype {
                                         AuraMessageTypes::AuthorBlockEnum(data) => {
                                             let author_block: AuthorBlock = data;
-                                            info!("AuthorBlock data received");
+                                            debug!("AuthorBlock data received");
                                             let mut waiting_blocks_queue_obj =
                                                 waiting_blocks_queue.lock().unwrap();
                                             let mut meta_data_obj = meta_data.lock().unwrap();
@@ -489,7 +532,7 @@ impl Aura {
                                         }
                                         AuraMessageTypes::BlockAcceptanceEnum(data) => {
                                             let block_acceptance: BlockAcceptance = data;
-                                            info!("BlockAcceptance data received");
+                                            debug!("BlockAcceptance data received");
                                             let mut waiting_blocks_queue_obj =
                                                 waiting_blocks_queue.lock().unwrap();
                                             let meta_data_obj = meta_data.lock().unwrap();
@@ -501,7 +544,7 @@ impl Aura {
                                         }
                                         AuraMessageTypes::RoundOwnerEnum(data) => {
                                             let round_config: RoundOwner = data;
-                                            info!("RoundOwner data received");
+                                            debug!("RoundOwner data received");
                                             let mut waiting_blocks_queue_obj =
                                                 waiting_blocks_queue.lock().unwrap();
                                             let meta_data_obj = meta_data.lock().unwrap();
@@ -536,7 +579,7 @@ impl Aura {
         let fork = fork_db();
         let mut schema = SchemaFork::new(&fork);
         for each_block in waiting_blocks_queue.queue.iter() {
-            info!("blocks order {:?}", each_block.block.id);
+            debug!("blocks order {:?}", each_block.block.id);
             schema.update_block(each_block);
         }
         let timestamp: u64 = SystemTime::now()
