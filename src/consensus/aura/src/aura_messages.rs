@@ -1,3 +1,4 @@
+use exonum_crypto::Hash;
 use libp2p::floodsub::{Topic, TopicBuilder};
 use message_handler::constants;
 use message_handler::message_traits::Message;
@@ -70,13 +71,13 @@ impl RoundOwner {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BlockAcceptance {
     pub signature: Vec<u8>,
-    pub block: SignedBlock,
+    pub block_hash: Hash,
     pub public_key: String,
 }
 
 impl BlockAcceptance {
     pub fn verify(&self) -> bool {
-        let ser_payload: Vec<u8> = match serialize(&self.block) {
+        let ser_payload: Vec<u8> = match serialize(&self.block_hash) {
             Result::Ok(value) => value,
             Result::Err(_) => return false,
         };
@@ -84,7 +85,7 @@ impl BlockAcceptance {
     }
 
     fn sign(&mut self, kp: &KeypairType) {
-        let ser_txn: Vec<u8> = match serialize(&self.block) {
+        let ser_txn: Vec<u8> = match serialize(&self.block_hash) {
             Result::Ok(value) => value,
             Result::Err(_) => vec![0],
         };
@@ -92,10 +93,10 @@ impl BlockAcceptance {
         self.signature = sign;
     }
 
-    pub fn create(kp: &KeypairType, block: SignedBlock) -> BlockAcceptance {
+    pub fn create(kp: &KeypairType, block_hash: Hash) -> BlockAcceptance {
         let mut block_acceptance: BlockAcceptance = BlockAcceptance {
             signature: vec![0],
-            block,
+            block_hash,
             public_key: hex::encode(kp.public().encode()),
         };
         block_acceptance.sign(kp);
@@ -207,7 +208,8 @@ mod consensus_message_test {
         let sign: Vec<u8> = block.sign(&kp);
         let signed_block: SignedBlock =
             SignedBlock::create_block(block.clone(), sign.clone(), Vec::new());
-        let block_acceptance: BlockAcceptance = BlockAcceptance::create(&kp, signed_block.clone());
+        let block_acceptance: BlockAcceptance =
+            BlockAcceptance::create(&kp, signed_block.get_hash());
         assert_eq!(block_acceptance.verify(), true);
 
         let author_block: AuthorBlock = AuthorBlock {

@@ -300,7 +300,7 @@ impl Aura {
         // let author_block: AuthorBlock = AuthorBlock::create(signed_block.clone());
         // AuraMessageSender::send_author_block_msg(sender, author_block);
         let block_acceptance: BlockAcceptance =
-            BlockAcceptance::create(&meta_data_obj.kp, author_block.block.clone());
+            BlockAcceptance::create(&meta_data_obj.kp, author_block.block.get_hash());
         AuraMessageSender::send_block_acceptance_msg(&mut meta_data_obj.sender, block_acceptance);
         let test_string: TestString = TestString::create(
             String::from("test_string after block acceptance"),
@@ -343,7 +343,7 @@ impl Aura {
         }
 
         // block acceptance for the correct_block
-        if waiting_blocks_queue.last_block_hash != block_acceptance.block.get_hash().to_hex() {
+        if waiting_blocks_queue.last_block_hash != block_acceptance.block_hash.to_hex() {
             warn!("Data coming for different block");
             return;
         }
