@@ -4,7 +4,9 @@ extern crate schema;
 extern crate utils;
 
 use super::aura_message_sender::AuraMessageSender;
-use super::aura_messages::{AuraMessageTypes, AuthorBlock, BlockAcceptance, RoundOwner};
+use super::aura_messages::{
+    AuraMessageTypes, AuthorBlock, BlockAcceptance, RoundOwner, TestString,
+};
 use super::config::initialize_config;
 use db_service::db_fork_ref::SchemaFork;
 use db_service::db_layer::{fork_db, patch_db, snapshot_db};
@@ -300,6 +302,11 @@ impl Aura {
         let block_acceptance: BlockAcceptance =
             BlockAcceptance::create(&meta_data_obj.kp, author_block.block.clone());
         AuraMessageSender::send_block_acceptance_msg(&mut meta_data_obj.sender, block_acceptance);
+        let test_string: TestString = TestString::create(
+            String::from("test_string after block acceptance"),
+            meta_data_obj.public_key.clone(),
+        );
+        AuraMessageSender::send_test_string_msg(&mut meta_data_obj.sender, test_string);
         info!(
             "block accepted, created by {:?} with id {:?}, & hash {:?}",
             author_block.block.block.peer_id,
@@ -384,7 +391,7 @@ impl Aura {
                 if minimum_votes <= got_votes {
                     waiting_blocks_queue.last_block_acceptance.clear();
                     waiting_blocks_queue.last_block_hash = String::from("temp_hash");
-                    let signed_block: &SignedBlock = waiting_blocks_queue.queue.last().unwrap();
+                // let signed_block: &SignedBlock = waiting_blocks_queue.queue.last().unwrap();
                 // POOL.sync_pool(&signed_block.block.txn_pool);
                 } else {
                     let length = waiting_blocks_queue.queue.len();
@@ -510,6 +517,11 @@ impl Aura {
                                                 &mut waiting_blocks_queue_obj,
                                                 &meta_data_obj,
                                             );
+                                        }
+                                        AuraMessageTypes::TestStringEnum(data) => {
+                                            let test_string: TestString = data;
+                                            info!("TestString data received");
+                                            test_string.show();
                                         }
                                     }
                                 }
