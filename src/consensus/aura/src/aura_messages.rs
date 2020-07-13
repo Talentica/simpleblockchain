@@ -7,12 +7,8 @@ use std::time::SystemTime;
 use utils::keypair::{CryptoKeypair, Keypair, KeypairType, PublicKey, Verify};
 use utils::serializer::{serialize, Deserialize, Serialize};
 
-pub const AURA_MSG_TOPIC_STR: &'static [&'static str] = &[
-    "RoundOwner",
-    "BlockAcceptance",
-    "AuthorBlock",
-    "test_string",
-];
+pub const AURA_MSG_TOPIC_STR: &'static [&'static str] =
+    &["RoundOwner", "BlockAcceptance", "AuthorBlock"];
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct RoundDetails {
@@ -119,22 +115,6 @@ impl AuthorBlock {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct TestString {
-    pub string: String,
-    pub from: String,
-}
-
-impl TestString {
-    pub fn show(&self) {
-        info!("data {:?}, from {:?}", self.string, self.from);
-    }
-
-    pub fn create(string: String, from: String) -> TestString {
-        TestString { string, from }
-    }
-}
-
 impl Message for RoundOwner {
     const TOPIC: &'static str = AURA_MSG_TOPIC_STR[0];
     const MODULE_TOPIC: &'static str = constants::CONSENSUS;
@@ -159,20 +139,11 @@ impl Message for AuthorBlock {
     }
 }
 
-impl Message for TestString {
-    const TOPIC: &'static str = AURA_MSG_TOPIC_STR[3];
-    const MODULE_TOPIC: &'static str = constants::CONSENSUS;
-    fn handler(&self) {
-        info!("i am TestString handler");
-    }
-}
-
 #[derive(Debug, Serialize, Deserialize)]
 pub enum AuraMessageTypes {
     RoundOwnerEnum(RoundOwner),
     BlockAcceptanceEnum(BlockAcceptance),
     AuthorBlockEnum(AuthorBlock),
-    TestStringEnum(TestString),
 }
 
 //TODO : Try using macro to implement this for all variations
@@ -182,7 +153,6 @@ impl From<AuraMessageTypes> for Topic {
             AuraMessageTypes::RoundOwnerEnum(data) => TopicBuilder::new(data.topic()).build(),
             AuraMessageTypes::BlockAcceptanceEnum(data) => TopicBuilder::new(data.topic()).build(),
             AuraMessageTypes::AuthorBlockEnum(data) => TopicBuilder::new(data.topic()).build(),
-            AuraMessageTypes::TestStringEnum(data) => TopicBuilder::new(data.topic()).build(),
         }
     }
 }

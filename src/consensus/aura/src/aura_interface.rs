@@ -4,9 +4,7 @@ extern crate schema;
 extern crate utils;
 
 use super::aura_message_sender::AuraMessageSender;
-use super::aura_messages::{
-    AuraMessageTypes, AuthorBlock, BlockAcceptance, RoundOwner, TestString,
-};
+use super::aura_messages::{AuraMessageTypes, AuthorBlock, BlockAcceptance, RoundOwner};
 use super::config::initialize_config;
 use db_service::db_fork_ref::SchemaFork;
 use db_service::db_layer::{fork_db, patch_db, snapshot_db};
@@ -302,11 +300,6 @@ impl Aura {
         let block_acceptance: BlockAcceptance =
             BlockAcceptance::create(&meta_data_obj.kp, author_block.block.get_hash());
         AuraMessageSender::send_block_acceptance_msg(&mut meta_data_obj.sender, block_acceptance);
-        let test_string: TestString = TestString::create(
-            String::from("test_string after block acceptance"),
-            meta_data_obj.public_key.clone(),
-        );
-        AuraMessageSender::send_test_string_msg(&mut meta_data_obj.sender, test_string);
         info!(
             "block accepted, created by {:?} with id {:?}, & hash {:?}",
             author_block.block.block.peer_id,
@@ -517,11 +510,6 @@ impl Aura {
                                                 &mut waiting_blocks_queue_obj,
                                                 &meta_data_obj,
                                             );
-                                        }
-                                        AuraMessageTypes::TestStringEnum(data) => {
-                                            let test_string: TestString = data;
-                                            info!("TestString data received");
-                                            test_string.show();
                                         }
                                     }
                                 }

@@ -1,6 +1,4 @@
-use crate::aura_messages::{
-    AuraMessageTypes, AuthorBlock, BlockAcceptance, RoundOwner, TestString,
-};
+use crate::aura_messages::{AuraMessageTypes, AuthorBlock, BlockAcceptance, RoundOwner};
 use futures::channel::mpsc::*;
 use message_handler::messages::MessageTypes;
 use utils::serializer::serialize;
@@ -43,18 +41,6 @@ impl AuraMessageSender {
                 error!("{:?}", error);
             } else {
                 println!("msg send send_author_block_msg");
-            }
-        }
-    }
-
-    pub fn send_test_string_msg(sender: &mut Sender<Option<MessageTypes>>, msg: TestString) {
-        if let Ok(serialize_msg) = serialize(&AuraMessageTypes::TestStringEnum(msg)) {
-            let data = Some(MessageTypes::ConsensusMsg(serialize_msg));
-            let error: Result<(), TrySendError<Option<MessageTypes>>> = sender.try_send(data);
-            if error.is_err() {
-                error!("{:?}", error);
-            } else {
-                println!("msg send send_test_string_msg");
             }
         }
     }
