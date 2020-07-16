@@ -22,7 +22,6 @@ mod test_controller_services {
     use std::time::SystemTime;
     use std::{thread, time::Duration};
     use utils::configreader::initialize_config;
-    use utils::crypto::keypair::{CryptoKeypair, Keypair, KeypairType};
     use utils::serializer::{deserialize, serialize};
 
     fn test_submit_transaction_service() {
@@ -158,11 +157,10 @@ mod test_controller_services {
     }
 
     fn fetch_block_peer_service() {
-        let kp: KeypairType = Keypair::generate();
         let fork = fork_db();
         {
             let mut schema = SchemaFork::new(&fork);
-            schema.initialize_db(&kp);
+            schema.initialize_db(Vec::new());
         }
         patch_db(fork);
         let index_byes: web::Bytes = web::Bytes::from(serialize(&0).unwrap());
@@ -177,8 +175,8 @@ mod test_controller_services {
                 Body::Message(_) => panic!("invalid response body type"),
             };
             let output: SignedBlock = deserialize(&body_vec).unwrap();
-            assert_eq!(output.validate(&output.block.peer_id), true);
             assert_eq!(0, output.block.id);
+            assert_eq!(output.validate(), false);
         } else {
             panic!("http_response not equal to 200");
         }
@@ -196,7 +194,11 @@ mod test_controller_services {
                 Body::Message(_) => panic!("invalid response body type"),
             };
             let output: SignedBlock = deserialize(&body_vec).unwrap();
-            assert_eq!(output.validate(&output.block.peer_id), true);
+            if output.block.id == 0 {
+                assert_eq!(output.validate(), false);
+            } else {
+                assert_eq!(output.validate(), true);
+            }
         } else {
             panic!("http_response not equal to 200");
         }

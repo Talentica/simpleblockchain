@@ -20,8 +20,7 @@ use sdk::traits::{PoolTrait, StateContext};
 use std::time::SystemTime;
 use utils::configreader;
 use utils::configreader::BlockConfig;
-use utils::keypair::{CryptoKeypair, Keypair, KeypairType, PublicKey, Verify};
-use utils::serializer::serialize;
+use utils::keypair::{CryptoKeypair, Keypair, KeypairType};
 
 #[derive(FromAccess)]
 pub struct SchemaFork<T: Access> {
@@ -87,20 +86,18 @@ where
         self.block_list.len()
     }
 
-    pub fn initialize_db(&mut self, kp: &KeypairType) -> SignedBlock {
+    pub fn initialize_db(&mut self, custom_headers: Vec<u8>) -> SignedBlock {
         self.state_trie.clear();
         self.txn_trie.clear();
         self.storage_trie.clear();
         self.block_list.clear();
-        let public_key: String = hex::encode(Keypair::public(&kp).encode());
-        let mut block = Block::genesis_block(public_key);
-        let public_key = hex::encode(Keypair::public(&kp).encode());
-        block.peer_id = public_key.clone();
+        let mut block = Block::genesis_block(custom_headers);
         block.header[0] = self.state_trie_merkle_hash();
         block.header[1] = self.storage_trie_merkle_hash();
         block.header[2] = self.txn_trie_merkle_hash();
-        let signature = block.sign(kp);
-        let genesis_block: SignedBlock = SignedBlock::create_block(block, signature);
+        let signature: Vec<u8> = Vec::new();
+        let sign_headers: Vec<u8> = Vec::new();
+        let genesis_block: SignedBlock = SignedBlock::create_block(block, signature, sign_headers);
         self.block_list.push(genesis_block.clone());
         return genesis_block;
     }
@@ -119,7 +116,7 @@ where
     }
 
     /// this function only will called when the node willing to propose block and for that agree to compute block
-    pub fn create_block(&mut self, kp: &KeypairType) -> SignedBlock {
+    pub fn create_block(&mut self, kp: &KeypairType, custom_headers: Vec<u8>) -> SignedBlock {
         // all trie's state before current block computation
         #[allow(unused_assignments)]
         let mut executed_txns: Vec<Hash> = vec![];
@@ -144,14 +141,26 @@ where
         ];
         // updated merkle root of all tries
         let public_key = hex::encode(Keypair::public(&kp).encode());
-        let block = Block::new_block(length, public_key, prev_hash, executed_txns, header);
+        let block = Block::new_block(
+            length,
+            public_key,
+            prev_hash,
+            executed_txns,
+            header,
+            custom_headers,
+        );
         let signature: Vec<u8> = block.sign(kp);
-        let signed_block: SignedBlock = SignedBlock::create_block(block, signature);
+        let auth_headers: Vec<u8> = Vec::new();
+        let signed_block: SignedBlock = SignedBlock::create_block(block, signature, auth_headers);
         self.block_list.push(signed_block.clone());
         signed_block
     }
 
-    pub fn forge_new_block(&self, kp: &KeypairType) -> (Fork, SignedBlock) {
+    pub fn forge_new_block(
+        &self,
+        kp: &KeypairType,
+        custom_headers: Vec<u8>,
+    ) -> (Fork, SignedBlock) {
         let block_config: &BlockConfig = &configreader::GLOBAL_CONFIG.block_config;
         let mut timestamp: TxnPoolKeyType = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
@@ -164,12 +173,13 @@ where
             .as_micros();
         #[allow(unused_assignments)]
         let mut fork_instance: Fork = fork_db();
+        // dummy signed block
         let mut block_instance: SignedBlock =
-            SignedBlock::create_block(Block::genesis_block(String::new()), Vec::new());
+            SignedBlock::create_block(Block::genesis_block(Vec::new()), Vec::new(), Vec::new());
         while current_timestamp < timestamp {
             {
                 let mut schema = SchemaFork::new(&fork_instance);
-                block_instance = schema.create_block(kp);
+                block_instance = schema.create_block(kp, custom_headers.clone());
             }
             if block_instance.block.txn_pool.len() >= block_config.block_transaction_limit as usize
             {
@@ -212,23 +222,6 @@ where
             return false;
         }
 
-        // block signature check
-        let msg: Vec<u8> = match serialize(&signed_block.block) {
-            Result::Ok(value) => value,
-            Result::Err(_) => {
-                error!("error occurred during block serialization process");
-                return false;
-            }
-        };
-        if !PublicKey::verify_from_encoded_pk(
-            &signed_block.block.peer_id,
-            &msg,
-            &signed_block.signature,
-        ) {
-            error!("block signature couldn't verified");
-            return false;
-        }
-
         // genesis block check
         if signed_block.block.id == 0 {
             let header: [Hash; 3] = [
@@ -262,6 +255,12 @@ where
                     "block prev_hash error block prev_hash {}, blockchain root {}",
                     signed_block.block.prev_hash, prev_hash
                 );
+                return false;
+            }
+
+            // block signature check
+            if !signed_block.validate() {
+                error!("block signature couldn't verified");
                 return false;
             }
 

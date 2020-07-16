@@ -21,7 +21,6 @@ mod test_controller_services {
     use std::time::SystemTime;
     use std::{thread, time::Duration};
     use utils::configreader::initialize_config;
-    use utils::crypto::keypair::{CryptoKeypair, Keypair, KeypairType};
     use utils::global_peer_data::*;
     use utils::serializer::serialize;
 
@@ -121,11 +120,10 @@ mod test_controller_services {
     }
 
     fn test_fetch_block_controller(client: &ClientObj) {
-        let kp: KeypairType = Keypair::generate();
         let fork = fork_db();
         {
             let mut schema = SchemaFork::new(&fork);
-            schema.initialize_db(&kp);
+            schema.initialize_db(Vec::new());
         }
         patch_db(fork);
         match client.fetch_block(&0) {

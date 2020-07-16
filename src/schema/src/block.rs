@@ -1,6 +1,8 @@
 extern crate utils;
 use exonum_crypto::Hash;
 use exonum_merkledb::ObjectHash;
+use std::fmt;
+use std::time::SystemTime;
 use std::{borrow::Cow, convert::AsRef};
 use utils::keypair::{CryptoKeypair, Keypair, KeypairType, PublicKey, Verify};
 use utils::serializer::{serialize, Deserialize, Serialize};
@@ -8,13 +10,14 @@ use utils::serializer::{serialize, Deserialize, Serialize};
 pub trait BlockTraits<T> {
     fn validate(&self, publickey: &String, signature: &[u8]) -> bool;
     fn sign(&self, kp: &T) -> Vec<u8>;
-    fn genesis_block(peer_id: String) -> Self;
+    fn genesis_block(custom_headers: Vec<u8>) -> Self;
     fn new_block(
         id: u64,
         peer_id: String,
         prev_hash: Hash,
         txn_pool: Vec<Hash>,
         header: [Hash; 3],
+        custom_headers: Vec<u8>,
     ) -> Self;
 }
 
@@ -33,6 +36,10 @@ pub struct Block {
     pub txn_pool: Vec<Hash>,
     // txn_trie, state_trie, storage_trie
     pub header: [Hash; 3],
+    // block creation time
+    pub timestamp: u128,
+    // custom defined data
+    pub custom_headers: Vec<u8>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, BinaryValue, ObjectHash)]
@@ -40,49 +47,55 @@ pub struct Block {
 pub struct SignedBlock {
     pub block: Block,
     pub signature: Vec<u8>,
+    pub auth_headers: Vec<u8>,
+}
+
+impl fmt::Display for Block {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "id: {:?} \
+            peer_id: {:?} \
+            previous_hash: {:?} \
+            timestamp: {:?} \
+            header: {:?} \
+            txn_pool: {:?}",
+            self.id, self.peer_id, self.prev_hash, self.timestamp, self.header, self.txn_pool
+        )
+    }
+}
+
+impl fmt::Display for SignedBlock {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self.block)
+    }
 }
 
 impl Block {
     pub fn to_string_format(&self) -> String {
-        let mut to_string: String = String::new();
-        to_string.extend("id: ".chars());
-        to_string.extend(self.id.to_string().chars());
-        to_string.extend(", peer_id: ".chars());
-        to_string.extend(self.peer_id.chars());
-        to_string.extend(", prev_hash: ".chars());
-        to_string.extend(self.prev_hash.to_hex().chars());
-        to_string.extend(", txn_pool: ".chars());
-        for each in self.txn_pool.iter() {
-            to_string.extend(each.to_hex().chars());
-            to_string.extend(", ".chars());
-        }
-        to_string.extend(", header: ".chars());
-        for each in 0..3 {
-            to_string.extend(self.header[each].to_hex().chars());
-            to_string.extend(", ".chars());
-        }
-        to_string
+        self.to_string()
     }
 }
 
 impl SignedBlock {
     pub fn to_string_format(&self) -> String {
-        let mut to_string: String = String::new();
-        to_string.extend("Block: ".chars());
-        to_string.extend(self.block.to_string_format().chars());
-        to_string
+        self.to_string()
     }
 
-    pub fn validate(&self, publickey: &String) -> bool {
+    pub fn validate(&self) -> bool {
         let ser_block: Vec<u8> = match serialize(&self.block) {
             Result::Ok(value) => value,
             Result::Err(_) => return false,
         };
-        PublicKey::verify_from_encoded_pk(&publickey, &ser_block, &self.signature)
+        PublicKey::verify_from_encoded_pk(&self.block.peer_id, &ser_block, &self.signature)
     }
 
-    pub fn create_block(block: Block, signature: Vec<u8>) -> SignedBlock {
-        SignedBlock { block, signature }
+    pub fn create_block(block: Block, signature: Vec<u8>, auth_headers: Vec<u8>) -> SignedBlock {
+        SignedBlock {
+            block,
+            signature,
+            auth_headers,
+        }
     }
 
     pub fn from_bytes(bytes: Cow<'_, [u8]>) -> anyhow::Result<Self> {
@@ -101,7 +114,6 @@ impl BlockTraits<KeypairType> for Block {
             Result::Err(_) => return false,
         };
         PublicKey::verify_from_encoded_pk(&publickey, &ser_block, &signature)
-        // PublicKey::verify_from_encoded_pk(&self.txn.party_a, signing_string.as_bytes(), &self.signature.as_ref())
     }
 
     fn sign(&self, kp: &KeypairType) -> Vec<u8> {
@@ -113,13 +125,19 @@ impl BlockTraits<KeypairType> for Block {
         sign
     }
 
-    fn genesis_block(peer_id: String) -> Block {
+    fn genesis_block(custom_headers: Vec<u8>) -> Block {
+        let timestamp: u128 = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_micros();
         Block {
             id: 0,
-            peer_id,
+            peer_id: String::from("genesis_block"),
             prev_hash: Hash::zero(),
             txn_pool: vec![],
             header: [Hash::zero(), Hash::zero(), Hash::zero()],
+            timestamp,
+            custom_headers,
         }
     }
 
@@ -129,13 +147,20 @@ impl BlockTraits<KeypairType> for Block {
         prev_hash: Hash,
         txn_pool: Vec<Hash>,
         header: [Hash; 3],
+        custom_headers: Vec<u8>,
     ) -> Block {
+        let timestamp: u128 = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_micros();
         Block {
             id,
             peer_id,
             prev_hash,
             txn_pool,
             header,
+            timestamp,
+            custom_headers,
         }
     }
 }
@@ -155,10 +180,12 @@ mod tests_block {
             Hash::zero(),
             vec![Hash::zero()],
             [Hash::zero(), Hash::zero(), Hash::zero()],
+            Vec::new(),
         );
-        let signed_block: SignedBlock = SignedBlock::create_block(block.clone(), block.sign(&kp));
+        let signed_block: SignedBlock =
+            SignedBlock::create_block(block.clone(), block.sign(&kp), Vec::new());
         assert_eq!(
-            signed_block.validate(&pk),
+            signed_block.validate(),
             true,
             "Issue with Signature Verification"
         );
@@ -167,14 +194,18 @@ mod tests_block {
     #[test]
     pub fn test_genesis_block() {
         let kp: KeypairType = Keypair::generate();
-        let pk: String = hex::encode(kp.public().encode());
-        let genesis_block: Block = Block::genesis_block(pk.clone());
+        let genesis_block: Block = Block::genesis_block(Vec::new());
         let signature: Vec<u8> = genesis_block.sign(&kp);
-        let signed_block: SignedBlock = SignedBlock::create_block(genesis_block, signature);
+        let signed_block: SignedBlock =
+            SignedBlock::create_block(genesis_block, signature, Vec::new());
         assert_eq!(
-            signed_block.validate(&pk),
-            true,
+            signed_block.validate(),
+            false,
             "Issue with Signature Verification"
         );
+        let data: String = signed_block.to_string_format();
+        println!("{:?}", data);
+        let data: String = signed_block.block.to_string_format();
+        println!("{:?}", data);
     }
 }

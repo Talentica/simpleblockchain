@@ -54,7 +54,8 @@ impl Consensus {
             let mut schema = SchemaFork::new(&fork);
             if schema.blockchain_length() == 0 {
                 info!("genesis block created");
-                let genesis_signed_block = schema.initialize_db(&self.keypair);
+                let custom_headers: Vec<u8> = Vec::new();
+                let genesis_signed_block = schema.initialize_db(custom_headers);
                 MessageSender::send_block_msg(sender, genesis_signed_block);
             } else {
                 self.round_number = schema.blockchain_length() - 1;
@@ -154,7 +155,9 @@ impl Consensus {
         {
             let schema = SchemaFork::new(&fork);
             // let signed_block = schema.create_block(&self.keypair);
-            let (fork_instance, signed_block) = schema.forge_new_block(&self.keypair);
+            let custom_headers: Vec<u8> = Vec::new();
+            let (fork_instance, signed_block) =
+                schema.forge_new_block(&self.keypair, custom_headers);
             //fork = fork_instance;
             info!(
                 "new block created.. id {},hash {}",

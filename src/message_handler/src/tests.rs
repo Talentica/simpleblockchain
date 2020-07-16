@@ -16,9 +16,8 @@ mod test_message_handler {
     fn test_node_message_operations() {
         let (tx1, mut rx1) = channel::<Option<MessageTypes>>(4194304);
         let mut sender = tx1.clone();
-        let peer_id: String = String::from("mock_peer_id");
-        let genesis_block: Block = Block::genesis_block(peer_id);
-        let block: SignedBlock = SignedBlock::create_block(genesis_block, vec![0]);
+        let genesis_block: Block = Block::genesis_block(Vec::new());
+        let block: SignedBlock = SignedBlock::create_block(genesis_block, vec![0], Vec::new());
         // let data = MessageTypes::NodeMsg(NodeMessageTypes::SignedBlockEnum(block));
         MessageSender::send_block_msg(&mut sender, block.clone());
         thread::sleep(Duration::from_millis(1000));
