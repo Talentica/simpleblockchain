@@ -7,14 +7,16 @@ use exonum_merkledb::{
     access::{Access, RawAccessMut},
     ObjectHash,
 };
-
 use sdk::traits::{PoolTrait, StateContext};
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
+use std::time::SystemTime;
+use utils::configreader;
+use utils::configreader::{BlockConfig, Configuration};
 pub type TxnPoolKeyType = u128;
 pub type TxnPoolValueType = SignedTransaction;
 
-trait TransactionPoolTraits {
+pub trait TransactionPoolTraits {
     fn new() -> Self;
     fn delete_txn_hash(&mut self, key: &Hash);
     fn delete_txn_order(&mut self, key: &TxnPoolKeyType);
@@ -167,35 +169,49 @@ impl<T: Access> PoolTrait<T, State, SignedTransaction> for TransactionPool
 where
     T::Base: RawAccessMut,
 {
-    fn execute_transactions(&self, state_context: &mut dyn StateContext) -> Vec<Hash> {
+    fn execute_transactions(&self, state_context: &mut dyn StateContext) -> (Vec<Hash>, Vec<Hash>) {
         let mut temp_vec: Vec<Hash> = Vec::with_capacity(15);
         // compute until order_pool exhusted or transaction limit crossed
         // let txn_pool = self.pool.lock().unwrap();
-        for (_key, sign_txn) in self.order_pool.iter() {
-            if temp_vec.len() < 15 {
-                match APPDATA.lock().unwrap().appdata.get(&sign_txn.app_name) {
-                    Some(app) => {
-                        app.lock().unwrap().execute(sign_txn, state_context);
-                        temp_vec.push(sign_txn.object_hash());
-                        debug!(
-                            "transaction with hash {:?} executed",
-                            sign_txn.object_hash()
-                        );
-                    }
-                    None => {
-                        temp_vec.push(sign_txn.object_hash());
-                        debug!(
-                            "transaction with hash {:?} executed",
-                            sign_txn.object_hash()
-                        );
-                        warn!("unknown app transaction came for execution");
+
+        let block_config: &BlockConfig = &configreader::GLOBAL_CONFIG.block_config;
+        // delayed transaction & transaction from unknown app will be added
+        // in this list. This list will be used to sync-up txn_pool.
+        let mut remove_txn_list: Vec<Hash> = Vec::new();
+        let current_timestamp: TxnPoolKeyType = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_micros();
+        for (timestamp, sign_txn) in self.order_pool.iter() {
+            if temp_vec.len() < block_config.block_transaction_limit as usize {
+                let txn_hash: Hash = sign_txn.object_hash();
+                // check is transaction already added in the previously
+                if !state_context.contains_txn(&txn_hash) {
+                    let timestamp: TxnPoolKeyType = timestamp.clone();
+                    if current_timestamp
+                        > (timestamp + block_config.transaction_execution_delay_limit)
+                    {
+                        remove_txn_list.push(txn_hash);
+                    } else if current_timestamp > timestamp {
+                        match APPDATA.lock().unwrap().appdata.get(&sign_txn.app_name) {
+                            Some(app) => {
+                                app.lock().unwrap().execute(sign_txn, state_context);
+                                temp_vec.push(txn_hash);
+                                debug!("transaction with hash {:?} executed", txn_hash);
+                            }
+                            None => {
+                                remove_txn_list.push(txn_hash);
+                                debug!("transaction with hash {:?} executed", txn_hash);
+                                info!("unknown app transaction came for execution");
+                            }
+                        }
                     }
                 }
             } else {
                 break;
             }
         }
-        temp_vec
+        (temp_vec, remove_txn_list)
     }
 
     fn update_transactions(

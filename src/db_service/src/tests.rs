@@ -10,6 +10,9 @@ mod test_db_service {
     use schema::state::State;
     use sdk::traits::StateContext;
     use std::collections::HashMap;
+    use std::time::SystemTime;
+    use utils::configreader;
+    use utils::configreader::BlockConfig;
     use utils::keypair::{CryptoKeypair, Keypair, KeypairType};
 
     fn test_db_initialization_check() {
@@ -190,6 +193,48 @@ mod test_db_service {
         }
     }
 
+    fn test_block_creation_config() {
+        let kp: KeypairType = Keypair::generate();
+        let block_config: &BlockConfig = &configreader::GLOBAL_CONFIG.block_config;
+        let fork = fork_db();
+        {
+            let schema = SchemaFork::new(&fork);
+            let mut timestamp: u128 = SystemTime::now()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap()
+                .as_micros();
+            timestamp = timestamp + block_config.block_creation_time_limit;
+            let (_fork_instance, signed_block) = schema.forge_new_block(&kp);
+            let current_timestamp: u128 = SystemTime::now()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap()
+                .as_micros();
+            assert_eq!(
+                current_timestamp > timestamp,
+                true,
+                "it should take extra time since there is no transaction to fullfill first cut-off"
+            );
+        }
+        {
+            let mut schema = SchemaFork::new(&fork);
+            let mut timestamp: u128 = SystemTime::now()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap()
+                .as_micros();
+            timestamp = timestamp + block_config.block_creation_time_limit;
+            let signed_block = schema.create_block(&kp);
+            let current_timestamp: u128 = SystemTime::now()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap()
+                .as_micros();
+            assert_eq!(
+                current_timestamp > timestamp,
+                false,
+                "it should take no extra time since it does not consider block creation config"
+            );
+        }
+    }
+
     #[test]
     fn test_db_services_checks() {
         std::thread::sleep(std::time::Duration::from_millis(100));
@@ -198,5 +243,6 @@ mod test_db_service {
         test_db_state_context();
         test_db_sync_state();
         test_failed_scenarios();
+        test_block_creation_config();
     }
 }

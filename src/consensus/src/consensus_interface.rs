@@ -152,8 +152,10 @@ impl Consensus {
         // schema operations and p2p module
         let fork = fork_db();
         {
-            let mut schema = SchemaFork::new(&fork);
-            let signed_block = schema.create_block(&self.keypair);
+            let schema = SchemaFork::new(&fork);
+            // let signed_block = schema.create_block(&self.keypair);
+            let (fork_instance, signed_block) = schema.forge_new_block(&self.keypair);
+            //fork = fork_instance;
             info!(
                 "new block created.. id {},hash {}",
                 signed_block.block.id,
@@ -170,8 +172,9 @@ impl Consensus {
             ConsensusMessageSender::send_election_ping_msg(sender, msg);
             info!("pinging for block number {}", self.round_number + 1);
             thread::sleep(Duration::from_micros(1000));
+            patch_db(fork_instance);
         }
-        patch_db(fork);
+        //patch_db(fork);
         let signed_new_leader: SignedLeaderElection = self.select_leader(meta_data);
         self.round_number = self.round_number + 1;
         let flag: bool = signed_new_leader.leader_payload.new_leader.clone()
