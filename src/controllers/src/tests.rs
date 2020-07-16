@@ -123,7 +123,7 @@ mod test_controller_services {
         let fork = fork_db();
         {
             let mut schema = SchemaFork::new(&fork);
-            schema.initialize_db(Vec::new());
+            schema.initialize_db(Vec::new(), 0);
         }
         patch_db(fork);
         match client.fetch_block(&0) {

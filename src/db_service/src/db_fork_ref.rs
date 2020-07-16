@@ -86,12 +86,12 @@ where
         self.block_list.len()
     }
 
-    pub fn initialize_db(&mut self, custom_headers: Vec<u8>) -> SignedBlock {
+    pub fn initialize_db(&mut self, custom_headers: Vec<u8>, timestamp: u128) -> SignedBlock {
         self.state_trie.clear();
         self.txn_trie.clear();
         self.storage_trie.clear();
         self.block_list.clear();
-        let mut block = Block::genesis_block(custom_headers);
+        let mut block = Block::genesis_block(custom_headers, timestamp);
         block.header[0] = self.state_trie_merkle_hash();
         block.header[1] = self.storage_trie_merkle_hash();
         block.header[2] = self.txn_trie_merkle_hash();
@@ -175,7 +175,7 @@ where
         let mut fork_instance: Fork = fork_db();
         // dummy signed block
         let mut block_instance: SignedBlock =
-            SignedBlock::create_block(Block::genesis_block(Vec::new()), Vec::new(), Vec::new());
+            SignedBlock::create_block(Block::genesis_block(Vec::new(), 0), Vec::new(), Vec::new());
         while current_timestamp < timestamp {
             {
                 let mut schema = SchemaFork::new(&fork_instance);

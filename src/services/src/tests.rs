@@ -160,7 +160,7 @@ mod test_controller_services {
         let fork = fork_db();
         {
             let mut schema = SchemaFork::new(&fork);
-            schema.initialize_db(Vec::new());
+            schema.initialize_db(Vec::new(), 0);
         }
         patch_db(fork);
         let index_byes: web::Bytes = web::Bytes::from(serialize(&0).unwrap());

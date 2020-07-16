@@ -19,13 +19,13 @@ mod test_db_service {
         // reset_db_state
         let kp: KeypairType = Keypair::generate();
         let pk: String = hex::encode(kp.public().encode());
-        let block: Block = Block::genesis_block(Vec::new());
+        let block: Block = Block::genesis_block(Vec::new(), 0);
         #[allow(unused_assignments)]
         let mut signed_block: SignedBlock = SignedBlock::create_block(block, vec![0], Vec::new());
         let fork: Fork = fork_db();
         {
             let mut schema = SchemaFork::new(&fork);
-            signed_block = schema.initialize_db(Vec::new());
+            signed_block = schema.initialize_db(Vec::new(), 0);
             assert_eq!(
                 signed_block.block.validate(&pk, &signed_block.signature),
                 false
@@ -61,7 +61,7 @@ mod test_db_service {
         }
         // db is initialized create one block and verify it with snapshot
         let fork: Fork = fork_db();
-        let block: Block = Block::genesis_block(Vec::new());
+        let block: Block = Block::genesis_block(Vec::new(), 0);
         #[allow(unused_assignments)]
         let mut signed_block: SignedBlock = SignedBlock::create_block(block, vec![0], Vec::new());
         {
@@ -135,7 +135,7 @@ mod test_db_service {
         let kp: KeypairType = Keypair::generate();
         // db is initialized create one block and verify it with snapshot
         let fork: Fork = fork_db();
-        let block: Block = Block::genesis_block(Vec::new());
+        let block: Block = Block::genesis_block(Vec::new(), 0);
         #[allow(unused_assignments)]
         let mut signed_block: SignedBlock = SignedBlock::create_block(block, vec![0], Vec::new());
         {

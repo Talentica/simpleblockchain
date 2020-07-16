@@ -20,6 +20,7 @@ use std::hash::{Hash, Hasher};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
+use std::time::SystemTime;
 use utils::configreader::Configuration;
 use utils::keypair::{CryptoKeypair, Keypair, KeypairType, PublicKey, Verify};
 use utils::serializer::{deserialize, serialize};
@@ -53,9 +54,16 @@ impl Consensus {
         {
             let mut schema = SchemaFork::new(&fork);
             if schema.blockchain_length() == 0 {
-                info!("genesis block created");
                 let custom_headers: Vec<u8> = Vec::new();
-                let genesis_signed_block = schema.initialize_db(custom_headers);
+                let timestamp: u128 = SystemTime::now()
+                    .duration_since(SystemTime::UNIX_EPOCH)
+                    .unwrap()
+                    .as_micros();
+                let genesis_signed_block = schema.initialize_db(custom_headers, timestamp);
+                info!(
+                    "genesis block created!, genesis block hash {:?}",
+                    genesis_signed_block.get_hash()
+                );
                 MessageSender::send_block_msg(sender, genesis_signed_block);
             } else {
                 self.round_number = schema.blockchain_length() - 1;

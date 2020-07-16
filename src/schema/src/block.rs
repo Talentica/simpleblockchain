@@ -10,7 +10,7 @@ use utils::serializer::{serialize, Deserialize, Serialize};
 pub trait BlockTraits<T> {
     fn validate(&self, publickey: &String, signature: &[u8]) -> bool;
     fn sign(&self, kp: &T) -> Vec<u8>;
-    fn genesis_block(custom_headers: Vec<u8>) -> Self;
+    fn genesis_block(custom_headers: Vec<u8>, timestamp: u128) -> Self;
     fn new_block(
         id: u64,
         peer_id: String,
@@ -125,11 +125,7 @@ impl BlockTraits<KeypairType> for Block {
         sign
     }
 
-    fn genesis_block(custom_headers: Vec<u8>) -> Block {
-        let timestamp: u128 = SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap()
-            .as_micros();
+    fn genesis_block(custom_headers: Vec<u8>, timestamp: u128) -> Block {
         Block {
             id: 0,
             peer_id: String::from("genesis_block"),
@@ -194,7 +190,11 @@ mod tests_block {
     #[test]
     pub fn test_genesis_block() {
         let kp: KeypairType = Keypair::generate();
-        let genesis_block: Block = Block::genesis_block(Vec::new());
+        let timestamp: u128 = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_micros();
+        let genesis_block: Block = Block::genesis_block(Vec::new(), timestamp);
         let signature: Vec<u8> = genesis_block.sign(&kp);
         let signed_block: SignedBlock =
             SignedBlock::create_block(genesis_block, signature, Vec::new());
