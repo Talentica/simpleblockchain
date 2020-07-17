@@ -96,7 +96,7 @@ impl Configuration {
             client_apps: tomlreader.client_apps.to_vec(),
         };
         let db_path: Database = Database {
-            dbpath: "utils/rocksdb".to_string(),
+            dbpath: tomlreader.dbpath,
         };
         let delay_in_micros: u128 = 1000 * tomlreader.transaction_execution_delay_limit as u128;
         let time_limit_for_block: u128 = 1000 * tomlreader.block_creation_time_limit as u128;

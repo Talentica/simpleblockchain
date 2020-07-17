@@ -19,16 +19,16 @@ mod test_db_service {
         // reset_db_state
         let kp: KeypairType = Keypair::generate();
         let pk: String = hex::encode(kp.public().encode());
-        let block: Block = Block::genesis_block(pk.clone());
+        let block: Block = Block::genesis_block(Vec::new(), 0);
         #[allow(unused_assignments)]
-        let mut signed_block: SignedBlock = SignedBlock::create_block(block, vec![0]);
+        let mut signed_block: SignedBlock = SignedBlock::create_block(block, vec![0], Vec::new());
         let fork: Fork = fork_db();
         {
             let mut schema = SchemaFork::new(&fork);
-            signed_block = schema.initialize_db(&kp);
+            signed_block = schema.initialize_db(Vec::new(), 0);
             assert_eq!(
                 signed_block.block.validate(&pk, &signed_block.signature),
-                true
+                false
             );
         }
         patch_db(fork);
@@ -54,7 +54,6 @@ mod test_db_service {
     fn test_db_read_write_check() {
         // reset_db_state
         let kp: KeypairType = Keypair::generate();
-        let pk: String = hex::encode(kp.public().encode());
         let snapshot: Box<dyn Snapshot> = snapshot_db();
         {
             let schema = SchemaSnap::new(&snapshot);
@@ -62,12 +61,12 @@ mod test_db_service {
         }
         // db is initialized create one block and verify it with snapshot
         let fork: Fork = fork_db();
-        let block: Block = Block::genesis_block(pk.clone());
+        let block: Block = Block::genesis_block(Vec::new(), 0);
         #[allow(unused_assignments)]
-        let mut signed_block: SignedBlock = SignedBlock::create_block(block, vec![0]);
+        let mut signed_block: SignedBlock = SignedBlock::create_block(block, vec![0], Vec::new());
         {
             let mut schema = SchemaFork::new(&fork);
-            signed_block = schema.create_block(&kp);
+            signed_block = schema.create_block(&kp, Vec::new());
         }
         // not using patch_db so that we can update this block
         let fork: Fork = fork_db();
@@ -134,15 +133,14 @@ mod test_db_service {
 
     fn test_failed_scenarios() {
         let kp: KeypairType = Keypair::generate();
-        let pk: String = hex::encode(kp.public().encode());
         // db is initialized create one block and verify it with snapshot
         let fork: Fork = fork_db();
-        let block: Block = Block::genesis_block(pk.clone());
+        let block: Block = Block::genesis_block(Vec::new(), 0);
         #[allow(unused_assignments)]
-        let mut signed_block: SignedBlock = SignedBlock::create_block(block, vec![0]);
+        let mut signed_block: SignedBlock = SignedBlock::create_block(block, vec![0], Vec::new());
         {
             let mut schema = SchemaFork::new(&fork);
-            signed_block = schema.create_block(&kp);
+            signed_block = schema.create_block(&kp, Vec::new());
         }
         // signature error
         let mut wrong_block: SignedBlock = signed_block.clone();
@@ -204,7 +202,7 @@ mod test_db_service {
                 .unwrap()
                 .as_micros();
             timestamp = timestamp + block_config.block_creation_time_limit;
-            let (_fork_instance, signed_block) = schema.forge_new_block(&kp);
+            let (_fork_instance, _signed_block) = schema.forge_new_block(&kp, Vec::new());
             let current_timestamp: u128 = SystemTime::now()
                 .duration_since(SystemTime::UNIX_EPOCH)
                 .unwrap()
@@ -222,7 +220,7 @@ mod test_db_service {
                 .unwrap()
                 .as_micros();
             timestamp = timestamp + block_config.block_creation_time_limit;
-            let signed_block = schema.create_block(&kp);
+            let _signed_block = schema.create_block(&kp, Vec::new());
             let current_timestamp: u128 = SystemTime::now()
                 .duration_since(SystemTime::UNIX_EPOCH)
                 .unwrap()

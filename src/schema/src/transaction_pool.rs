@@ -12,7 +12,8 @@ use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 use utils::configreader;
-use utils::configreader::{BlockConfig, Configuration};
+use utils::configreader::BlockConfig;
+
 pub type TxnPoolKeyType = u128;
 pub type TxnPoolValueType = SignedTransaction;
 
