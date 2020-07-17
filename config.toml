@@ -11,5 +11,6 @@ block_creation_time_limit = 3000 # in milliseconds
 block_transaction_limit = 20 # max transaction count in a block
 transaction_execution_delay_limit = 60000 # in milliseconds
 
+
 # [consensus]
 public_keys = ["2c8a35450e1d198e3834d933a35962600c33d1d0f8f6481d6e08f140791374d0"]

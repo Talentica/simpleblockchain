@@ -201,7 +201,7 @@ impl Aura {
                     return;
                 }
                 let custom_header: CustomHeaders =
-                    match deserialize(&author_block.block.auth_headers) {
+                    match deserialize(&author_block.block.block.custom_headers) {
                         Ok(value) => value,
                         Err(_) => {
                             warn!("block custom headers couldn't deserialized");
@@ -209,7 +209,7 @@ impl Aura {
                         }
                     };
                 let last_custom_header: CustomHeaders =
-                    match deserialize(&last_waiting_block.auth_headers) {
+                    match deserialize(&last_waiting_block.block.custom_headers) {
                         Ok(value) => value,
                         Err(_) => {
                             if last_waiting_block.block.id == 0 {
@@ -282,7 +282,7 @@ impl Aura {
                         return;
                     }
                     let custom_header: CustomHeaders =
-                        match deserialize(&author_block.block.auth_headers) {
+                        match deserialize(&author_block.block.block.custom_headers) {
                             Ok(value) => value,
                             Err(_) => {
                                 warn!("block custom headers couldn't deserialized");
@@ -297,7 +297,7 @@ impl Aura {
                         }
                     };
                     let last_custom_header: CustomHeaders =
-                        match deserialize(&root_block.auth_headers) {
+                        match deserialize(&root_block.block.custom_headers) {
                             Ok(value) => value,
                             Err(_) => {
                                 if root_block.block.id == 0 {
