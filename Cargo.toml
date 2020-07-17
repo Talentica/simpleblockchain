@@ -1,9 +1,6 @@
 [workspace]
 members = [
     "src/node",
-    "src/db_service",
-    "src/schema",
-    "src/client",
     "src/user/doc_app",
     "src/user/wallet_app",
     "src/user/wallet_app_client",

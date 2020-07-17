@@ -18,7 +18,7 @@ pub trait AppHandler {
 }
 
 pub trait PoolTrait<T: Access, StateObj, TransactionObj> {
-    fn execute_transactions(&self, state_context: &mut dyn StateContext) -> Vec<Hash>;
+    fn execute_transactions(&self, state_context: &mut dyn StateContext) -> (Vec<Hash>, Vec<Hash>);
     fn update_transactions(
         &self,
         state_context: &mut dyn StateContext,

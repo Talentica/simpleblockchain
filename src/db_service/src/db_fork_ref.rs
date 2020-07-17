@@ -2,20 +2,25 @@ extern crate client;
 extern crate schema;
 extern crate utils;
 
+use super::db_layer::fork_db;
 use client::client::{ClientObj, SyncState};
 use exonum_crypto::Hash;
 use exonum_derive::FromAccess;
 use exonum_merkledb::{
     access::{Access, FromAccess, RawAccessMut},
-    ListIndex, ObjectHash, ProofMapIndex,
+    Fork, ListIndex, ObjectHash, ProofMapIndex,
 };
 use schema::block::{Block, BlockTraits, SignedBlock};
 use schema::signed_transaction::SignedTransaction;
 use schema::state::State;
-use schema::transaction_pool::{TransactionPool, TxnPool, TxnPoolKeyType, POOL};
+use schema::transaction_pool::{
+    TransactionPool, TransactionPoolTraits, TxnPool, TxnPoolKeyType, POOL,
+};
 use sdk::traits::{PoolTrait, StateContext};
-use utils::keypair::{CryptoKeypair, Keypair, KeypairType, PublicKey, Verify};
-use utils::serializer::serialize;
+use std::time::SystemTime;
+use utils::configreader;
+use utils::configreader::BlockConfig;
+use utils::keypair::{CryptoKeypair, Keypair, KeypairType};
 
 #[derive(FromAccess)]
 pub struct SchemaFork<T: Access> {
@@ -81,20 +86,18 @@ where
         self.block_list.len()
     }
 
-    pub fn initialize_db(&mut self, kp: &KeypairType) -> SignedBlock {
+    pub fn initialize_db(&mut self, custom_headers: Vec<u8>, timestamp: u128) -> SignedBlock {
         self.state_trie.clear();
         self.txn_trie.clear();
         self.storage_trie.clear();
         self.block_list.clear();
-        let public_key: String = hex::encode(Keypair::public(&kp).encode());
-        let mut block = Block::genesis_block(public_key);
-        let _public_key = hex::encode(Keypair::public(&kp).encode());
-        block.peer_id = String::from("genesis_block");
+        let mut block = Block::genesis_block(custom_headers, timestamp);
         block.header[0] = self.state_trie_merkle_hash();
         block.header[1] = self.storage_trie_merkle_hash();
         block.header[2] = self.txn_trie_merkle_hash();
-        let signature = vec![0];
-        let genesis_block: SignedBlock = SignedBlock::create_block(block, signature, Vec::new());
+        let signature: Vec<u8> = Vec::new();
+        let sign_headers: Vec<u8> = Vec::new();
+        let genesis_block: SignedBlock = SignedBlock::create_block(block, signature, sign_headers);
         self.block_list.push(genesis_block.clone());
         return genesis_block;
     }
@@ -102,14 +105,14 @@ where
     /**
      * this function will iterate over txn_order_pool and return a vec of SignedTransaction and
      * all changes due to these transaction also updated in state_trie
-     * TODO: // since fxn iterate over txnz-order_pool, so in case of invalid txn or expired txn will not be
-     * deleted from txn_pool according to whole txn_pool
-     * Update logic for that in future.  
      */
-    pub fn execute_transactions(&mut self, txn_pool: &TransactionPool) -> Vec<Hash> {
+    pub fn execute_transactions(&mut self, txn_pool: &mut TransactionPool) -> Vec<Hash> {
         let txn_pool_as_trait = txn_pool as &dyn PoolTrait<T, State, SignedTransaction>;
         let state_context = self as &mut dyn StateContext;
-        txn_pool_as_trait.execute_transactions(state_context)
+        let (executed_txns, unknown_app_txns_hash) =
+            txn_pool_as_trait.execute_transactions(state_context);
+        txn_pool.sync_pool(&unknown_app_txns_hash);
+        executed_txns
     }
 
     /// this function only will called when the node willing to propose block and for that agree to compute block
@@ -138,11 +141,62 @@ where
         ];
         // updated merkle root of all tries
         let public_key = hex::encode(Keypair::public(&kp).encode());
-        let block = Block::new_block(length, public_key, prev_hash, executed_txns, header);
+        let block = Block::new_block(
+            length,
+            public_key,
+            prev_hash,
+            executed_txns,
+            header,
+            custom_headers,
+        );
         let signature: Vec<u8> = block.sign(kp);
-        let signed_block: SignedBlock = SignedBlock::create_block(block, signature, custom_headers);
+        let auth_headers: Vec<u8> = Vec::new();
+        let signed_block: SignedBlock = SignedBlock::create_block(block, signature, auth_headers);
         self.block_list.push(signed_block.clone());
         signed_block
+    }
+
+    pub fn forge_new_block(
+        &self,
+        kp: &KeypairType,
+        custom_headers: Vec<u8>,
+    ) -> (Fork, SignedBlock) {
+        let block_config: &BlockConfig = &configreader::GLOBAL_CONFIG.block_config;
+        let mut timestamp: TxnPoolKeyType = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_micros();
+        timestamp = timestamp + block_config.block_creation_time_limit;
+        let mut current_timestamp: TxnPoolKeyType = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_micros();
+        #[allow(unused_assignments)]
+        let mut fork_instance: Fork = fork_db();
+        // dummy signed block
+        let mut block_instance: SignedBlock =
+            SignedBlock::create_block(Block::genesis_block(Vec::new(), 0), Vec::new(), Vec::new());
+        while current_timestamp < timestamp {
+            {
+                let mut schema = SchemaFork::new(&fork_instance);
+                block_instance = schema.create_block(kp, custom_headers.clone());
+            }
+            if block_instance.block.txn_pool.len() >= block_config.block_transaction_limit as usize
+            {
+                current_timestamp = timestamp;
+            } else {
+                current_timestamp = SystemTime::now()
+                    .duration_since(SystemTime::UNIX_EPOCH)
+                    .unwrap()
+                    .as_micros();
+                if current_timestamp < timestamp {
+                    fork_instance = fork_db();
+                }
+            }
+            let sleep_time: u64 = block_config.block_creation_time_limit as u64 / 10;
+            std::thread::sleep(std::time::Duration::from_micros(sleep_time));
+        }
+        (fork_instance, block_instance)
     }
 
     /// this function will update state_trie for given transaction
@@ -168,15 +222,6 @@ where
             return false;
         }
 
-        // block signature check
-        let msg: Vec<u8> = match serialize(&signed_block.block) {
-            Result::Ok(value) => value,
-            Result::Err(_) => {
-                error!("error occurred during block serialization process");
-                return false;
-            }
-        };
-
         // genesis block check
         if signed_block.block.id == 0 {
             let header: [Hash; 3] = [
@@ -199,16 +244,6 @@ where
             self.block_list.push(signed_block.clone());
             return true;
         } else {
-            // signature validation
-            if !PublicKey::verify_from_encoded_pk(
-                &signed_block.block.peer_id,
-                &msg,
-                &signed_block.signature,
-            ) {
-                error!("block signature couldn't verified");
-                return false;
-            }
-
             // block pre_hash check
             let last_block: SignedBlock = match self.block_list.get(length - 1) {
                 Some(block) => block,
@@ -220,6 +255,12 @@ where
                     "block prev_hash error block prev_hash {}, blockchain root {}",
                     signed_block.block.prev_hash, prev_hash
                 );
+                return false;
+            }
+
+            // block signature check
+            if !signed_block.validate() {
+                error!("block signature couldn't verified");
                 return false;
             }
 

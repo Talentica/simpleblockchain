@@ -107,7 +107,7 @@ pub struct AuthorBlock {
 
 impl AuthorBlock {
     pub fn verify(&self) -> bool {
-        self.block.validate(&self.block.block.peer_id)
+        self.block.validate()
     }
 
     pub fn create(block: SignedBlock) -> AuthorBlock {
@@ -173,8 +173,14 @@ mod consensus_message_test {
 
         std::thread::sleep(std::time::Duration::from_secs(step_time + 1));
         assert_eq!(round_config.verify(step_time), false);
-
-        let block: Block = Block::genesis_block(pk.clone());
+        let block: Block = Block::new_block(
+            1,
+            pk.clone(),
+            Hash::zero(),
+            vec![Hash::zero()],
+            [Hash::zero(), Hash::zero(), Hash::zero()],
+            Vec::new(),
+        );
         let sign: Vec<u8> = block.sign(&kp);
         let signed_block: SignedBlock =
             SignedBlock::create_block(block.clone(), sign.clone(), Vec::new());

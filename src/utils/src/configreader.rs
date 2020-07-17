@@ -36,6 +36,7 @@ pub enum NODETYPE {
     FullNode,
     Validator,
 }
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TomlReaderConfig {
     pub public: String,
@@ -50,6 +51,10 @@ pub struct TomlReaderConfig {
     client_port: u32,
     client_host: String,
     client_apps: Vec<String>,
+    //block config
+    block_creation_time_limit: u64,
+    block_transaction_limit: u64,
+    transaction_execution_delay_limit: u64,
 }
 
 #[derive(Debug)]
@@ -60,6 +65,9 @@ pub struct Configuration {
 
     //Database config
     pub db: Database,
+
+    // block creation config
+    pub block_config: BlockConfig,
 }
 
 impl Configuration {
@@ -88,14 +96,23 @@ impl Configuration {
             client_apps: tomlreader.client_apps.to_vec(),
         };
         let db_path: Database = Database {
-            dbpath: "utils/rocksdb".to_string(),
+            dbpath: tomlreader.dbpath,
+        };
+        let delay_in_micros: u128 = 1000 * tomlreader.transaction_execution_delay_limit as u128;
+        let time_limit_for_block: u128 = 1000 * tomlreader.block_creation_time_limit as u128;
+        let block_config: BlockConfig = BlockConfig {
+            block_creation_time_limit: time_limit_for_block,
+            block_transaction_limit: tomlreader.block_transaction_limit,
+            transaction_execution_delay_limit: delay_in_micros,
         };
         let conf_obj = Configuration {
             node: node_obj,
             db: db_path,
+            block_config,
         };
         conf_obj
     }
+
     pub fn init_config() -> TomlReaderConfig {
         // get Current Directory
         let cwd: String = match env::current_dir() {
@@ -140,6 +157,13 @@ pub struct Node {
 #[derive(Debug)]
 pub struct Database {
     pub dbpath: String,
+}
+
+#[derive(Debug)]
+pub struct BlockConfig {
+    pub block_creation_time_limit: u128,         // in micro seconds
+    pub block_transaction_limit: u64,            // max transaction count in a block
+    pub transaction_execution_delay_limit: u128, // in micro seconds
 }
 
 pub fn initialize_config(file_path: &str) {

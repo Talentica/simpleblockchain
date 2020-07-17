@@ -33,6 +33,10 @@ pub struct Aura {
     validator_mapping: HashMap<String, u64>,
     // 10th part of step_time (in millis)
     leader_epoch: u64,
+    // empty block acceptance
+    force_sealing: bool,
+    // last start time of consensus (in seconds)
+    start_time: u64,
 }
 
 /// WaitingBLocksQueue will store waiting block queue and
@@ -96,7 +100,16 @@ impl Aura {
         {
             let mut schema = SchemaFork::new(&fork);
             if schema.blockchain_length() == 0 {
-                let genesis_signed_block = schema.initialize_db(&self.keypair);
+                let custom_headers: CustomHeaders = CustomHeaders {
+                    timestamp: self.start_time,
+                    round_number: 0,
+                };
+                let custom_headers: Vec<u8> = match serialize(&custom_headers) {
+                    Ok(value) => value,
+                    Err(_) => Vec::new(),
+                };
+                let genesis_signed_block =
+                    schema.initialize_db(custom_headers, self.start_time as u128);
                 info!(
                     "genesis block created with hash {:?}",
                     genesis_signed_block.get_hash()
@@ -188,7 +201,7 @@ impl Aura {
                     return;
                 }
                 let custom_header: CustomHeaders =
-                    match deserialize(&author_block.block.custom_header) {
+                    match deserialize(&author_block.block.auth_headers) {
                         Ok(value) => value,
                         Err(_) => {
                             warn!("block custom headers couldn't deserialized");
@@ -196,7 +209,7 @@ impl Aura {
                         }
                     };
                 let last_custom_header: CustomHeaders =
-                    match deserialize(&last_waiting_block.custom_header) {
+                    match deserialize(&last_waiting_block.auth_headers) {
                         Ok(value) => value,
                         Err(_) => {
                             if last_waiting_block.block.id == 0 {
@@ -269,7 +282,7 @@ impl Aura {
                         return;
                     }
                     let custom_header: CustomHeaders =
-                        match deserialize(&author_block.block.custom_header) {
+                        match deserialize(&author_block.block.auth_headers) {
                             Ok(value) => value,
                             Err(_) => {
                                 warn!("block custom headers couldn't deserialized");
@@ -284,7 +297,7 @@ impl Aura {
                         }
                     };
                     let last_custom_header: CustomHeaders =
-                        match deserialize(&root_block.custom_header) {
+                        match deserialize(&root_block.auth_headers) {
                             Ok(value) => value,
                             Err(_) => {
                                 if root_block.block.id == 0 {
@@ -520,7 +533,7 @@ impl Aura {
                                     match msgtype {
                                         AuraMessageTypes::AuthorBlockEnum(data) => {
                                             let author_block: AuthorBlock = data;
-                                            debug!("AuthorBlock data received");
+                                            info!("AuthorBlock data received");
                                             let mut waiting_blocks_queue_obj =
                                                 waiting_blocks_queue.lock().unwrap();
                                             let mut meta_data_obj = meta_data.lock().unwrap();
@@ -532,7 +545,7 @@ impl Aura {
                                         }
                                         AuraMessageTypes::BlockAcceptanceEnum(data) => {
                                             let block_acceptance: BlockAcceptance = data;
-                                            debug!("BlockAcceptance data received");
+                                            info!("BlockAcceptance data received");
                                             let mut waiting_blocks_queue_obj =
                                                 waiting_blocks_queue.lock().unwrap();
                                             let meta_data_obj = meta_data.lock().unwrap();
@@ -544,7 +557,7 @@ impl Aura {
                                         }
                                         AuraMessageTypes::RoundOwnerEnum(data) => {
                                             let round_config: RoundOwner = data;
-                                            debug!("RoundOwner data received");
+                                            info!("RoundOwner data received");
                                             let mut waiting_blocks_queue_obj =
                                                 waiting_blocks_queue.lock().unwrap();
                                             let meta_data_obj = meta_data.lock().unwrap();
@@ -595,7 +608,13 @@ impl Aura {
             Ok(value) => value,
             Err(_) => Vec::new(),
         };
-        schema.create_block(&self.keypair, custom_headers)
+        if self.force_sealing {
+            schema.create_block(&self.keypair, custom_headers)
+        } else {
+            let (_fork_instance, signed_block) =
+                schema.forge_new_block(&self.keypair, custom_headers);
+            signed_block
+        }
     }
 
     // fn will create new blocks periodically after checking round ownership
@@ -694,6 +713,8 @@ impl Aura {
             pk: hex::encode(config.node.keypair.public().encode()),
             validator_mapping: validator_mapping.clone(),
             leader_epoch: 100 * aura_config.step_time,
+            force_sealing: aura_config.force_sealing,
+            start_time: aura_config.start_time,
         };
 
         let consensus_meta_data = MetaData {
