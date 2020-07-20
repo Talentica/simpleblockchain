@@ -9,6 +9,7 @@ extern crate log;
 
 extern crate futures;
 
+mod transaction_test_cases;
 mod wallet_app_types;
 use crate::wallet_app_types::{CryptoTransaction, SignedTransaction, TransactionTrait};
 use exonum_crypto::{Hash, PublicKey};
@@ -212,7 +213,7 @@ async fn main() {
     logger_init_from_yml(logger_file_path);
     info!("Wallet Application CLient Bootstrapping");
     let cli_configuration: &cli_config::Configuration = &cli_config::GLOBAL_CONFIG;
-    let client: ClientObj = ClientObj::new(cli_configuration);
+    let mut client: ClientObj = ClientObj::new(cli_configuration);
     let mut end_flag: bool = false;
     let mut invalid_opt_count: u8 = 0;
     while !end_flag {
@@ -225,6 +226,7 @@ async fn main() {
         info!("5:) fetch block");
         info!("6:) fetch latest block");
         info!("7:) exit");
+        info!("7:) Dummy Transactions");
         let mut input = String::new();
         info!("Please select Option:");
         let is_string: bool = get_string_input(&mut input);
@@ -286,6 +288,8 @@ async fn main() {
                 invalid_opt_count = 0;
             } else if input == String::from("7") {
                 end_flag = true;
+            } else if input == String::from("8") {
+                transaction_test_cases::create_transactions_set(&mut client).await;
             } else {
                 info!("invalid option");
                 invalid_opt_count = invalid_opt_count + 1;

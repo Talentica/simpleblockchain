@@ -31,6 +31,11 @@ impl ClientObj {
     pub fn get_keypair(&self) -> &KeypairType {
         &self.keypair
     }
+
+    pub fn set_keypair(&mut self, kp: KeypairType) {
+        self.keypair = kp;
+    }
+
     // request for transaction submission to validator
     pub async fn submit_transaction(&self, txn: &SignedTransaction) {
         let mut url: String = self.url.clone();

@@ -481,6 +481,11 @@ impl Aura {
                         signed_block.block.id,
                         signed_block.object_hash()
                     );
+                    // flush the waiting blocks queue
+                    waiting_blocks_queue.queue.clear();
+                    waiting_blocks_queue.last_block_acceptance.clear();
+                    waiting_blocks_queue.last_block_hash = String::from("temp_hash");
+                    break;
                 }
             }
             patch_db(fork);
@@ -586,34 +591,46 @@ impl Aura {
     // fn will create new block to propose after processing waiting blocks
     fn propose_block(
         &self,
-        waiting_blocks_queue: &WaitingBLocksQueue,
+        waiting_blocks_queue: &mut WaitingBLocksQueue,
         meta_data: &MetaData,
     ) -> SignedBlock {
-        let fork = fork_db();
-        let mut schema = SchemaFork::new(&fork);
-        for each_block in waiting_blocks_queue.queue.iter() {
-            debug!("blocks order {:?}", each_block.block.id);
-            schema.update_block(each_block);
-        }
-        let timestamp: u64 = SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
-        let round_number: u64 = Aura::calculate_round_number(meta_data);
-        let custom_headers: CustomHeaders = CustomHeaders {
-            timestamp,
-            round_number,
-        };
-        let custom_headers: Vec<u8> = match serialize(&custom_headers) {
-            Ok(value) => value,
-            Err(_) => Vec::new(),
-        };
-        if self.force_sealing {
-            schema.create_block(&self.keypair, custom_headers)
-        } else {
-            let (_fork_instance, signed_block) =
-                schema.forge_new_block(&self.keypair, custom_headers);
-            signed_block
+        loop {
+            let fork = fork_db();
+            let mut schema = SchemaFork::new(&fork);
+            let mut update_success_flag: bool = true;
+            for each_block in waiting_blocks_queue.queue.iter() {
+                debug!("blocks order {:?}", each_block.block.id);
+                if !schema.update_block(each_block) {
+                    update_success_flag = false;
+                }
+            }
+            if update_success_flag {
+                let timestamp: u64 = SystemTime::now()
+                    .duration_since(SystemTime::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs();
+                let round_number: u64 = Aura::calculate_round_number(meta_data);
+                let custom_headers: CustomHeaders = CustomHeaders {
+                    timestamp,
+                    round_number,
+                };
+                let custom_headers: Vec<u8> = match serialize(&custom_headers) {
+                    Ok(value) => value,
+                    Err(_) => Vec::new(),
+                };
+                if self.force_sealing {
+                    return schema.create_block(&self.keypair, custom_headers);
+                } else {
+                    let (_fork_instance, signed_block) =
+                        schema.forge_new_block(&self.keypair, custom_headers);
+                    return signed_block;
+                }
+            } else {
+                // flush the waiting blocks queue
+                waiting_blocks_queue.queue.clear();
+                waiting_blocks_queue.last_block_acceptance.clear();
+                waiting_blocks_queue.last_block_hash = String::from("temp_hash");
+            }
         }
     }
 
@@ -665,7 +682,7 @@ impl Aura {
                             &meta_data_obj,
                         );
                         let signed_block: SignedBlock =
-                            self.propose_block(&waiting_blocks_queue_obj, &meta_data_obj);
+                            self.propose_block(&mut waiting_blocks_queue_obj, &meta_data_obj);
                         info!(
                             "new block created.. id {},hash {}",
                             signed_block.block.id,

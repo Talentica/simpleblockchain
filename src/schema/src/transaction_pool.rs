@@ -224,6 +224,10 @@ where
         // let txn_pool = self.pool.lock().unwrap();
         for each in hash_vec.iter() {
             let signed_txn = self.get(each);
+            if state_context.contains_txn(each) {
+                warn!("try to execute duplicate transaction");
+                return false;
+            }
             if let Some(txn) = signed_txn {
                 match APPDATA.lock().unwrap().appdata.get(&txn.app_name) {
                     Some(app) => {
