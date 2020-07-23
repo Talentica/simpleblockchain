@@ -147,4 +147,25 @@ impl ClientServices {
         }
         HttpResponse::BadRequest().body("BadRequest")
     }
+
+    pub fn fetch_transaction_peer_service(transaction_hash: web::Bytes) -> HttpResponse {
+        if let Ok(txn_hash) = deserialize::<Hash>(&transaction_hash) {
+            debug!("fetching transaction for peer {:?}", txn_hash);
+            if let Some(transaction) = POOL.get(&txn_hash) {
+                if let Ok(serialized_transaction) = serialize(&transaction) {
+                    return HttpResponse::Ok().body(serialized_transaction);
+                };
+            } else {
+                let snapshot = snapshot_db();
+                let schema = SchemaSnap::new(&snapshot);
+                if let Some(transaction) = schema.get_transaction(txn_hash) {
+                    if let Ok(serialized_transaction) = serialize(&transaction) {
+                        return HttpResponse::Ok().body(serialized_transaction);
+                    };
+                }
+                return HttpResponse::BadRequest().body("BadRequest");
+            }
+        }
+        HttpResponse::BadRequest().body("txn_hash couldn't deserialize")
+    }
 }

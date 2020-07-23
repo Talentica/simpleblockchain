@@ -1,8 +1,10 @@
 use exonum_crypto::Hash;
+use libp2p::{identity::PublicKey, PeerId};
 use reqwest::{Client, Error};
 use schema::block::SignedBlock;
 use schema::signed_transaction::SignedTransaction;
 use schema::state::State;
+use schema::transaction_pool::{TxnPool, TxnPoolKeyType, POOL};
 use std::collections::HashMap;
 use std::net::IpAddr;
 use utils::global_peer_data::{PeerData, GLOBALDATA};
@@ -24,6 +26,35 @@ fn get_peer_url() -> Option<String> {
                 return Some(url);
             }
             Err(_) => {}
+        }
+    }
+    None
+}
+
+fn get_peer_url_using_pk(pk: &String) -> Option<String> {
+    let public_key: PublicKey = match utils::keypair::PublicKey::from_string(pk) {
+        Some(public_key) => PublicKey::Ed25519(public_key),
+        None => return None,
+    };
+    let peer_id_string: String = PeerId::from_public_key(public_key).to_string();
+    let locked_peer_map = GLOBALDATA.lock().unwrap();
+    for (peer_id, peer_data) in locked_peer_map.peers.iter() {
+        let peer_id: &String = peer_id;
+        if peer_id.eq(&peer_id_string) {
+            let peer: PeerData = peer_data.clone();
+            match peer.get_network_addr() {
+                Ok(ip_address) => {
+                    let ip_string: String = match ip_address {
+                        IpAddr::V4(ip) => ip.to_string(),
+                        IpAddr::V6(ip) => ip.to_string(),
+                    };
+                    let mut url: String = String::from("http://");
+                    url.extend(ip_string.chars());
+                    url.extend(":8089/".chars());
+                    return Some(url);
+                }
+                Err(_) => {}
+            }
         }
     }
     None
@@ -356,5 +387,64 @@ impl ClientObj {
         }
         info!("Sync_State --All data fetched");
         return SyncState::new_from(blockchain_length, block_pool, txn_map);
+    }
+
+    pub fn fetch_transaction(
+        &self,
+        url: &String,
+        transaction_hash: &Hash,
+    ) -> Result<Option<SignedTransaction>, Error> {
+        let mut url: String = url.clone();
+        url.extend("peer/fetch_transaction".chars());
+        let serialized_body: Vec<u8> = match serialize(transaction_hash) {
+            Result::Ok(value) => value,
+            Result::Err(_) => return Ok(None),
+        };
+        let response = self
+            .client
+            .get(&url) // <- Create request builder
+            .header("User-Agent", "Actix-web")
+            //.send() // <- Send http request
+            .body(serialized_body)
+            .send()?;
+        match response.error_for_status() {
+            Ok(mut body) => {
+                let mut buf: Vec<u8> = vec![];
+                body.copy_to(&mut buf)?;
+                let signed_transaction: SignedTransaction = match deserialize(buf.as_slice()) {
+                    Result::Ok(value) => value,
+                    Result::Err(_) => return Ok(None),
+                };
+                Ok(Some(signed_transaction))
+            }
+            Err(_) => {
+                return Ok(None);
+            }
+        }
+    }
+
+    pub fn sync_txn_pool(&self, pk: String, transaction_hash_vec: &Vec<Hash>) -> bool {
+        let peer_url: String = match get_peer_url_using_pk(&pk) {
+            Some(url) => url,
+            None => return true,
+        };
+        for each in transaction_hash_vec.iter() {
+            if None == POOL.get(each) {
+                match self.fetch_transaction(&peer_url, each) {
+                    Ok(is_txn) => match is_txn {
+                        Some(txn) => match txn.header.get(&String::from("timestamp")) {
+                            Some(string) => match string.parse::<TxnPoolKeyType>() {
+                                Ok(timestamp) => POOL.insert_op(&timestamp, &txn),
+                                Err(_) => return false,
+                            },
+                            None => return false,
+                        },
+                        None => return false,
+                    },
+                    Err(_) => return false,
+                }
+            }
+        }
+        true
     }
 }

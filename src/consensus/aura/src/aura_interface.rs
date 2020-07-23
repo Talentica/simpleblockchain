@@ -174,32 +174,32 @@ impl Aura {
         match waiting_blocks_queue.queue.last() {
             Some(last_waiting_block) => {
                 let last_waiting_block: &SignedBlock = last_waiting_block;
-                if last_waiting_block.block.id + 1 != author_block.block.block.id {
-                    warn!(
-                        "malicious block proposed by author {:?}!",
-                        author_block.block.block.peer_id
-                    );
-                    warn!("malicious block proposed, invalid height compare to waiting block!");
-                    warn!(
-                        "block should proposed on height {:?}, but got block on height {:?}",
-                        last_waiting_block.block.id + 1,
-                        author_block.block.block.id
-                    );
-                    return;
-                }
-                if last_waiting_block.get_hash() != author_block.block.block.prev_hash {
-                    warn!(
-                        "malicious block proposed by author {:?}!",
-                        author_block.block.block.peer_id
-                    );
-                    warn!("malicious block proposed, invalid previous block hash compare to waiting block!");
-                    warn!(
-                        "previous_hash shuold be {:?}, but previous hash is {:?}",
-                        last_waiting_block.get_hash(),
-                        author_block.block.get_hash()
-                    );
-                    return;
-                }
+                // if last_waiting_block.block.id + 1 != author_block.block.block.id {
+                //     warn!(
+                //         "malicious block proposed by author {:?}!",
+                //         author_block.block.block.peer_id
+                //     );
+                //     warn!("malicious block proposed, invalid height compare to waiting block!");
+                //     warn!(
+                //         "block should proposed on height {:?}, but got block on height {:?}",
+                //         last_waiting_block.block.id + 1,
+                //         author_block.block.block.id
+                //     );
+                //     return;
+                // }
+                // if last_waiting_block.get_hash() != author_block.block.block.prev_hash {
+                //     warn!(
+                //         "malicious block proposed by author {:?}!",
+                //         author_block.block.block.peer_id
+                //     );
+                //     warn!("malicious block proposed, invalid previous block hash compare to waiting block!");
+                //     warn!(
+                //         "previous_hash shuold be {:?}, but previous hash is {:?}",
+                //         last_waiting_block.get_hash(),
+                //         author_block.block.get_hash()
+                //     );
+                //     return;
+                // }
                 let custom_header: CustomHeaders =
                     match deserialize(&author_block.block.block.custom_headers) {
                         Ok(value) => value,
@@ -255,32 +255,32 @@ impl Aura {
                 let snapshot: Box<dyn Snapshot> = snapshot_db();
                 {
                     let schema = SchemaSnap::new(&snapshot);
-                    if schema.get_blockchain_length() != author_block.block.block.id {
-                        warn!(
-                            "malicious block proposed by author {:?}!",
-                            author_block.block.block.peer_id
-                        );
-                        warn!("malicious block proposed, invalid height from snapshot!");
-                        warn!(
-                            "block should proposed on height {:?}, but got block on height {:?}",
-                            schema.get_blockchain_length(),
-                            author_block.block.block.id
-                        );
-                        return;
-                    }
-                    if schema.get_root_block_hash() != author_block.block.block.prev_hash {
-                        warn!(
-                            "malicious block proposed by author {:?}!",
-                            author_block.block.block.peer_id
-                        );
-                        warn!("malicious block proposed, invalid previous block hash compare to snapshot!");
-                        warn!(
-                            "previous_hash shuold be {:?}, but previous hash is {:?}",
-                            schema.get_root_block_hash(),
-                            author_block.block.get_hash()
-                        );
-                        return;
-                    }
+                    // if schema.get_blockchain_length() != author_block.block.block.id {
+                    //     warn!(
+                    //         "malicious block proposed by author {:?}!",
+                    //         author_block.block.block.peer_id
+                    //     );
+                    //     warn!("malicious block proposed, invalid height from snapshot!");
+                    //     warn!(
+                    //         "block should proposed on height {:?}, but got block on height {:?}",
+                    //         schema.get_blockchain_length(),
+                    //         author_block.block.block.id
+                    //     );
+                    //     return;
+                    // }
+                    // if schema.get_root_block_hash() != author_block.block.block.prev_hash {
+                    //     warn!(
+                    //         "malicious block proposed by author {:?}!",
+                    //         author_block.block.block.peer_id
+                    //     );
+                    //     warn!("malicious block proposed, invalid previous block hash compare to snapshot!");
+                    //     warn!(
+                    //         "previous_hash shuold be {:?}, but previous hash is {:?}",
+                    //         schema.get_root_block_hash(),
+                    //         author_block.block.get_hash()
+                    //     );
+                    //     return;
+                    // }
                     let custom_header: CustomHeaders =
                         match deserialize(&author_block.block.block.custom_headers) {
                             Ok(value) => value,
@@ -455,6 +455,7 @@ impl Aura {
             } else {
                 info!("last block hash is NULL, can't initiate block acceptance process");
             }
+            Aura::finalise_waiting_blocks(waiting_blocks_queue, &meta_data_obj)
         } else {
             warn!("data is either tempered or delayed/replayed");
         }
@@ -462,15 +463,24 @@ impl Aura {
 
     // fn will update waiting blocks in sequence to local db
     fn process_blocks(blocks_count: usize, waiting_blocks_queue: &mut WaitingBLocksQueue) {
+        let fork = fork_db();
+        {
+            let mut schema = SchemaFork::new(&fork);
+            for each in waiting_blocks_queue.queue.iter() {
+                if !schema.update_block(each) {
+                    return;
+                }
+            }
+        }
         let mut blocks_count = blocks_count;
-        while blocks_count > 0 {
-            let signed_block: SignedBlock = waiting_blocks_queue.queue.remove(0);
-            let fork = fork_db();
-            {
-                let mut schema = SchemaFork::new(&fork);
+        let fork = fork_db();
+        {
+            let mut schema = SchemaFork::new(&fork);
+            while blocks_count > 0 {
+                let signed_block: SignedBlock = waiting_blocks_queue.queue.remove(0);
                 if schema.update_block(&signed_block) {
                     POOL.sync_pool(&signed_block.block.txn_pool);
-                    debug!(
+                    info!(
                         "block with id {} & hash {} added in database",
                         signed_block.block.id,
                         signed_block.object_hash()
@@ -481,41 +491,52 @@ impl Aura {
                         signed_block.block.id,
                         signed_block.object_hash()
                     );
-                    // flush the waiting blocks queue
-                    waiting_blocks_queue.queue.clear();
-                    waiting_blocks_queue.last_block_acceptance.clear();
-                    waiting_blocks_queue.last_block_hash = String::from("temp_hash");
+                    // // remove all increasing index order blocks
+                    // let mut current_block_index: u64 = signed_block.block.id;
+                    // loop {
+                    //     match waiting_blocks_queue.queue.get(0) {
+                    //         Some(waiting_block) => {
+                    //             let waiting_block: &SignedBlock = waiting_block;
+                    //             if waiting_block.block.id > current_block_index {
+                    //                 current_block_index = waiting_block.block.id;
+                    //                 waiting_blocks_queue.queue.remove(0);
+                    //             }
+                    //             else {
+                    //                 break;
+                    //             }
+                    //         }
+                    //         None => {
+                    //             waiting_blocks_queue.last_block_acceptance.clear();
+                    //             waiting_blocks_queue.last_block_hash = String::from("temp_hash");
+                    //             break;
+                    //         }
+                    //     }
+                    // }
                     break;
                 }
+                blocks_count = blocks_count - 1;
             }
-            patch_db(fork);
-            blocks_count = blocks_count - 1;
         }
-        info!("Blocks are updated in the database");
+        if blocks_count == 0 {
+            patch_db(fork);
+            info!("Blocks are updated in the database");
+        }
     }
 
     // fn will finalise blocks periodically in permanent db
     fn finalise_waiting_blocks(
-        step_time: u64,
-        waiting_blocks_queue: Arc<Mutex<WaitingBLocksQueue>>,
-        meta_data: Arc<Mutex<MetaData>>,
+        waiting_blocks_queue: &mut WaitingBLocksQueue,
+        meta_data_obj: &MetaData,
     ) {
-        loop {
-            {
-                let mut waiting_blocks_queue_obj = waiting_blocks_queue.lock().unwrap();
-                let meta_data_obj = meta_data.lock().unwrap();
-                let queue_length: usize = waiting_blocks_queue_obj.queue.len();
-                if queue_length > meta_data_obj.block_queue_size + 1 {
-                    debug!("queue length {:?}", queue_length);
-                    let blocks_to_be_confirmed: usize = queue_length / 3 * 2;
-                    Aura::process_blocks(blocks_to_be_confirmed, &mut waiting_blocks_queue_obj);
-                    debug!(
-                        "after processing queue length {:?}",
-                        waiting_blocks_queue_obj.queue.len()
-                    );
-                }
-            }
-            thread::sleep(Duration::from_secs(step_time));
+        let queue_length: usize = waiting_blocks_queue.queue.len();
+        if queue_length > meta_data_obj.block_queue_size + 1 {
+            info!("queue length {:?}", queue_length);
+            let blocks_to_be_confirmed: usize = queue_length / 3 * 2;
+            Aura::process_blocks(blocks_to_be_confirmed, waiting_blocks_queue);
+            info!(
+                "after processing queue length {:?}",
+                waiting_blocks_queue.queue.len()
+            );
         }
     }
 
@@ -602,6 +623,7 @@ impl Aura {
                 debug!("blocks order {:?}", each_block.block.id);
                 if !schema.update_block(each_block) {
                     update_success_flag = false;
+                    break;
                 }
             }
             if update_success_flag {
@@ -627,9 +649,12 @@ impl Aura {
                 }
             } else {
                 // flush the waiting blocks queue
-                waiting_blocks_queue.queue.clear();
-                waiting_blocks_queue.last_block_acceptance.clear();
-                waiting_blocks_queue.last_block_hash = String::from("temp_hash");
+                if waiting_blocks_queue.queue.len() > 0 {
+                    waiting_blocks_queue.queue.remove(0);
+                } else {
+                    waiting_blocks_queue.last_block_acceptance.clear();
+                    waiting_blocks_queue.last_block_hash = String::from("temp_hash");
+                }
             }
         }
     }
@@ -763,19 +788,6 @@ impl Aura {
             }
             patch_db(fork);
         }
-        let cloned_waiting_blocks_queue = waiting_blocks_queue.clone();
-        let cloned_meta_data = meta_data.clone();
-        thread::spawn(move || {
-            Aura::finalise_waiting_blocks(
-                aura_config.step_time,
-                cloned_waiting_blocks_queue,
-                cloned_meta_data,
-            );
-        });
-        aura_obj.state_machine(
-            waiting_blocks_queue.clone(),
-            meta_data.clone(),
-            &mut sender.clone(),
-        );
+        aura_obj.state_machine(waiting_blocks_queue.clone(), meta_data, sender);
     }
 }

@@ -64,6 +64,15 @@ mod test_controller_services {
             }
             Err(_) => panic!("http_response not equal to 200"),
         };
+        let url = String::from("http://127.0.0.1:8089/");
+        match client.fetch_transaction(&url, &txn_hash) {
+            Ok(is_value) => {
+                if None == is_value {
+                    panic!("error in fetch pending transaction process");
+                }
+            }
+            Err(_) => panic!("http_response not equal to 200"),
+        };
     }
 
     fn test_fetch_confirm_transaction_controller(client: &ClientObj) {
@@ -92,6 +101,15 @@ mod test_controller_services {
             Ok(is_value) => {
                 if None == is_value {
                     panic!("error in fetch confirm transaction process");
+                }
+            }
+            Err(_) => panic!("http_response not equal to 200"),
+        };
+        let url = String::from("http://127.0.0.1:8089/");
+        match client.fetch_transaction(&url, &txn_hash) {
+            Ok(is_value) => {
+                if None == is_value {
+                    panic!("error in fetch pending transaction process");
                 }
             }
             Err(_) => panic!("http_response not equal to 200"),
