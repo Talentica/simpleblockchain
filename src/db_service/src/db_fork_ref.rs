@@ -264,6 +264,14 @@ where
                 return false;
             }
 
+            // check all transactions are present or not in the POOL
+            let client_obj: ClientObj = ClientObj::new();
+            let pk: String = signed_block.block.peer_id.clone();
+            if !client_obj.sync_txn_pool(pk, &signed_block.block.txn_pool) {
+                error!("some transactions are missing from the txn_pool, block declined");
+                return false;
+            }
+
             // block txn pool validation
             {
                 let txn_pool = POOL.pool.lock().unwrap();

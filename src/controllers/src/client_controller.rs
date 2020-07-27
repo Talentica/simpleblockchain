@@ -73,6 +73,11 @@ async fn fetch_blockchain_length_controller() -> HttpResponse {
     ClientServices::fetch_blockchain_length_service()
 }
 
+#[get("/peer/fetch_transaction")]
+async fn fetch_transaction_peer_controller(transaction_hash: web::Bytes) -> HttpResponse {
+    ClientServices::fetch_transaction_peer_service(transaction_hash)
+}
+
 //May be useful for storing forwarding/db_layer related info
 #[allow(dead_code)]
 struct AppState {
@@ -124,6 +129,7 @@ impl Controller for ClientController {
                     .service(fetch_latest_block_peer_controller)
                     .service(fetch_blockchain_length_peer_controller)
                     .service(fetch_blockchain_length_controller)
+                    .service(fetch_transaction_peer_controller)
             })
             .bind(self.srvr_addr)
             .unwrap()
