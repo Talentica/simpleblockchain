@@ -23,7 +23,7 @@ exonum-derive = "^1.0.0-rc.3"
 hex = "^0.4"
 serde = { version = "1.0", features = ["derive"] }
 serde_cbor = "^0.10"
-libp2p = "^0.15"
+libp2p = "0.22.0"
 futures = "0.3.1"
 async-std = "^1.4"
 log = "0.4.8"

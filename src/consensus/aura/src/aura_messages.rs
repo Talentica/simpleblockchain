@@ -1,5 +1,5 @@
 use exonum_crypto::Hash;
-use libp2p::floodsub::{Topic, TopicBuilder};
+use libp2p::floodsub::Topic;
 use message_handler::constants;
 use message_handler::message_traits::Message;
 use schema::block::SignedBlock;
@@ -150,9 +150,9 @@ pub enum AuraMessageTypes {
 impl From<AuraMessageTypes> for Topic {
     fn from(msg: AuraMessageTypes) -> Topic {
         match msg {
-            AuraMessageTypes::RoundOwnerEnum(data) => TopicBuilder::new(data.topic()).build(),
-            AuraMessageTypes::BlockAcceptanceEnum(data) => TopicBuilder::new(data.topic()).build(),
-            AuraMessageTypes::AuthorBlockEnum(data) => TopicBuilder::new(data.topic()).build(),
+            AuraMessageTypes::RoundOwnerEnum(data) => Topic::new(data.topic()),
+            AuraMessageTypes::BlockAcceptanceEnum(data) => Topic::new(data.topic()),
+            AuraMessageTypes::AuthorBlockEnum(data) => Topic::new(data.topic()),
         }
     }
 }
