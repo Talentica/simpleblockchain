@@ -73,7 +73,24 @@ mod test_controller_services {
         let txn_hash: Hash = signed_transaction.object_hash();
         let transaction_hash: web::Bytes = web::Bytes::from(serialize(&txn_hash).unwrap());
         let mut http_response: HttpResponse =
-            ClientServices::fetch_pending_transaction_service(transaction_hash);
+            ClientServices::fetch_pending_transaction_service(transaction_hash.clone());
+        if http_response.status() == 200 {
+            let response_body: ResponseBody<Body> = http_response.take_body();
+            let body_ref = response_body.as_ref().unwrap();
+            let body_vec: Vec<u8> = match body_ref {
+                Body::None => panic!("invalid response body type"),
+                Body::Empty => panic!("invalid response body type"),
+                Body::Bytes(ref b) => b.to_vec(),
+                Body::Message(_) => panic!("invalid response body type"),
+            };
+            let output: SignedTransaction = deserialize(&body_vec).unwrap();
+            assert_eq!(txn_hash, output.object_hash());
+        } else {
+            panic!("http_response not equal to 200");
+        }
+
+        let mut http_response: HttpResponse =
+            ClientServices::fetch_transaction_peer_service(transaction_hash);
         if http_response.status() == 200 {
             let response_body: ResponseBody<Body> = http_response.take_body();
             let body_ref = response_body.as_ref().unwrap();
@@ -112,7 +129,24 @@ mod test_controller_services {
         patch_db(fork);
         let transaction_hash: web::Bytes = web::Bytes::from(serialize(&txn_hash).unwrap());
         let mut http_response: HttpResponse =
-            ClientServices::fetch_confirm_transaction_service(transaction_hash);
+            ClientServices::fetch_confirm_transaction_service(transaction_hash.clone());
+        if http_response.status() == 200 {
+            let response_body: ResponseBody<Body> = http_response.take_body();
+            let body_ref = response_body.as_ref().unwrap();
+            let body_vec: Vec<u8> = match body_ref {
+                Body::None => panic!("invalid response body type"),
+                Body::Empty => panic!("invalid response body type"),
+                Body::Bytes(ref b) => b.to_vec(),
+                Body::Message(_) => panic!("invalid response body type"),
+            };
+            let output: SignedTransaction = deserialize(&body_vec).unwrap();
+            assert_eq!(txn_hash, output.object_hash())
+        } else {
+            panic!("http_response not equal to 200");
+        }
+
+        let mut http_response: HttpResponse =
+            ClientServices::fetch_transaction_peer_service(transaction_hash);
         if http_response.status() == 200 {
             let response_body: ResponseBody<Body> = http_response.take_body();
             let body_ref = response_body.as_ref().unwrap();

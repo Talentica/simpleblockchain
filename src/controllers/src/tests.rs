@@ -10,17 +10,20 @@ mod test_controller_services {
     use exonum_merkledb::ObjectHash;
     use futures::channel::mpsc::*;
     use libp2p::core::{Multiaddr, PeerId};
+    use libp2p::identity::PublicKey;
     use message_handler::messages::MessageTypes;
     use schema::signed_transaction::SignedTransaction;
     use schema::state::State;
-    use schema::transaction_pool::TxnPoolKeyType;
+    use schema::transaction_pool::{TxnPool, TxnPoolKeyType, POOL};
     use sdk::traits::StateContext;
     use std::collections::HashMap;
     use std::net::IpAddr;
     use std::net::Ipv4Addr;
     use std::time::SystemTime;
     use std::{thread, time::Duration};
+    use utils::configreader;
     use utils::configreader::initialize_config;
+    use utils::configreader::Configuration;
     use utils::global_peer_data::*;
     use utils::serializer::serialize;
 
@@ -45,7 +48,7 @@ mod test_controller_services {
         };
     }
 
-    fn test_fetch_pending_transaction_controller(client: &ClientObj) {
+    fn test_fetch_pending_transaction_controller(client: &ClientObj, pk: String) {
         let time_stamp: TxnPoolKeyType = 6565656565;
         let mut header = HashMap::default();
         header.insert("timestamp".to_string(), time_stamp.to_string());
@@ -57,6 +60,18 @@ mod test_controller_services {
         };
         let txn_hash: Hash = signed_transaction.object_hash();
         match client.fetch_pending_transaction(&txn_hash) {
+            Ok(is_value) => {
+                if None == is_value {
+                    panic!("error in fetch pending transaction process");
+                }
+            }
+            Err(_) => panic!("http_response not equal to 200"),
+        };
+        let url = String::from("http://127.0.0.1:8089/");
+        let transaction_hash_vec: Vec<Hash> = vec![txn_hash];
+        assert_eq!(client.sync_txn_pool(pk, &transaction_hash_vec), true);
+        assert_eq!(POOL.get(&txn_hash).unwrap(), signed_transaction);
+        match client.fetch_transaction(&url, &txn_hash) {
             Ok(is_value) => {
                 if None == is_value {
                     panic!("error in fetch pending transaction process");
@@ -92,6 +107,15 @@ mod test_controller_services {
             Ok(is_value) => {
                 if None == is_value {
                     panic!("error in fetch confirm transaction process");
+                }
+            }
+            Err(_) => panic!("http_response not equal to 200"),
+        };
+        let url = String::from("http://127.0.0.1:8089/");
+        match client.fetch_transaction(&url, &txn_hash) {
+            Ok(is_value) => {
+                if None == is_value {
+                    panic!("error in fetch pending transaction process");
                 }
             }
             Err(_) => panic!("http_response not equal to 200"),
@@ -157,7 +181,9 @@ mod test_controller_services {
     #[test]
     fn test_controller_functionality() {
         initialize_config("../../config.toml");
-        let peer_id: String = "127.0.0.1".to_string();
+        let config: &Configuration = &configreader::GLOBAL_CONFIG;
+        let pk: PublicKey = PublicKey::Ed25519(config.node.public.clone());
+        let peer_id = PeerId::from_public_key(pk).to_string();
         let time_stamp: u128 = 123445;
         let addr: Multiaddr = Multiaddr::from(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)));
         let id: PeerId = PeerId::random();
@@ -175,7 +201,7 @@ mod test_controller_services {
         thread::sleep(Duration::from_millis(2000));
         let client: ClientObj = ClientObj::new();
         test_submit_transaction_controller(&client);
-        test_fetch_pending_transaction_controller(&client);
+        test_fetch_pending_transaction_controller(&client, config.node.hex_public.clone());
         test_fetch_confirm_transaction_controller(&client);
         test_fetch_state_controller(&client);
         test_fetch_block_controller(&client);

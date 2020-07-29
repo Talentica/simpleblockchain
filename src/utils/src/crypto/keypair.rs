@@ -48,22 +48,30 @@ impl CryptoKeypair<KeypairType, PublicKeyType> for Keypair {
     }
 }
 
+impl PublicKey {
+    pub fn from_string(public: &String) -> Option<PublicKeyType> {
+        let decode_public_key = match hex::decode(public) {
+            Ok(decode_public_key) => decode_public_key,
+            Err(_) => return None,
+        };
+
+        match PublicKeyType::decode(&decode_public_key) {
+            Ok(public_key) => return Some(public_key),
+            Err(_) => return None,
+        };
+    }
+}
+
 impl Verify<PublicKeyType> for PublicKey {
     fn verify(public: &PublicKeyType, msg: &[u8], signature: &[u8]) -> bool {
         public.verify(msg, signature)
     }
 
     fn verify_from_encoded_pk(public: &String, msg: &[u8], signature: &[u8]) -> bool {
-        let decode_public_key = match hex::decode(public) {
-            Ok(decode_public_key) => decode_public_key,
-            Err(_e) => return false,
-        };
-
-        let public_key = match PublicKeyType::decode(&decode_public_key) {
-            Ok(public_key) => public_key,
-            Err(_e) => return false,
-        };
-        public_key.verify(msg, signature)
+        match PublicKey::from_string(public) {
+            Some(public_key) => public_key.verify(msg, signature),
+            None => return false,
+        }
     }
 }
 

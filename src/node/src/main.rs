@@ -62,7 +62,8 @@ fn validator_process() {
         )
     });
     thread::spawn(move || {
-        swarm.process(peer_id, config);
+        let process = swarm.process(peer_id, config);
+        process.expect("swarm messganing system broken");
     });
     std::env::set_var("RUST_BACKTRACE", "1");
     //Register the Ctrl-C handler so that user can use it to exit the application gracefully.
@@ -102,7 +103,8 @@ fn fullnode_process() {
         });
     }
     thread::spawn(move || {
-        swarm.process(peer_id, config);
+        let process = swarm.process(peer_id, config);
+        process.expect("swarm messganing system broken");
     });
     std::env::set_var("RUST_BACKTRACE", "1");
     //Register the Ctrl-C handler so that user can use it to exit the application gracefully.
