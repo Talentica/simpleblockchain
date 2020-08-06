@@ -648,12 +648,23 @@ impl Aura {
                     return signed_block;
                 }
             } else {
+                // init sync_state_flag with false
+                #[allow(unused_assignments)]
+                let mut sync_state_flag: bool = false;
+                let fork_to_sync = fork_db();
+                {
+                    let mut sync_schema = SchemaFork::new(&fork_to_sync);
+                    sync_state_flag = sync_schema.sync_state();
+                }
+                patch_db(fork_to_sync);
                 // flush the waiting blocks queue
-                if waiting_blocks_queue.queue.len() > 0 {
-                    waiting_blocks_queue.queue.remove(0);
-                } else {
-                    waiting_blocks_queue.last_block_acceptance.clear();
-                    waiting_blocks_queue.last_block_hash = String::from("temp_hash");
+                if sync_state_flag {
+                    if waiting_blocks_queue.queue.len() > 0 {
+                        waiting_blocks_queue.queue.remove(0);
+                    } else {
+                        waiting_blocks_queue.last_block_acceptance.clear();
+                        waiting_blocks_queue.last_block_hash = String::from("temp_hash");
+                    }
                 }
             }
         }

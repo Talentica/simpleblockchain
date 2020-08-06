@@ -1,4 +1,4 @@
-use libp2p::floodsub::{Topic, TopicBuilder};
+use libp2p::floodsub::Topic;
 use message_handler::constants;
 use message_handler::message_traits::Message;
 use std::hash::{Hash, Hasher};
@@ -162,9 +162,9 @@ pub enum ConsensusMessageTypes {
 impl From<ConsensusMessageTypes> for Topic {
     fn from(msg: ConsensusMessageTypes) -> Topic {
         match msg {
-            ConsensusMessageTypes::LeaderElect(data) => TopicBuilder::new(data.topic()).build(),
-            ConsensusMessageTypes::ConsensusPing(data) => TopicBuilder::new(data.topic()).build(),
-            ConsensusMessageTypes::ConsensusPong(data) => TopicBuilder::new(data.topic()).build(),
+            ConsensusMessageTypes::LeaderElect(data) => Topic::new(data.topic()),
+            ConsensusMessageTypes::ConsensusPing(data) => Topic::new(data.topic()),
+            ConsensusMessageTypes::ConsensusPong(data) => Topic::new(data.topic()),
         }
     }
 }

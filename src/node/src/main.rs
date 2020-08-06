@@ -1,4 +1,4 @@
-extern crate aura;
+extern crate consensus;
 extern crate controllers;
 extern crate ctrlc;
 extern crate db_service;
@@ -9,7 +9,7 @@ extern crate schema;
 extern crate log;
 
 mod nodemsgprocessor;
-use aura::aura_interface as consensus_interface;
+use consensus::consensus_interface;
 use controllers::client_controller::{ClientController, Controller};
 use libloading::{Library, Symbol};
 use schema::appdata::APPDATA;
@@ -55,7 +55,7 @@ fn validator_process(consensus_file_path: String) {
     // in future this thread will spwan new child thread accrding to consensus requirement.
     let consensus_msg_receiver_clone = MSG_DISPATCHER.consensus_msg_receiver.clone();
     thread::spawn(move || {
-        consensus_interface::Aura::init_aura_consensus(
+        consensus_interface::Consensus::init_consensus(
             config,
             &consensus_file_path,
             &mut sender,

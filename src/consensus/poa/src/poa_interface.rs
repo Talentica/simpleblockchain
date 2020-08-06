@@ -3,17 +3,19 @@ extern crate message_handler;
 extern crate schema;
 extern crate utils;
 
-use super::consensus_message_sender::ConsensusMessageSender;
-use super::consensus_messages::{
+use super::poa_config::initialize_config;
+use super::poa_message_sender::ConsensusMessageSender;
+use super::poa_messages::{
     ConsensusMessageTypes, ElectionPing, ElectionPong, LeaderElection, SignedLeaderElection,
 };
 use db_service::db_fork_ref::SchemaFork;
 use db_service::db_layer::{fork_db, patch_db, snapshot_db};
 use db_service::db_snapshot_ref::SchemaSnap;
-use exonum_merkledb::ObjectHash;
+use exonum_merkledb::{Fork, ObjectHash};
 use futures::{channel::mpsc::*, executor::*, future, prelude::*, task::*};
 use message_handler::message_sender::MessageSender;
 use message_handler::messages::MessageTypes;
+use schema::block::SignedBlock;
 use schema::transaction_pool::{TxnPool, POOL};
 use std::collections::{hash_map::DefaultHasher, BTreeMap};
 use std::hash::{Hash, Hasher};
@@ -30,6 +32,7 @@ pub struct Consensus {
     pk: String,
     round_number: u64,
     public_keys: Vec<String>,
+    force_sealing: bool,
 }
 
 pub struct LeaderMap {
@@ -151,6 +154,32 @@ impl Consensus {
         }
     }
 
+    fn propose_block(&self, fork: Fork) -> (Fork, SignedBlock) {
+        let signed_block: SignedBlock;
+        {
+            let mut schema = SchemaFork::new(&fork);
+            // let signed_block = schema.create_block(&self.keypair);
+            let custom_headers: Vec<u8> = Vec::new();
+            if !self.force_sealing {
+                let (fork_instance, signed_block) =
+                    schema.forge_new_block(&self.keypair, custom_headers);
+                info!(
+                    "new block created.. id {},hash {}",
+                    signed_block.block.id,
+                    signed_block.object_hash()
+                );
+                return (fork_instance, signed_block);
+            }
+            signed_block = schema.create_block(&self.keypair, custom_headers);
+            info!(
+                "new block created.. id {},hash {}",
+                signed_block.block.id,
+                signed_block.object_hash()
+            );
+        }
+        return (fork, signed_block);
+    }
+
     fn validator(
         &mut self,
         sender: &mut Sender<Option<MessageTypes>>,
@@ -159,19 +188,10 @@ impl Consensus {
         // no polling machenism of txn_pool and create block need to implement or modified here
         // if one want to change the create_block and txn priority then change/ implment that part in
         // schema operations and p2p module
-        let fork = fork_db();
+        let mut fork = fork_db();
         {
-            let schema = SchemaFork::new(&fork);
-            // let signed_block = schema.create_block(&self.keypair);
-            let custom_headers: Vec<u8> = Vec::new();
-            let (fork_instance, signed_block) =
-                schema.forge_new_block(&self.keypair, custom_headers);
-            //fork = fork_instance;
-            info!(
-                "new block created.. id {},hash {}",
-                signed_block.block.id,
-                signed_block.object_hash()
-            );
+            let (fork_instance, signed_block) = self.propose_block(fork);
+            fork = fork_instance;
             POOL.sync_pool(&signed_block.block.txn_pool);
             self.round_number = signed_block.block.id;
             MessageSender::send_block_msg(sender, signed_block);
@@ -183,9 +203,8 @@ impl Consensus {
             ConsensusMessageSender::send_election_ping_msg(sender, msg);
             info!("pinging for block number {}", self.round_number + 1);
             thread::sleep(Duration::from_micros(1000));
-            patch_db(fork_instance);
         }
-        //patch_db(fork);
+        patch_db(fork);
         let signed_new_leader: SignedLeaderElection = self.select_leader(meta_data);
         self.round_number = self.round_number + 1;
         let flag: bool = signed_new_leader.leader_payload.new_leader.clone()
@@ -390,18 +409,21 @@ impl Consensus {
         }
     }
 
-    pub fn init_consensus(
+    pub fn init_poa_consensus(
         config: &Configuration,
+        consensus_file_path: &str,
         sender: &mut Sender<Option<MessageTypes>>,
         msg_receiver: Arc<Mutex<Receiver<Option<Vec<u8>>>>>,
     ) {
-        let consensus_configuration: &crate::consensus_config::Configuration =
-            &crate::consensus_config::GLOBAL_CONFIG;
+        initialize_config(consensus_file_path);
+        let consensus_configuration: &crate::poa_config::Configuration =
+            &crate::poa_config::POA_CONFIG;
         let mut consensus_obj = Consensus {
             keypair: config.node.keypair.clone(),
             pk: String::from(""),
             round_number: 0,
             public_keys: consensus_configuration.public_keys.clone(),
+            force_sealing: consensus_configuration.force_sealing,
         };
         consensus_obj.pk = hex::encode(consensus_obj.keypair.public().encode());
         let leader_map_obj = LeaderMap {

@@ -1,4 +1,4 @@
-use crate::consensus_messages::{
+use crate::poa_messages::{
     ConsensusMessageTypes, ElectionPing, ElectionPong, SignedLeaderElection,
 };
 use futures::channel::mpsc::*;
