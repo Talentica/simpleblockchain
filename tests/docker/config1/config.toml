@@ -7,6 +7,7 @@ p2p_port = 4444
 client_port = 8089
 client_host = "0.0.0.0"
 client_apps = ["./app/wallet.so"]
+consensus_name = "aura"
 block_creation_time_limit = 3000 # in milliseconds
 block_transaction_limit = 20 # max transaction count in a block
 transaction_execution_delay_limit = 60000 # in milliseconds

@@ -1,12 +1,13 @@
 public = "5f0323b9825360402401878d0e97f6c583c6896c79dc76d91e8375aec47918c0"
 secret = "06281e5c72a4795bf9b9a5ba273d36b28355edf9952c6e266edaeddd729b3b0c"
-node_type = "fullnode"
-genesis_block = false
+node_type = "validator"
+genesis_block = true
 dbpath = "./rockdb/db"
 p2p_port = 4444
 client_port = 8089
 client_host = "0.0.0.0"
 client_apps = ["./app/wallet.so"]
+consensus_name = "aura"
 block_creation_time_limit = 3000 # in milliseconds
 block_transaction_limit = 20 # max transaction count in a block
 transaction_execution_delay_limit = 60000 # in milliseconds
