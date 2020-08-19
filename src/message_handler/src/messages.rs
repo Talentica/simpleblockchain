@@ -1,7 +1,7 @@
 use super::constants;
 use super::node_messages::NodeMessageTypes;
 use futures::{channel::mpsc::channel, channel::mpsc::Receiver, channel::mpsc::Sender};
-use libp2p::floodsub::{protocol, Topic, TopicBuilder, TopicHash};
+use libp2p::floodsub::{protocol, Topic};
 use std::sync::{Arc, Mutex};
 use utils::serializer::{deserialize, Deserialize, Serialize};
 
@@ -17,10 +17,10 @@ impl From<MessageTypes> for Vec<Topic> {
         let mut ret: Vec<Topic> = Vec::new();
         match msg {
             MessageTypes::NodeMsg(_data) => {
-                ret.push(TopicBuilder::new(constants::NODE).build());
+                ret.push(Topic::new(constants::NODE));
             }
             MessageTypes::ConsensusMsg(_data) => {
-                ret.push(TopicBuilder::new(constants::CONSENSUS).build());
+                ret.push(Topic::new(constants::CONSENSUS));
             }
         }
         ret
@@ -30,12 +30,12 @@ impl From<MessageTypes> for Vec<Topic> {
 ///Process FloodSubMessages
 ///
 pub trait MsgProcess {
-    fn process(&self, topics: &Vec<TopicHash>, data: &Vec<u8>);
+    fn process(&self, topics: &Vec<Topic>, data: &Vec<u8>);
 }
 
 impl MsgProcess for protocol::FloodsubMessage {
-    fn process(&self, topics: &Vec<TopicHash>, data: &Vec<u8>) {
-        if topics[0] == TopicBuilder::new(constants::NODE).build().hash().clone() {
+    fn process(&self, topics: &Vec<Topic>, data: &Vec<u8>) {
+        if topics[0] == Topic::new(constants::NODE) {
             debug!("NodeMessageTypes data received");
             if let Ok(deserialize_msg) = deserialize::<NodeMessageTypes>(data) {
                 let result = MSG_DISPATCHER
@@ -46,12 +46,7 @@ impl MsgProcess for protocol::FloodsubMessage {
                     result.unwrap_err().into_send_error();
                 }
             }
-        } else if topics[0]
-            == TopicBuilder::new(constants::CONSENSUS)
-                .build()
-                .hash()
-                .clone()
-        {
+        } else if topics[0] == Topic::new(constants::CONSENSUS) {
             debug!("ConsensusMessageTypes data received");
             if let Ok(deserialize_msg) = deserialize::<Vec<u8>>(data) {
                 let result = MSG_DISPATCHER

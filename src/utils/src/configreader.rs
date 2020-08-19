@@ -55,6 +55,8 @@ pub struct TomlReaderConfig {
     block_creation_time_limit: u64,
     block_transaction_limit: u64,
     transaction_execution_delay_limit: u64,
+    // consensus name
+    consensus_name: String,
 }
 
 #[derive(Debug)]
@@ -94,6 +96,7 @@ impl Configuration {
             client_host: tomlreader.client_host,
             client_port: tomlreader.client_port,
             client_apps: tomlreader.client_apps.to_vec(),
+            consensus_name: tomlreader.consensus_name,
         };
         let db_path: Database = Database {
             dbpath: tomlreader.dbpath,
@@ -152,6 +155,7 @@ pub struct Node {
     pub client_host: String,
     pub client_port: u32,
     pub client_apps: Vec<String>,
+    pub consensus_name: String,
 }
 
 #[derive(Debug)]

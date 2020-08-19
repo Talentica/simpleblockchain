@@ -1,0 +1,5 @@
+# [poa_consensus]
+# public_keys should be a list containing all authorities publick keys
+public_keys = ["2c8a35450e1d198e3834d933a35962600c33d1d0f8f6481d6e08f140791374d0"]
+# force-sealing will ensure blocks will be produced instantly even if there are no transactions.
+force_sealing = false

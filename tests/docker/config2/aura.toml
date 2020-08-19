@@ -1,0 +1,19 @@
+# [aura_consensus]
+# public_keys should be a list containing all authorities publick keys
+validator_set = ["5f0323b9825360402401878d0e97f6c583c6896c79dc76d91e8375aec47918c0",
+               "2c8a35450e1d198e3834d933a35962600c33d1d0f8f6481d6e08f140791374d0",
+               "c087853a474e7f8f4e3783250fc4f85104a179fdb1a85ae71402f0e5b66ae3f7",
+            ]
+# this should be integer defining waiting queue size
+block_list_size = 5
+# this should be integer defining each round time in seconds.
+step_time = 5
+# this should be a list of indentity numbers(integers) from 0 to size of public_keys
+# this should be order in respective to public_keys.
+validator_ids = [0, 1, 2]
+# force-sealing will ensure blocks will be produced even if there are no transactions.
+force_sealing = true
+# start_time will be used to calculate round number
+start_time = 34234233
+# round_number at the start_time
+round_number = 0 

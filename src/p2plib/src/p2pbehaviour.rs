@@ -1,4 +1,3 @@
-use futures::prelude::*;
 use libp2p::{
     floodsub::{self, Floodsub, FloodsubEvent},
     mdns::{Mdns, MdnsEvent},
@@ -16,12 +15,12 @@ const LOCALHOST_V6: IpAddr = IpAddr::V6(Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 1));
 /// Network behavior defined combining, floodsub and mdns (for discovery)
 ///
 #[derive(NetworkBehaviour)]
-pub struct P2PBehaviour<TSubstream: AsyncRead + AsyncWrite> {
-    pub floodsub: Floodsub<TSubstream>,
-    pub mdns: Mdns<TSubstream>,
+pub struct P2PBehaviour {
+    pub floodsub: Floodsub,
+    pub mdns: Mdns,
 }
 
-impl<TSubstream: AsyncRead + AsyncWrite> P2PBehaviour<TSubstream> {
+impl P2PBehaviour {
     pub fn new(peer_id: PeerId) -> Self {
         let mdns = Mdns::new().unwrap();
         let behaviour = P2PBehaviour {
@@ -31,14 +30,12 @@ impl<TSubstream: AsyncRead + AsyncWrite> P2PBehaviour<TSubstream> {
         behaviour
     }
     pub fn subscribe(&mut self, topic_str: &String) {
-        let floodsub_topic = floodsub::TopicBuilder::new(topic_str).build();
+        let floodsub_topic = floodsub::Topic::new(topic_str);
         self.floodsub.subscribe(floodsub_topic);
     }
 }
 
-impl<TSubstream: AsyncRead + AsyncWrite> NetworkBehaviourEventProcess<MdnsEvent>
-    for P2PBehaviour<TSubstream>
-{
+impl NetworkBehaviourEventProcess<MdnsEvent> for P2PBehaviour {
     fn inject_event(&mut self, mdns_event: MdnsEvent) {
         match mdns_event {
             MdnsEvent::Discovered(discovered_nodes) => {
@@ -84,9 +81,7 @@ impl<TSubstream: AsyncRead + AsyncWrite> NetworkBehaviourEventProcess<MdnsEvent>
     }
 }
 
-impl<TSubstream: AsyncRead + AsyncWrite> NetworkBehaviourEventProcess<FloodsubEvent>
-    for P2PBehaviour<TSubstream>
-{
+impl NetworkBehaviourEventProcess<FloodsubEvent> for P2PBehaviour {
     fn inject_event(&mut self, pubsub_event: FloodsubEvent) {
         match pubsub_event {
             FloodsubEvent::Message(msg) => {

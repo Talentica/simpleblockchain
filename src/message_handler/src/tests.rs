@@ -6,7 +6,7 @@ mod test_message_handler {
     use crate::messages::{MessageTypes, MSG_DISPATCHER};
     use crate::node_messages::NodeMessageTypes;
     use futures::channel::mpsc::*;
-    use libp2p::floodsub::{Topic, TopicBuilder};
+    use libp2p::floodsub::Topic;
     use schema::block::{Block, BlockTraits, SignedBlock};
     use std::{thread, time::Duration};
     use utils::serializer::{deserialize, serialize};
@@ -31,10 +31,7 @@ mod test_message_handler {
                                 info!("NodeMsg received {:?}", data);
                                 let topics: Vec<Topic> =
                                     Vec::<Topic>::from(MessageTypes::NodeMsg(data.clone()));
-                                assert_eq!(
-                                    topics[0].hash().clone(),
-                                    TopicBuilder::new(constants::NODE).build().hash().clone()
-                                );
+                                assert_eq!(topics[0], Topic::new(constants::NODE));
                                 let result = MSG_DISPATCHER
                                     .node_msg_dispatcher
                                     .clone()
@@ -47,13 +44,7 @@ mod test_message_handler {
                                 info!("ConsensusMsg received {:?}", data);
                                 let topics: Vec<Topic> =
                                     Vec::<Topic>::from(MessageTypes::ConsensusMsg(data.clone()));
-                                assert_eq!(
-                                    topics[0].hash().clone(),
-                                    TopicBuilder::new(constants::CONSENSUS)
-                                        .build()
-                                        .hash()
-                                        .clone()
-                                );
+                                assert_eq!(topics[0], Topic::new(constants::CONSENSUS));
                                 let result = MSG_DISPATCHER
                                     .consensus_msg_dispatcher
                                     .clone()
@@ -105,10 +96,7 @@ mod test_message_handler {
                                 info!("NodeMsg received {:?}", data);
                                 let topics: Vec<Topic> =
                                     Vec::<Topic>::from(MessageTypes::NodeMsg(data.clone()));
-                                assert_eq!(
-                                    topics[0].hash().clone(),
-                                    TopicBuilder::new(constants::NODE).build().hash().clone()
-                                );
+                                assert_eq!(topics[0], Topic::new(constants::NODE));
                                 let result = MSG_DISPATCHER
                                     .node_msg_dispatcher
                                     .clone()
@@ -121,13 +109,7 @@ mod test_message_handler {
                                 info!("ConsensusMsg received {:?}", data);
                                 let topics: Vec<Topic> =
                                     Vec::<Topic>::from(MessageTypes::ConsensusMsg(data.clone()));
-                                assert_eq!(
-                                    topics[0].hash().clone(),
-                                    TopicBuilder::new(constants::CONSENSUS)
-                                        .build()
-                                        .hash()
-                                        .clone()
-                                );
+                                assert_eq!(topics[0], Topic::new(constants::CONSENSUS));
                                 let result = MSG_DISPATCHER
                                     .consensus_msg_dispatcher
                                     .clone()

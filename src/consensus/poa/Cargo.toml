@@ -1,20 +1,20 @@
 [package]
-name = "controllers"
+name = "poa"
 version = "0.1.0"
 authors = ["gaurav agarwal <gaurav.agarwal@talentica.com>"]
 edition = "2018"
 license = "MIT OR Apache-2.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[build-dependencies]
+exonum-build = "^1.0.0-rc.3"
 
 [dependencies]
-message_handler = { path = "../message_handler" }
-services = { path = "../services" }
-schema = { path = "../schema" }
-sdk = { path = "../sdk" }
-utils = { path = "../utils" }
-client = { path = "../client" }
-db_service = { path = "../db_service" }
+db_service = { path = "../../db_service" }
+message_handler = { path = "../../message_handler" }
+schema = { path = "../../schema" }
+utils = { path = "../../utils" }
+sdk = { path = "../../sdk" }
 
 exonum-merkledb = "^1.0.0-rc.3"
 exonum-crypto = "^1.0.0-rc.3"
@@ -23,10 +23,11 @@ exonum-derive = "^1.0.0-rc.3"
 hex = "^0.4"
 serde = { version = "1.0", features = ["derive"] }
 serde_cbor = "^0.10"
-libp2p = "0.22.0"
-futures = "0.3.1"
-async-std = "^1.4"
+failure = "0.1"
+bincode = "1.0"
+futures = "^0.3"
+toml = "0.5.5"
+lazy_static = "1.4.0"
+protobuf = "2.8.0"
 log = "0.4.8"
-lazy_static = "^1.4"
-actix-web = "2.0"
-actix-rt = "1.0"
+libp2p = "0.22.0"

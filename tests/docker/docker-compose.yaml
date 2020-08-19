@@ -9,7 +9,7 @@ services:
       - 8090:8089
     volumes:
       - ./config1:/config 
-    command: bash -c "cp -r /config/* /simpleblockchain && cd /simpleblockchain && ./node"
+    command: bash -c "cp -r /config/* /simpleblockchain && cd /simpleblockchain && ./node -c aura.toml"
     environment:
       - RUST_BACKTRACE=1
 
@@ -22,7 +22,7 @@ services:
       - 8091:8089
     volumes:
       - ./config2:/config 
-    command: bash -c "cp -r /config/* /simpleblockchain && cd /simpleblockchain && ./node"
+    command: bash -c "cp -r /config/* /simpleblockchain && cd /simpleblockchain && ./node -c aura.toml"
     depends_on:
       - node1
   node3:
@@ -34,7 +34,7 @@ services:
       - 8092:8089
     volumes:
       - ./config3:/config 
-    command: bash -c "cp -r /config/* /simpleblockchain && cd /simpleblockchain && ./node"
+    command: bash -c "cp -r /config/* /simpleblockchain && cd /simpleblockchain && ./node -c aura.toml"
     depends_on:
       - node1
     # cd /simpleblockchain; bash ./node"

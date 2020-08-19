@@ -1,6 +1,6 @@
 use super::constants;
 use super::message_traits::Message;
-use libp2p::floodsub::{Topic, TopicBuilder};
+use libp2p::floodsub::Topic;
 use schema::block::SignedBlock;
 use schema::signed_transaction::SignedTransaction;
 use utils::serializer::{Deserialize, Serialize};
@@ -33,10 +33,8 @@ impl Message for SignedBlock {
 impl From<NodeMessageTypes> for Topic {
     fn from(msg: NodeMessageTypes) -> Topic {
         match msg {
-            NodeMessageTypes::SignedBlockEnum(data) => TopicBuilder::new(data.topic()).build(),
-            NodeMessageTypes::SignedTransactionEnum(data) => {
-                TopicBuilder::new(data.topic()).build()
-            }
+            NodeMessageTypes::SignedBlockEnum(data) => Topic::new(data.topic()),
+            NodeMessageTypes::SignedTransactionEnum(data) => Topic::new(data.topic()),
         }
     }
 }

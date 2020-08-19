@@ -1,20 +1,20 @@
 [package]
 name = "consensus"
 version = "0.1.0"
-authors = ["gaurava"]
+authors = ["gaurav agarwal <gaurav.agarwal@talentica.com>"]
 edition = "2018"
 license = "MIT OR Apache-2.0"
+description = "SimpleBlockchain consensus interface to access different consensus."
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-[build-dependencies]
-exonum-build = "^1.0.0-rc.3"
 
 [dependencies]
-db_service = { path = "../db_service" }
-message_handler = { path = "../message_handler" }
-schema = { path = "../schema" }
+aura = { path = "./aura" }
+# gosig = { path = "./gosig" }
+poa = { path = "./poa" }
 utils = { path = "../utils" }
-sdk = { path = "../sdk" }
+sdk = { path = "../sdk"}
+message_handler = { path = "../message_handler" }
 
 exonum-merkledb = "^1.0.0-rc.3"
 exonum-crypto = "^1.0.0-rc.3"
@@ -30,4 +30,4 @@ toml = "0.5.5"
 lazy_static = "1.4.0"
 protobuf = "2.8.0"
 log = "0.4.8"
-libp2p = "^0.15"
+libp2p = "0.22.0"
