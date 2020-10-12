@@ -526,9 +526,9 @@ dependencies = [
  "protobuf 2.14.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "schema 0.1.0",
  "sdk 0.1.0",
- "serde 1.0.114 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.115 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_cbor 0.10.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "toml 0.5.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "toml 0.5.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "utils 0.1.0",
 ]
 
@@ -932,7 +932,7 @@ dependencies = [
  "schema 0.1.0",
  "serde 1.0.115 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_cbor 0.11.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "toml 0.5.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "toml 0.5.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "utils 0.1.0",
 ]
 
@@ -973,7 +973,7 @@ dependencies = [
  "sdk 0.1.0",
  "serde 1.0.115 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_cbor 0.10.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "toml 0.5.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "toml 0.5.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "utils 0.1.0",
 ]
 
@@ -1362,7 +1362,7 @@ dependencies = [
  "sdk 0.1.0",
  "serde 1.0.115 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_cbor 0.11.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "toml 0.5.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "toml 0.5.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "utils 0.1.0",
 ]
 
@@ -1387,7 +1387,7 @@ dependencies = [
  "curve25519-dalek 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "ed25519 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.114 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.115 (registry+https://github.com/rust-lang/crates.io-index)",
  "sha2 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "zeroize 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -3241,9 +3241,9 @@ dependencies = [
  "protobuf 2.14.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "schema 0.1.0",
  "sdk 0.1.0",
- "serde 1.0.114 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.115 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_cbor 0.10.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "toml 0.5.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "toml 0.5.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "utils 0.1.0",
 ]
 
@@ -4489,7 +4489,7 @@ dependencies = [
 
 [[package]]
 name = "toml"
-version = "0.5.6"
+version = "0.5.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "serde 1.0.115 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4697,7 +4697,7 @@ dependencies = [
  "log4rs 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.115 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_cbor 0.10.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "toml 0.5.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "toml 0.5.7 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -4803,7 +4803,7 @@ dependencies = [
  "sdk 0.1.0",
  "serde 1.0.115 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_cbor 0.11.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "toml 0.5.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "toml 0.5.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "utils 0.1.0",
 ]
 
@@ -5501,7 +5501,7 @@ dependencies = [
 "checksum tokio-threadpool 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)" = "df720b6581784c118f0eb4310796b12b1d242a7eb95f716a8367855325c25f89"
 "checksum tokio-timer 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)" = "93044f2d313c95ff1cb7809ce9a7a05735b012288a888b62d4434fd58c94f296"
 "checksum tokio-util 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "571da51182ec208780505a32528fc5512a8fe1443ab960b3f2f3ef093cd16930"
-"checksum toml 0.5.6 (registry+https://github.com/rust-lang/crates.io-index)" = "ffc92d160b1eef40665be3a05630d003936a3bc7da7421277846c2613e92c71a"
+"checksum toml 0.5.7 (registry+https://github.com/rust-lang/crates.io-index)" = "75cf45bb0bef80604d001caaec0d09da99611b3c0fd39d3080468875cdb65645"
 "checksum traitobject 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "efd1f82c56340fdf16f2a953d7bda4f8fdffba13d93b00844c25572110b26079"
 "checksum trust-dns-proto 0.18.0-alpha.2 (registry+https://github.com/rust-lang/crates.io-index)" = "2a7f3a2ab8a919f5eca52a468866a67ed7d3efa265d48a652a9a3452272b413f"
 "checksum trust-dns-resolver 0.18.0-alpha.2 (registry+https://github.com/rust-lang/crates.io-index)" = "6f90b1502b226f8b2514c6d5b37bafa8c200d7ca4102d57dc36ee0f3b7a04a2f"
