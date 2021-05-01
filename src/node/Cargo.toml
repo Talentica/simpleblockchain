@@ -26,7 +26,7 @@ actix-rt = "1.1.1"
 hex = "^0.4"
 serde = { version = "1.0", features = ["derive"] }
 serde_cbor = "^0.11"
-libp2p = "0.22.0"
+libp2p = "0.24.0"
 futures = "0.3.5"
 async-std = "^1.6"
 env_logger = "0.7.1"
