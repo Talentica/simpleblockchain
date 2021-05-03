@@ -11,7 +11,7 @@ crate-type = ["cdylib"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [build-dependencies]
 exonum-build = "^1.0.0-rc.3"
-prost-build = { version = "0.6.1" }
+prost-build = { version = "0.7.0" }
 
 [dependencies]
 sdk = { path = "../../sdk" }
